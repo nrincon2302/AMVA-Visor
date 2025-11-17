@@ -10,7 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@highcharts/map-collection": "^2.3.2",
     "@tailwindcss/vite": "^4.1.17",
+    "crossfilter2": "^1.5.4",
+    "d3": "^7.9.0",
+    "highcharts": "^12.4.0",
+    "highcharts-react-official": "^3.2.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.4.1",

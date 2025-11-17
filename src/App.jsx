@@ -1,8 +1,9 @@
 import React from "react";
 import KpiCard from "./components/KpiCard";
 import FilterBar from "./components/FilterBar";
-import MapCard from "./components/MapCard";
-import TabbedCharts from "./components/TabbedCharts";
+import HighchartsMapCard from "./components/HighchartsMapCard";
+import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
+import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts"
 
 // ---------- Header + navbar + hero --------------
 const Header = () => {
@@ -470,28 +471,7 @@ const Footer = () => {
 
 // ---------- Dashboard (contenido central) --------------
 const DashboardSection = () => {
-  // Mock data como antes
-  const estratoData = [
-    { label: "1", value: 4200 },
-    { label: "2", value: 11800 },
-    { label: "3", value: 18900 },
-    { label: "4", value: 13500 },
-    { label: "5", value: 5200 },
-    { label: "6", value: 1800 },
-  ];
-
-  const edadData = [
-    { label: "18–25", value: 8200 },
-    { label: "26–35", value: 15200 },
-    { label: "36–45", value: 13100 },
-    { label: "46–60", value: 9100 },
-    { label: "60+", value: 3100 },
-  ];
-
-  const generoData = [
-    { name: "Hombres", value: 54000 },
-    { name: "Mujeres", value: 46000 },
-  ];
+  const { filters, setFilters, estratoData, edadData, generoData } = useTravelCrossfilterRecharts();
 
   const escolaridadData = [
     { label: "Primaria", value: 6000 },
@@ -572,18 +552,20 @@ const DashboardSection = () => {
           marginBottom: 32,
         }}
       >
-        <MapCard title="Mapa de Origen (Viajes)" />
-        <MapCard title="Mapa de Destino (Viajes)" />
+        <HighchartsMapCard title="Mapa de Origen (Viajes)" />
+        <HighchartsMapCard title="Mapa de Destino (Viajes)" palette="orange" />
       </section>
 
       {/* Tabs + gráficos inferiores */}
       <section>
-        <TabbedCharts
+        <TabbedChartsRecharts
           estratoData={estratoData}
           edadData={edadData}
           generoData={generoData}
           escolaridadData={escolaridadData}
           ingresosData={ingresosData}
+          filters={filters}
+          onFilterChange={setFilters}
         />
       </section>
     </main>
