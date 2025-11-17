@@ -190,8 +190,9 @@ const TabbedCharts = ({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 16,
+          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          gap: 24,
+          paddingBottom: 24,
         }}
       >
         {renderContent()}

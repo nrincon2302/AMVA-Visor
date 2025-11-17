@@ -512,9 +512,10 @@ const DashboardSection = () => {
   return (
     <main
       style={{
-        maxWidth: 1200,
+        width: "100%",
+        maxWidth: "1500px",     // wider dashboard
         margin: "0 auto",
-        padding: "24px 16px 40px",
+        padding: "32px 32px 48px", // more breathing room
       }}
     >
       <h1
@@ -534,9 +535,9 @@ const DashboardSection = () => {
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-          gap: 16,
-          marginBottom: 12,
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: 20,
+          marginBottom: 20,
         }}
       >
         <KpiCard
@@ -566,9 +567,9 @@ const DashboardSection = () => {
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-          gap: 16,
-          marginBottom: 24,
+          gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))",
+          gap: 24,
+          marginBottom: 32,
         }}
       >
         <MapCard title="Mapa de Origen (Viajes)" />
