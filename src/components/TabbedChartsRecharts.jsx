@@ -2,13 +2,12 @@ import React, { useState } from "react";
 import BarChartCard from "./BarChartCard";
 import PieChartCard from "./PieChartCard";
 
-// Definimos las métricas que existen y el tipo de gráfica
 const METRICS = [
-  { id: "genero", label: "Género", type: "pie" },
-  { id: "edad", label: "Edad", type: "bar" },
-  { id: "escolaridad", label: "Escolaridad", type: "bar" },
-  { id: "estrato", label: "Estrato", type: "bar" },
-  { id: "ingresos", label: "Nivel de Ingresos", type: "bar" },
+  { id: "genero", label: "Género" },
+  { id: "edad", label: "Edad" },
+  { id: "escolaridad", label: "Escolaridad" },
+  { id: "estrato", label: "Estrato" },
+  { id: "ingresos", label: "Nivel de Ingresos" },
 ];
 
 const TabbedChartsRecharts = ({
@@ -17,25 +16,21 @@ const TabbedChartsRecharts = ({
   generoData = [],
   escolaridadData = [],
   ingresosData = [],
+  filters,
+  onGenderFilterChange,
 }) => {
-  // arr de ids de métricas visibles (máx 3)
   const [selectedMetrics, setSelectedMetrics] = useState([
     "estrato",
     "edad",
     "genero",
   ]);
 
+  const currentGender = filters?.gender ?? "Todos";
+
   const handleMetricClick = (metricId) => {
     setSelectedMetrics((prev) => {
-      // si ya está seleccionada, no hacemos nada (puedes cambiar esto si quieres toggle)
       if (prev.includes(metricId)) return prev;
-
-      // si hay menos de 3, simplemente la agregamos
-      if (prev.length < 3) {
-        return [...prev, metricId];
-      }
-
-      // si ya hay 3, sacamos la más vieja (posición 0) y metemos la nueva al final
+      if (prev.length < 3) return [...prev, metricId];
       return [...prev.slice(1), metricId];
     });
   };
@@ -102,6 +97,40 @@ const TabbedChartsRecharts = ({
 
   return (
     <div>
+      {/* Filtro por género */}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          marginBottom: 12,
+          fontSize: 12,
+        }}
+      >
+        <span style={{ color: "#6b7280" }}>Filtro por género:</span>
+        {["Todos", "Hombre", "Mujer"].map((g) => {
+          const active = currentGender === g;
+          return (
+            <button
+              key={g}
+              onClick={() =>
+                onGenderFilterChange && onGenderFilterChange(g)
+              }
+              style={{
+                borderRadius: 9999,
+                border: active ? "1px solid #16a34a" : "1px solid #d1d5db",
+                background: active ? "#ecfdf3" : "#ffffff",
+                fontSize: 11,
+                padding: "4px 10px",
+                cursor: "pointer",
+              }}
+            >
+              {g}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Tabs de métricas */}
       <div
         style={{
@@ -136,7 +165,7 @@ const TabbedChartsRecharts = ({
         })}
       </div>
 
-      {/* Grid de gráficas seleccionadas */}
+      {/* Gráficos */}
       <div
         style={{
           display: "grid",

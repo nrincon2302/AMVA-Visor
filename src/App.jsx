@@ -4,6 +4,7 @@ import FilterBar from "./components/FilterBar";
 import HighchartsMapCard from "./components/HighchartsMapCard";
 import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
 import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts"
+import { useKpiStats } from "./hooks/useKpiStats";
 
 // ---------- Header + navbar + hero --------------
 const Header = () => {
@@ -471,7 +472,20 @@ const Footer = () => {
 
 // ---------- Dashboard (contenido central) --------------
 const DashboardSection = () => {
-  const { filters, setFilters, estratoData, edadData, generoData } = useTravelCrossfilterRecharts();
+  const {
+    filters,
+    setGenderFilter,
+    filteredTrips,
+    estratoData,
+    edadData,
+    generoData,
+  } = useTravelCrossfilterRecharts();
+
+  const {
+    totalTrips,
+    avgDistance,
+    avgTime,
+  } = useKpiStats(filteredTrips);
 
   const escolaridadData = [
     { label: "Primaria", value: 6000 },
@@ -493,9 +507,9 @@ const DashboardSection = () => {
     <main
       style={{
         width: "100%",
-        maxWidth: "1500px",     // wider dashboard
+        maxWidth: "1500px",
         margin: "0 auto",
-        padding: "32px 32px 48px", // more breathing room
+        padding: "32px 32px 48px",
       }}
     >
       <h1
@@ -521,21 +535,23 @@ const DashboardSection = () => {
         }}
       >
         <KpiCard
-          label="Viajes Totales"
-          value="311,002"
-          subLabel="5% del total"
+          label="Viajes Totales (filtrados)"
+          value={totalTrips.toLocaleString("es-CO")}
+          subLabel={`Filtro: género ${filters.gender}`}
           accentColor="#16a34a"
         />
+
         <KpiCard
           label="Tiempo Promedio"
-          value="32 min"
-          subLabel="4 min menos que el promedio"
+          value={`${avgTime.toFixed(1)} min`}
+          subLabel="Basado en datos filtrados"
           accentColor="#3b82f6"
         />
+
         <KpiCard
           label="Distancia Promedio"
-          value="5.9 km"
-          subLabel="1 km menos que el total"
+          value={`${avgDistance.toFixed(1)} km`}
+          subLabel="Basado en datos filtrados"
           accentColor="#f97316"
         />
       </section>
@@ -565,7 +581,7 @@ const DashboardSection = () => {
           escolaridadData={escolaridadData}
           ingresosData={ingresosData}
           filters={filters}
-          onFilterChange={setFilters}
+          onGenderFilterChange={setGenderFilter}
         />
       </section>
     </main>
