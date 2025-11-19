@@ -1,8 +1,10 @@
+// src/hooks/useTravelCrossfilterRecharts.js
 import { useMemo, useState } from "react";
 import crossfilter from "crossfilter2";
 
+// Mock de viajes con género, edad, estrato, ingresos, escolaridad y DEPARTAMENTO
 const mockTrips = [
-  // Hombre, 18–25
+  // HOMBRES 18–25
   {
     gender: "Hombre",
     ageRange: "18–25",
@@ -11,6 +13,7 @@ const mockTrips = [
     edu: "Secundaria",
     distanceKm: 4.2,
     durationMin: 28,
+    departamento: "Antioquia",
   },
   {
     gender: "Hombre",
@@ -20,9 +23,10 @@ const mockTrips = [
     edu: "Técnica",
     distanceKm: 5.1,
     durationMin: 32,
+    departamento: "Antioquia",
   },
 
-  // Hombre, 26–35
+  // HOMBRES 26–35
   {
     gender: "Hombre",
     ageRange: "26–35",
@@ -31,6 +35,7 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 6.3,
     durationMin: 35,
+    departamento: "Cundinamarca",
   },
   {
     gender: "Hombre",
@@ -40,6 +45,7 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 6.8,
     durationMin: 37,
+    departamento: "Valle del Cauca",
   },
   {
     gender: "Hombre",
@@ -49,9 +55,10 @@ const mockTrips = [
     edu: "Posgrado",
     distanceKm: 7.5,
     durationMin: 40,
+    departamento: "Atlántico",
   },
 
-  // Hombre, 36–45
+  // HOMBRES 36–45
   {
     gender: "Hombre",
     ageRange: "36–45",
@@ -60,6 +67,7 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 6.0,
     durationMin: 34,
+    departamento: "Santander",
   },
   {
     gender: "Hombre",
@@ -69,9 +77,10 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 7.2,
     durationMin: 39,
+    departamento: "Antioquia",
   },
 
-  // Mujer, 18–25
+  // MUJERES 18–25
   {
     gender: "Mujer",
     ageRange: "18–25",
@@ -80,6 +89,7 @@ const mockTrips = [
     edu: "Secundaria",
     distanceKm: 3.8,
     durationMin: 26,
+    departamento: "Antioquia",
   },
   {
     gender: "Mujer",
@@ -89,9 +99,10 @@ const mockTrips = [
     edu: "Técnica",
     distanceKm: 4.5,
     durationMin: 29,
+    departamento: "Cundinamarca",
   },
 
-  // Mujer, 26–35
+  // MUJERES 26–35
   {
     gender: "Mujer",
     ageRange: "26–35",
@@ -100,6 +111,7 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 5.9,
     durationMin: 33,
+    departamento: "Valle del Cauca",
   },
   {
     gender: "Mujer",
@@ -109,6 +121,7 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 6.4,
     durationMin: 36,
+    departamento: "Antioquia",
   },
   {
     gender: "Mujer",
@@ -118,9 +131,10 @@ const mockTrips = [
     edu: "Posgrado",
     distanceKm: 6.9,
     durationMin: 38,
+    departamento: "Atlántico",
   },
 
-  // Mujer, 36–45
+  // MUJERES 36–45
   {
     gender: "Mujer",
     ageRange: "36–45",
@@ -129,6 +143,7 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 5.7,
     durationMin: 32,
+    departamento: "Santander",
   },
   {
     gender: "Mujer",
@@ -138,9 +153,10 @@ const mockTrips = [
     edu: "Secundaria",
     distanceKm: 4.1,
     durationMin: 27,
+    departamento: "Antioquia",
   },
 
-  // Mujer, 46–60
+  // MUJERES 46–60
   {
     gender: "Mujer",
     ageRange: "46–60",
@@ -149,6 +165,7 @@ const mockTrips = [
     edu: "Primaria",
     distanceKm: 3.2,
     durationMin: 24,
+    departamento: "Nariño",
   },
   {
     gender: "Mujer",
@@ -158,9 +175,10 @@ const mockTrips = [
     edu: "Secundaria",
     distanceKm: 3.9,
     durationMin: 26,
+    departamento: "Norte de Santander",
   },
 
-  // Hombre, 46–60
+  // HOMBRES 46–60
   {
     gender: "Hombre",
     ageRange: "46–60",
@@ -169,6 +187,7 @@ const mockTrips = [
     edu: "Universitaria",
     distanceKm: 7.0,
     durationMin: 38,
+    departamento: "Bolívar",
   },
   {
     gender: "Hombre",
@@ -178,22 +197,33 @@ const mockTrips = [
     edu: "Posgrado",
     distanceKm: 8.1,
     durationMin: 42,
+    departamento: "Antioquia",
   },
 ];
 
 export function useTravelCrossfilterRecharts() {
-  const [filters, setFilters] = useState({ gender: "Todos" });
+  const [filters, setFilters] = useState({ gender: "Todos", departamento: "Todos" });
 
   const result = useMemo(() => {
     const cf = crossfilter(mockTrips);
 
+    // ---------- Filtro por género ----------
     const genderDim = cf.dimension((d) => d.gender);
     if (filters.gender !== "Todos") {
       genderDim.filter(filters.gender);
     }
 
+    // ---------- Filtro por departamento ----------
+    const deptDimFilter = cf.dimension((d) => d.departamento);
+    if (filters.departamento !== "Todos") {
+      deptDimFilter.filter(filters.departamento);
+    }
+
+    // Viajes filtrados (útil para KPIs más avanzados)
+    const filteredTrips = genderDim.top(Infinity);
     const totalTrips = cf.groupAll().value();
 
+    // ---------- Estrato ----------
     const estratoDim = cf.dimension((d) => d.estrato);
     const estratoData = estratoDim
       .group()
@@ -201,6 +231,7 @@ export function useTravelCrossfilterRecharts() {
       .sort((a, b) => a.key - b.key)
       .map((d) => ({ label: String(d.key), value: d.value }));
 
+    // ---------- Edad ----------
     const edadDim = cf.dimension((d) => d.ageRange);
     const edadData = edadDim
       .group()
@@ -208,6 +239,7 @@ export function useTravelCrossfilterRecharts() {
       .sort((a, b) => a.key.localeCompare(b.key))
       .map((d) => ({ label: d.key, value: d.value }));
 
+    // ---------- Escolaridad ----------
     const eduDim = cf.dimension((d) => d.edu);
     const escolaridadData = eduDim
       .group()
@@ -215,6 +247,7 @@ export function useTravelCrossfilterRecharts() {
       .sort((a, b) => a.key.localeCompare(b.key))
       .map((d) => ({ label: d.key, value: d.value }));
 
+    // ---------- Ingresos ----------
     const incomeDim = cf.dimension((d) => d.income);
     const ingresosData = incomeDim
       .group()
@@ -222,31 +255,46 @@ export function useTravelCrossfilterRecharts() {
       .sort((a, b) => a.key.localeCompare(b.key))
       .map((d) => ({ label: d.key, value: d.value }));
 
+    // ---------- Género (para pie) ----------
     const generoData = genderDim
       .group()
       .all()
       .map((d) => ({ name: d.key, value: d.value }));
 
-    const filteredTrips = genderDim.top(Infinity);
+    // ---------- Departamentos (para mapa Highcharts) ----------
+    const deptDim = cf.dimension((d) => d.departamento);
+    const deptGroup = deptDim.group();
+    const departamentoData = deptGroup.all().map((d) => ({
+      name: d.key, // esto debe coincidir con properties.name del mapa de Colombia
+      value: d.value,
+    }));
 
     return {
-      totalTrips,
       filteredTrips,
+      totalTrips,
       estratoData,
       edadData,
       escolaridadData,
       ingresosData,
       generoData,
+      departamentoData,
     };
   }, [filters]);
 
+  // API de filtros hacia afuera
   const setGenderFilter = (gender) => {
     setFilters((prev) => ({ ...prev, gender }));
   };
 
+  const setDepartamentoFilter = (departamento) => {
+    setFilters((prev) => ({ ...prev, departamento }));
+  };
+
   return {
     filters,
-    setGenderFilter,
+    setFilters,       // lo dejo expuesto por si en algún lado ya lo estabas usando
+    setGenderFilter,  // este es el que usamos para el filtro de género en los tabs
+    setDepartamentoFilter, // este es el que usamos para el filtro de departamento
     ...result,
   };
 }
