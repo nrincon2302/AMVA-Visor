@@ -475,10 +475,12 @@ const DashboardSection = () => {
   const {
     filters,
     setGenderFilter,
+    setDepartamentoFilter,
     filteredTrips,
     estratoData,
     edadData,
     generoData,
+    departamentoData,
   } = useTravelCrossfilterRecharts();
 
   const {
@@ -557,10 +559,13 @@ const DashboardSection = () => {
       </section>
 
       {/* Filtros */}
-      <FilterBar />
+      <FilterBar 
+        departamentoFilter={filters.departamento}
+        onDepartamentoChange={setDepartamentoFilter}
+      />
 
       {/* Mapas */}
-      <section
+       <section
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))",
@@ -568,8 +573,16 @@ const DashboardSection = () => {
           marginBottom: 32,
         }}
       >
-        <HighchartsMapCard title="Mapa de Origen (Viajes)" />
-        <HighchartsMapCard title="Mapa de Destino (Viajes)" palette="orange" />
+        <HighchartsMapCard
+          title="Viajes por departamento"
+          departamentoData={departamentoData}
+          palette="green"
+        />
+        <HighchartsMapCard
+          title="Viajes por departamento (otra vista)"
+          departamentoData={departamentoData}
+          palette="orange"
+        />
       </section>
 
       {/* Tabs + gráficos inferiores */}
@@ -582,6 +595,7 @@ const DashboardSection = () => {
           ingresosData={ingresosData}
           filters={filters}
           onGenderFilterChange={setGenderFilter}
+          onDepartamentoFilterChange={setDepartamentoFilter}
         />
       </section>
     </main>
