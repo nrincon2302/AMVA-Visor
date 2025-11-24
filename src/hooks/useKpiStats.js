@@ -15,12 +15,12 @@ export function useKpiStats(filteredTrips) {
     const totalTrips = filteredTrips.length;
 
     const avgDistance =
-    filteredTrips.reduce((acc, trip) => acc + (trip.distanceKm ?? 0), 0) /
-    totalTrips;
+      filteredTrips.reduce((acc, trip) => acc + (trip.distanceKm ?? 0), 0) /
+      totalTrips;
 
     const avgTime =
-    filteredTrips.reduce((acc, trip) => acc + (trip.durationMin ?? 0), 0) /
-    totalTrips;
+      filteredTrips.reduce((acc, trip) => acc + (trip.durationMin ?? 0), 0) /
+      totalTrips;
 
     const men = filteredTrips.filter((t) => t.gender === "Hombre").length;
     const women = filteredTrips.filter((t) => t.gender === "Mujer").length;
