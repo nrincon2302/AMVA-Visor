@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-export function useKpiStats(filteredTrips) {
+export function useKpiStats(filteredTrips, filteredPersons) {
   return useMemo(() => {
     if (!filteredTrips || filteredTrips.length === 0) {
       return {
@@ -9,18 +9,19 @@ export function useKpiStats(filteredTrips) {
         avgTime: 0,
         pctMen: 0,
         pctWomen: 0,
+        avgTripsPerPerson: 0,
       };
     }
 
     const totalTrips = filteredTrips.length;
 
     const avgDistance =
-    filteredTrips.reduce((acc, trip) => acc + (trip.distanceKm ?? 0), 0) /
-    totalTrips;
+      filteredTrips.reduce((acc, trip) => acc + (trip.distanceKm ?? 0), 0) /
+      totalTrips;
 
     const avgTime =
-    filteredTrips.reduce((acc, trip) => acc + (trip.durationMin ?? 0), 0) /
-    totalTrips;
+      filteredTrips.reduce((acc, trip) => acc + (trip.durationMin ?? 0), 0) /
+      totalTrips;
 
     const men = filteredTrips.filter((t) => t.gender === "Hombre").length;
     const women = filteredTrips.filter((t) => t.gender === "Mujer").length;
@@ -28,12 +29,18 @@ export function useKpiStats(filteredTrips) {
     const pctMen = ((men / totalTrips) * 100).toFixed(1);
     const pctWomen = ((women / totalTrips) * 100).toFixed(1);
 
+    const peopleBase = filteredPersons?.length || 0;
+    const avgTripsPerPerson = peopleBase
+      ? Number((totalTrips / peopleBase).toFixed(2))
+      : 0;
+
     return {
       totalTrips,
       avgDistance,
       avgTime,
       pctMen,
       pctWomen,
+      avgTripsPerPerson,
     };
-  }, [filteredTrips]);
+  }, [filteredTrips, filteredPersons]);
 }

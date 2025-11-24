@@ -1,300 +1,383 @@
 // src/hooks/useTravelCrossfilterRecharts.js
 import { useMemo, useState } from "react";
-import crossfilter from "crossfilter2";
 
-// Mock de viajes con género, edad, estrato, ingresos, escolaridad y DEPARTAMENTO
-const mockTrips = [
-  // HOMBRES 18–25
+const households = [
+  { id: "H1", municipio: "Medellín", macrozona: "Centro", size: 3 },
+  { id: "H2", municipio: "Medellín", macrozona: "Sur", size: 4 },
+  { id: "H3", municipio: "Medellín", macrozona: "Norte", size: 2 },
+  { id: "H4", municipio: "Medellín", macrozona: "Occidente", size: 5 },
+  { id: "H5", municipio: "Medellín", macrozona: "Centro", size: 2 },
+  { id: "H6", municipio: "Medellín", macrozona: "Sur", size: 3 },
+];
+
+const persons = [
   {
-    gender: "Hombre",
+    id: "P1",
+    householdId: "H1",
+    municipio: "Medellín",
+    macrozona: "Centro",
     ageRange: "18–25",
+    gender: "Mujer",
     estrato: 2,
     income: "1–2 SM",
     edu: "Secundaria",
-    distanceKm: 4.2,
-    durationMin: 28,
-    departamento: "Antioquia",
   },
   {
-    gender: "Hombre",
-    ageRange: "18–25",
-    estrato: 2,
-    income: "1–2 SM",
-    edu: "Técnica",
-    distanceKm: 5.1,
-    durationMin: 32,
-    departamento: "Antioquia",
-  },
-
-  // HOMBRES 26–35
-  {
-    gender: "Hombre",
+    id: "P2",
+    householdId: "H1",
+    municipio: "Medellín",
+    macrozona: "Centro",
     ageRange: "26–35",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 6.3,
-    durationMin: 35,
-    departamento: "Cundinamarca",
-  },
-  {
     gender: "Hombre",
-    ageRange: "26–35",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 6.8,
-    durationMin: 37,
-    departamento: "Valle del Cauca",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "26–35",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Posgrado",
-    distanceKm: 7.5,
-    durationMin: 40,
-    departamento: "Atlántico",
-  },
-
-  // HOMBRES 36–45
-  {
-    gender: "Hombre",
-    ageRange: "36–45",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 6.0,
-    durationMin: 34,
-    departamento: "Santander",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "36–45",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Universitaria",
-    distanceKm: 7.2,
-    durationMin: 39,
-    departamento: "Antioquia",
-  },
-
-  // MUJERES 18–25
-  {
-    gender: "Mujer",
-    ageRange: "18–25",
-    estrato: 2,
-    income: "1–2 SM",
-    edu: "Secundaria",
-    distanceKm: 3.8,
-    durationMin: 26,
-    departamento: "Antioquia",
-  },
-  {
-    gender: "Mujer",
-    ageRange: "18–25",
     estrato: 3,
     income: "2–4 SM",
     edu: "Técnica",
-    distanceKm: 4.5,
-    durationMin: 29,
-    departamento: "Cundinamarca",
   },
-
-  // MUJERES 26–35
   {
-    gender: "Mujer",
+    id: "P3",
+    householdId: "H2",
+    municipio: "Medellín",
+    macrozona: "Sur",
     ageRange: "26–35",
+    gender: "Mujer",
     estrato: 3,
     income: "2–4 SM",
     edu: "Universitaria",
-    distanceKm: 5.9,
-    durationMin: 33,
-    departamento: "Valle del Cauca",
   },
   {
-    gender: "Mujer",
-    ageRange: "26–35",
+    id: "P4",
+    householdId: "H2",
+    municipio: "Medellín",
+    macrozona: "Sur",
+    ageRange: "36–45",
+    gender: "Hombre",
     estrato: 4,
     income: "4–6 SM",
     edu: "Universitaria",
-    distanceKm: 6.4,
-    durationMin: 36,
-    departamento: "Antioquia",
   },
   {
-    gender: "Mujer",
-    ageRange: "26–35",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Posgrado",
-    distanceKm: 6.9,
-    durationMin: 38,
-    departamento: "Atlántico",
-  },
-
-  // MUJERES 36–45
-  {
-    gender: "Mujer",
-    ageRange: "36–45",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 5.7,
-    durationMin: 32,
-    departamento: "Santander",
-  },
-  {
-    gender: "Mujer",
-    ageRange: "36–45",
+    id: "P5",
+    householdId: "H3",
+    municipio: "Medellín",
+    macrozona: "Norte",
+    ageRange: "18–25",
+    gender: "Hombre",
     estrato: 2,
     income: "1–2 SM",
     edu: "Secundaria",
-    distanceKm: 4.1,
-    durationMin: 27,
-    departamento: "Antioquia",
   },
-
-  // MUJERES 46–60
   {
+    id: "P6",
+    householdId: "H3",
+    municipio: "Medellín",
+    macrozona: "Norte",
+    ageRange: "36–45",
     gender: "Mujer",
+    estrato: 3,
+    income: "2–4 SM",
+    edu: "Posgrado",
+  },
+  {
+    id: "P7",
+    householdId: "H4",
+    municipio: "Medellín",
+    macrozona: "Occidente",
     ageRange: "46–60",
+    gender: "Mujer",
     estrato: 2,
     income: "0–1 SM",
     edu: "Primaria",
-    distanceKm: 3.2,
-    durationMin: 24,
-    departamento: "Nariño",
   },
   {
-    gender: "Mujer",
-    ageRange: "46–60",
-    estrato: 3,
-    income: "1–2 SM",
-    edu: "Secundaria",
-    distanceKm: 3.9,
-    durationMin: 26,
-    departamento: "Norte de Santander",
-  },
-
-  // HOMBRES 46–60
-  {
+    id: "P8",
+    householdId: "H4",
+    municipio: "Medellín",
+    macrozona: "Occidente",
+    ageRange: "26–35",
     gender: "Hombre",
+    estrato: 3,
+    income: "2–4 SM",
+    edu: "Universitaria",
+  },
+  {
+    id: "P9",
+    householdId: "H5",
+    municipio: "Medellín",
+    macrozona: "Centro",
+    ageRange: "18–25",
+    gender: "Mujer",
+    estrato: 1,
+    income: "0–1 SM",
+    edu: "Primaria",
+  },
+  {
+    id: "P10",
+    householdId: "H6",
+    municipio: "Medellín",
+    macrozona: "Sur",
     ageRange: "46–60",
+    gender: "Hombre",
     estrato: 4,
     income: "4–6 SM",
-    edu: "Universitaria",
-    distanceKm: 7.0,
-    durationMin: 38,
-    departamento: "Bolívar",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "46–60",
-    estrato: 5,
-    income: "6+ SM",
     edu: "Posgrado",
-    distanceKm: 8.1,
-    durationMin: 42,
-    departamento: "Antioquia",
   },
 ];
 
+const trips = [
+  {
+    id: "T1",
+    personId: "P1",
+    originMacro: "Centro",
+    destinationMacro: "Sur",
+    distanceKm: 4.2,
+    durationMin: 28,
+    mode: "Metro",
+  },
+  {
+    id: "T2",
+    personId: "P1",
+    originMacro: "Centro",
+    destinationMacro: "Centro",
+    distanceKm: 1.4,
+    durationMin: 12,
+    mode: "Caminata",
+  },
+  {
+    id: "T3",
+    personId: "P2",
+    originMacro: "Centro",
+    destinationMacro: "Sur",
+    distanceKm: 5.1,
+    durationMin: 32,
+    mode: "Metro",
+  },
+  {
+    id: "T4",
+    personId: "P3",
+    originMacro: "Sur",
+    destinationMacro: "Centro",
+    distanceKm: 6.3,
+    durationMin: 35,
+    mode: "Bus",
+  },
+  {
+    id: "T5",
+    personId: "P4",
+    originMacro: "Sur",
+    destinationMacro: "Sur",
+    distanceKm: 3.2,
+    durationMin: 22,
+    mode: "Moto",
+  },
+  {
+    id: "T6",
+    personId: "P5",
+    originMacro: "Norte",
+    destinationMacro: "Centro",
+    distanceKm: 5.7,
+    durationMin: 30,
+    mode: "Bus",
+  },
+  {
+    id: "T7",
+    personId: "P6",
+    originMacro: "Norte",
+    destinationMacro: "Norte",
+    distanceKm: 2.9,
+    durationMin: 18,
+    mode: "Bicicleta",
+  },
+  {
+    id: "T8",
+    personId: "P7",
+    originMacro: "Occidente",
+    destinationMacro: "Centro",
+    distanceKm: 7.2,
+    durationMin: 42,
+    mode: "Bus",
+  },
+  {
+    id: "T9",
+    personId: "P8",
+    originMacro: "Occidente",
+    destinationMacro: "Sur",
+    distanceKm: 4.4,
+    durationMin: 26,
+    mode: "Carro",
+  },
+  {
+    id: "T10",
+    personId: "P9",
+    originMacro: "Centro",
+    destinationMacro: "Centro",
+    distanceKm: 1.0,
+    durationMin: 10,
+    mode: "Caminata",
+  },
+  {
+    id: "T11",
+    personId: "P10",
+    originMacro: "Sur",
+    destinationMacro: "Centro",
+    distanceKm: 6.7,
+    durationMin: 34,
+    mode: "Carro",
+  },
+];
+
+const MACROZONAS_POR_MUNICIPIO = {
+  Medellín: ["Centro", "Sur", "Norte", "Occidente"],
+};
+
+const THEMATIC_OPTIONS = {
+  gender: ["Hombre", "Mujer"],
+  ageRange: ["18–25", "26–35", "36–45", "46–60"],
+  estrato: [1, 2, 3, 4],
+  income: ["0–1 SM", "1–2 SM", "2–4 SM", "4–6 SM"],
+  mode: ["Metro", "Bus", "Moto", "Carro", "Bicicleta", "Caminata"],
+};
+
+function aggregatePercentages(data, field) {
+  if (!data.length) return [];
+  const counts = data.reduce((acc, item) => {
+    const key = item[field];
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([label, value]) => ({
+      label,
+      value: Number(((value / data.length) * 100).toFixed(1)),
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+function aggregatePie(data, field) {
+  return aggregatePercentages(data, field).map((item) => ({
+    name: item.label,
+    value: item.value,
+  }));
+}
+
+function aggregateHeat(data, field) {
+  const counts = data.reduce((acc, item) => {
+    const key = item[field];
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts).map(([name, value]) => ({ name, value }));
+}
+
 export function useTravelCrossfilterRecharts() {
-  const [filters, setFilters] = useState({ gender: "Todos", departamento: "Todos" });
+  const [municipio, setMunicipio] = useState("Medellín");
+  const [macrozona, setMacrozona] = useState("Todas");
+  const [thematicFilters, setThematicFilters] = useState({
+    gender: [],
+    ageRange: [],
+    estrato: [],
+    income: [],
+    mode: [],
+  });
 
-  const result = useMemo(() => {
-    const cf = crossfilter(mockTrips);
+  const macrozones = MACROZONAS_POR_MUNICIPIO[municipio] || [];
 
-    // ---------- Filtro por género ----------
-    const genderDim = cf.dimension((d) => d.gender);
-    if (filters.gender !== "Todos") {
-      genderDim.filter(filters.gender);
-    }
+  const filtered = useMemo(() => {
+    const personsFiltered = persons.filter((person) => {
+      const matchesMunicipio = municipio === "Todos" || person.municipio === municipio;
+      const matchesMacrozona =
+        macrozona === "Todas" || macrozona === "" || person.macrozona === macrozona;
 
-    // ---------- Filtro por departamento ----------
-    const deptDimFilter = cf.dimension((d) => d.departamento);
-    if (filters.departamento !== "Todos") {
-      deptDimFilter.filter(filters.departamento);
-    }
+      const thematicChecks = Object.entries(thematicFilters).every(([key, values]) => {
+        if (!values.length) return true;
+        return values.includes(person[key]);
+      });
 
-    // Viajes filtrados (útil para KPIs más avanzados)
-    const filteredTrips = genderDim.top(Infinity);
-    const totalTrips = cf.groupAll().value();
+      return matchesMunicipio && matchesMacrozona && thematicChecks;
+    });
 
-    // ---------- Estrato ----------
-    const estratoDim = cf.dimension((d) => d.estrato);
-    const estratoData = estratoDim
-      .group()
-      .all()
-      .sort((a, b) => a.key - b.key)
-      .map((d) => ({ label: String(d.key), value: d.value }));
+    const personIds = new Set(personsFiltered.map((p) => p.id));
 
-    // ---------- Edad ----------
-    const edadDim = cf.dimension((d) => d.ageRange);
-    const edadData = edadDim
-      .group()
-      .all()
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((d) => ({ label: d.key, value: d.value }));
+    const tripsFiltered = trips.filter((trip) => {
+      if (!personIds.has(trip.personId)) return false;
+      if (thematicFilters.mode.length && !thematicFilters.mode.includes(trip.mode)) {
+        return false;
+      }
+      return true;
+    });
 
-    // ---------- Escolaridad ----------
-    const eduDim = cf.dimension((d) => d.edu);
-    const escolaridadData = eduDim
-      .group()
-      .all()
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((d) => ({ label: d.key, value: d.value }));
+    const enrichedTrips = tripsFiltered.map((trip) => {
+      const person = persons.find((p) => p.id === trip.personId);
+      return { ...trip, ...person };
+    });
 
-    // ---------- Ingresos ----------
-    const incomeDim = cf.dimension((d) => d.income);
-    const ingresosData = incomeDim
-      .group()
-      .all()
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((d) => ({ label: d.key, value: d.value }));
+    return { personsFiltered, tripsFiltered: enrichedTrips };
+  }, [municipio, macrozona, thematicFilters]);
 
-    // ---------- Género (para pie) ----------
-    const generoData = genderDim
-      .group()
-      .all()
-      .map((d) => ({ name: d.key, value: d.value }));
+  const estratoData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "estrato"),
+    [filtered.tripsFiltered]
+  );
+  const edadData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "ageRange"),
+    [filtered.tripsFiltered]
+  );
+  const generoData = useMemo(
+    () => aggregatePie(filtered.tripsFiltered, "gender"),
+    [filtered.tripsFiltered]
+  );
+  const escolaridadData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "edu"),
+    [filtered.tripsFiltered]
+  );
+  const ingresosData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "income"),
+    [filtered.tripsFiltered]
+  );
+  const modeData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "mode"),
+    [filtered.tripsFiltered]
+  );
 
-    // ---------- Departamentos (para mapa Highcharts) ----------
-    const deptDim = cf.dimension((d) => d.departamento);
-    const deptGroup = deptDim.group();
-    const departamentoData = deptGroup.all().map((d) => ({
-      name: d.key, // esto debe coincidir con properties.name del mapa de Colombia
-      value: d.value,
-    }));
+  const originHeatData = useMemo(
+    () => aggregateHeat(filtered.tripsFiltered, "originMacro"),
+    [filtered.tripsFiltered]
+  );
+  const destinationHeatData = useMemo(
+    () => aggregateHeat(filtered.tripsFiltered, "destinationMacro"),
+    [filtered.tripsFiltered]
+  );
 
-    return {
-      filteredTrips,
-      totalTrips,
-      estratoData,
-      edadData,
-      escolaridadData,
-      ingresosData,
-      generoData,
-      departamentoData,
-    };
-  }, [filters]);
-
-  // API de filtros hacia afuera
-  const setGenderFilter = (gender) => {
-    setFilters((prev) => ({ ...prev, gender }));
+  const filters = {
+    municipio,
+    macrozona,
+    thematicFilters,
   };
 
-  const setDepartamentoFilter = (departamento) => {
-    setFilters((prev) => ({ ...prev, departamento }));
+  const setThematicValue = (key, values) => {
+    setThematicFilters((prev) => ({ ...prev, [key]: values }));
   };
 
   return {
+    households,
+    persons,
+    trips,
     filters,
-    setFilters,       // lo dejo expuesto por si en algún lado ya lo estabas usando
-    setGenderFilter,  // este es el que usamos para el filtro de género en los tabs
-    setDepartamentoFilter, // este es el que usamos para el filtro de departamento
-    ...result,
+    macrozones,
+    filteredTrips: filtered.tripsFiltered,
+    filteredPersons: filtered.personsFiltered,
+    estratoData,
+    edadData,
+    generoData,
+    escolaridadData,
+    ingresosData,
+    modeData,
+    originHeatData,
+    destinationHeatData,
+    setMunicipio,
+    setMacrozona,
+    setThematicValue,
+    thematicOptions: THEMATIC_OPTIONS,
   };
 }

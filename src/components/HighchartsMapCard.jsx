@@ -3,9 +3,9 @@ import React from "react";
 import Highcharts from "highcharts/highmaps";
 import HighchartsReact from "highcharts-react-official";
 import ChartCard from "./ChartCard";
-import mapData from "@highcharts/map-collection/countries/co/co-all.geo.json";
+import mapData from "../assets/medellin-zones.geo.json";
 
-const HighchartsMapCard = ({ title, departamentoData, palette = "green" }) => {
+const HighchartsMapCard = ({ title, data, palette = "green" }) => {
   const colorAxis =
     palette === "orange"
       ? {
@@ -58,14 +58,13 @@ const HighchartsMapCard = ({ title, departamentoData, palette = "green" }) => {
     series: [
       {
         type: "map",
-        mapData: mapData,
-        data: departamentoData || [],
-        // name en el GeoJSON vs name en data
+        mapData,
+        data: data || [],
         joinBy: ["name", "name"],
         name: "Viajes",
         borderColor: "#ffffff",
         borderWidth: 0.5,
-        nullColor: "#f3f4f6", // departamentos sin datos = gris claro
+        nullColor: "#f3f4f6",
         states: {
           hover: { brightness: 0.1 },
         },

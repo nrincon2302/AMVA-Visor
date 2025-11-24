@@ -1,0 +1,73 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "Centro",
+      "properties": { "name": "Centro" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [0, 0],
+            [0, 5],
+            [5, 5],
+            [5, 0],
+            [0, 0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "Sur",
+      "properties": { "name": "Sur" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [0, -5],
+            [0, 0],
+            [5, 0],
+            [5, -5],
+            [0, -5]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "Norte",
+      "properties": { "name": "Norte" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [0, 5],
+            [0, 10],
+            [5, 10],
+            [5, 5],
+            [0, 5]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "Occidente",
+      "properties": { "name": "Occidente" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-5, 0],
+            [-5, 5],
+            [0, 5],
+            [0, 0],
+            [-5, 0]
+          ]
+        ]
+      }
+    }
+  ]
+}
