@@ -7,6 +7,14 @@ const persons = dataset.persons;
 const trips = dataset.trips;
 const MACROZONAS_POR_MUNICIPIO = dataset.metadata.macrozonasPorMunicipio;
 const MUNICIPIOS = dataset.metadata.municipios;
+const formatMacrozonaLabel = (municipio, macrozona) =>
+  `${municipio} - ${macrozona}`;
+
+const ALL_MACROZONAS = Object.entries(MACROZONAS_POR_MUNICIPIO)
+  .filter(([municipio]) => municipio !== "Zona Externa" && municipio !== "AMVA General")
+  .flatMap(([municipio, macros]) =>
+    macros.map((macro) => formatMacrozonaLabel(municipio, macro))
+  );
 
 const THEMATIC_OPTIONS = {
   gender: ["Hombre", "Mujer"],
@@ -15,6 +23,10 @@ const THEMATIC_OPTIONS = {
   income: ["0–1 SM", "1–2 SM", "2–4 SM", "4–6 SM", "6+ SM"],
   mode: ["Metro", "Bus", "Moto", "Carro", "Bicicleta", "Caminata", "Taxi", "Tranvía"],
 };
+
+const PERSON_THEMATIC_KEYS = Object.keys(THEMATIC_OPTIONS).filter(
+  (key) => key !== "mode"
+);
 
 function aggregatePercentages(data, field) {
   if (!data.length) return [];
@@ -61,41 +73,79 @@ export function useTravelCrossfilterRecharts() {
   });
 
   const macrozones =
-    municipio === "AMVA General"
-      ? ["AMVA General"]
-      : MACROZONAS_POR_MUNICIPIO[municipio] || [];
+    municipio === "AMVA General" || municipio === "Todos"
+      ? ALL_MACROZONAS
+      : (MACROZONAS_POR_MUNICIPIO[municipio] || []).map((macro) =>
+          formatMacrozonaLabel(municipio, macro)
+        );
+
+  const personsById = useMemo(
+    () => Object.fromEntries(persons.map((p) => [p.id, p])),
+    []
+  );
 
   const filtered = useMemo(() => {
-    const personsFiltered = persons.filter((person) => {
-      const matchesMunicipio =
-        municipio === "AMVA General" || municipio === "Todos" || person.municipio === municipio;
-      const matchesMacrozona =
-        macrozona === "Todas" || municipio === "AMVA General" || person.macrozona === macrozona;
-
-      const thematicChecks = Object.entries(thematicFilters).every(([key, values]) => {
-        if (!values.length) return true;
+    const thematicMatch = (person) =>
+      PERSON_THEMATIC_KEYS.every((key) => {
+        const values = thematicFilters[key];
+        if (!values?.length) return true;
         return values.includes(person[key]);
       });
 
-      return matchesMunicipio && matchesMacrozona && thematicChecks;
-    });
-
-    const personIds = new Set(personsFiltered.map((p) => p.id));
+    const personsFiltered = persons.filter(thematicMatch);
+    const thematicPersonIds = new Set(personsFiltered.map((p) => p.id));
 
     const tripsFiltered = trips.filter((trip) => {
-      if (!personIds.has(trip.personId)) return false;
+      if (!thematicPersonIds.has(trip.personId)) return false;
+
+      const person = personsById[trip.personId];
+      const originMunicipio = person?.municipio || "AMVA General";
+      const originKey = formatMacrozonaLabel(originMunicipio, trip.originMacro);
+      const destinationKey = formatMacrozonaLabel(
+        trip.destinationMunicipio,
+        trip.destinationMacro
+      );
+
+      const matchesMunicipio =
+        municipio === "AMVA General" ||
+        municipio === "Todos" ||
+        originMunicipio === municipio ||
+        trip.destinationMunicipio === municipio;
+
+      const matchesMacrozona =
+        macrozona === "Todas" ||
+        originKey === macrozona ||
+        destinationKey === macrozona;
+
+      if (!matchesMunicipio || !matchesMacrozona) return false;
+
       if (thematicFilters.mode.length && !thematicFilters.mode.includes(trip.mode)) {
         return false;
       }
+
       return true;
     });
 
     const enrichedTrips = tripsFiltered.map((trip) => {
-      const person = persons.find((p) => p.id === trip.personId);
-      return { ...trip, ...person };
+      const person = personsById[trip.personId];
+      const originMunicipio = person?.municipio || "AMVA General";
+
+      return {
+        ...trip,
+        ...person,
+        originMunicipio,
+        originKey: formatMacrozonaLabel(originMunicipio, trip.originMacro),
+        destinationKey: formatMacrozonaLabel(
+          trip.destinationMunicipio,
+          trip.destinationMacro
+        ),
+      };
     });
 
-    return { personsFiltered, tripsFiltered: enrichedTrips };
+    const activePersonIds = new Set(enrichedTrips.map((trip) => trip.personId));
+    const personsWithTrips = personsFiltered.filter((person) => activePersonIds.has(person.id));
+
+    return { personsFiltered: personsWithTrips, tripsFiltered: enrichedTrips };
   }, [municipio, macrozona, thematicFilters]);
 
   const estratoData = useMemo(
@@ -124,12 +174,28 @@ export function useTravelCrossfilterRecharts() {
   );
 
   const originHeatData = useMemo(
-    () => aggregateHeat(filtered.tripsFiltered, "originMacro"),
-    [filtered.tripsFiltered]
+    () => {
+      const heat = aggregateHeat(filtered.tripsFiltered, "originKey");
+
+      if (municipio === "AMVA General" || municipio === "Todos") {
+        return heat;
+      }
+
+      return heat.filter((item) => item.name?.startsWith(`${municipio} - `));
+    },
+    [filtered.tripsFiltered, municipio]
   );
   const destinationHeatData = useMemo(
-    () => aggregateHeat(filtered.tripsFiltered, "destinationMacro"),
-    [filtered.tripsFiltered]
+    () => {
+      const heat = aggregateHeat(filtered.tripsFiltered, "destinationKey");
+
+      if (municipio === "AMVA General" || municipio === "Todos") {
+        return heat;
+      }
+
+      return heat.filter((item) => item.name?.startsWith(`${municipio} - `));
+    },
+    [filtered.tripsFiltered, municipio]
   );
 
   const filters = {
