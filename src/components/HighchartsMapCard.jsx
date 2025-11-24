@@ -32,7 +32,7 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
   const options = {
     chart: {
       map: mapData,
-      height: 260,
+      height: 320,
       spacing: [0, 0, 0, 0],
     },
     title: { text: "" },

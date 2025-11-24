@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-export function useKpiStats(filteredTrips, filteredPersons) {
+export function useKpiStats(filteredTrips) {
   return useMemo(() => {
     if (!filteredTrips || filteredTrips.length === 0) {
       return {
@@ -9,7 +9,6 @@ export function useKpiStats(filteredTrips, filteredPersons) {
         avgTime: 0,
         pctMen: 0,
         pctWomen: 0,
-        avgTripsPerPerson: 0,
       };
     }
 
@@ -29,18 +28,12 @@ export function useKpiStats(filteredTrips, filteredPersons) {
     const pctMen = ((men / totalTrips) * 100).toFixed(1);
     const pctWomen = ((women / totalTrips) * 100).toFixed(1);
 
-    const peopleBase = filteredPersons?.length || 0;
-    const avgTripsPerPerson = peopleBase
-      ? Number((totalTrips / peopleBase).toFixed(2))
-      : 0;
-
     return {
       totalTrips,
       avgDistance,
       avgTime,
       pctMen,
       pctWomen,
-      avgTripsPerPerson,
     };
-  }, [filteredTrips, filteredPersons]);
+  }, [filteredTrips]);
 }

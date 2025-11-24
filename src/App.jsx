@@ -482,7 +482,6 @@ const DashboardSection = () => {
     setThematicValue,
     thematicOptions,
     filteredTrips,
-    filteredPersons,
     estratoData,
     edadData,
     generoData,
@@ -497,11 +496,12 @@ const DashboardSection = () => {
     totalTrips,
     avgDistance,
     avgTime,
-    avgTripsPerPerson,
-  } = useKpiStats(filteredTrips, filteredPersons);
+    pctMen,
+    pctWomen,
+  } = useKpiStats(filteredTrips);
 
   const exportReport = (format) => {
-    const summary = `Reporte de viajes (formato ${format})\nMunicipio: ${filters.municipio}\nMacrozona: ${filters.macrozona}\nViajes: ${totalTrips}\nPromedio por persona: ${avgTripsPerPerson}`;
+    const summary = `Reporte de viajes (formato ${format})\nMunicipio: ${filters.municipio}\nMacrozona: ${filters.macrozona}\nViajes filtrados: ${totalTrips}\nParticipación mujeres: ${pctWomen}%\nParticipación hombres: ${pctMen}%`;
     const blob = new Blob([summary], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -601,13 +601,6 @@ const DashboardSection = () => {
           value={`${avgDistance.toFixed(1)} km`}
           subLabel="Basado en datos filtrados"
           accentColor="#f97316"
-        />
-
-        <KpiCard
-          label="Viajes promedio por persona"
-          value={avgTripsPerPerson.toString()}
-          subLabel="Personas filtradas en la muestra"
-          accentColor="#8b5cf6"
         />
       </section>
 

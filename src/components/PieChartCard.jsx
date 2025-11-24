@@ -19,7 +19,7 @@ const PieChartCard = ({
 }) => {
   return (
     <ChartCard title={title}>
-      <ResponsiveContainer width="100%" height={220}>
+      <ResponsiveContainer width="100%" height={280}>
         <PieChart>
           <Pie
             data={data}
@@ -27,8 +27,8 @@ const PieChartCard = ({
             nameKey={nameKey}
             cx="50%"
             cy="50%"
-            outerRadius={80}
-            innerRadius={45}
+            outerRadius={95}
+            innerRadius={52}
             paddingAngle={2}
           >
             {data.map((entry, index) => (
