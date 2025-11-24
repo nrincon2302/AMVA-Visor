@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import KpiCard from "./components/KpiCard";
 import FilterBar from "./components/FilterBar";
 import HighchartsMapCard from "./components/HighchartsMapCard";
@@ -477,6 +477,7 @@ const DashboardSection = () => {
     setGenderFilter,
     setDepartamentoFilter,
     filteredTrips,
+    filteredPersons,
     estratoData,
     edadData,
     generoData,
@@ -489,6 +490,48 @@ const DashboardSection = () => {
     avgTime,
   } = useKpiStats(filteredTrips);
 
+  const dashboardRef = useRef(null);
+
+  const loadExternalLib = async (url, globalName) => {
+    if (window[globalName]) return window[globalName];
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = url;
+      script.async = true;
+      script.onload = () => resolve(window[globalName]);
+      script.onerror = () => reject(new Error(`No se pudo cargar ${url}`));
+      document.body.appendChild(script);
+    });
+  };
+
+  const captureDashboardImage = async () => {
+    if (!dashboardRef.current) {
+      throw new Error("No se pudo encontrar el contenedor del visor para exportar");
+    }
+
+    const html2canvas = await loadExternalLib(
+      "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
+      "html2canvas"
+    );
+
+    const canvas = await html2canvas(dashboardRef.current, {
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+
+    return canvas.toDataURL("image/png");
+  };
+
+  const downloadBlob = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
   const escolaridadData = [
     { label: "Primaria", value: 6000 },
     { label: "Secundaria", value: 19000 },
@@ -505,8 +548,128 @@ const DashboardSection = () => {
     { label: "6+ SM", value: 3000 },
   ];
 
+  const exportReport = (format) => {
+    const filename = `reporte-viajes.${
+      format === "excel" ? "xlsx" : format === "word" ? "doc" : "pdf"
+    }`;
+
+    const summaryText = `Municipio: ${filters.municipio}\nMacrozona: ${filters.macrozona}\nViajes filtrados: ${totalTrips}\nTiempo promedio: ${avgTime.toFixed(
+      1
+    )} min\nDistancia promedio: ${avgDistance.toFixed(
+      1
+    )} km\nParticipación mujeres: ${pctWomen}%\nParticipación hombres: ${pctMen}%`;
+
+    const buildExcel = async () => {
+      const XLSX = await loadExternalLib(
+        "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+        "XLSX"
+      );
+
+      const workbook = XLSX.utils.book_new();
+
+      const summarySheet = XLSX.utils.json_to_sheet([
+        {
+          Municipio: filters.municipio,
+          Macrozona: filters.macrozona,
+          "Viajes filtrados": totalTrips,
+          "Tiempo promedio (min)": Number(avgTime.toFixed(1)),
+          "Distancia promedio (km)": Number(avgDistance.toFixed(1)),
+          "% Mujeres": pctWomen,
+          "% Hombres": pctMen,
+        },
+      ]);
+
+      const tripsSheet = XLSX.utils.json_to_sheet(
+        filteredTrips.map((trip) => ({
+          Persona: trip.personId,
+          MunicipioOrigen: trip.originMunicipio,
+          MacrozonaOrigen: trip.originMacro,
+          MunicipioDestino: trip.destinationMunicipio,
+          MacrozonaDestino: trip.destinationMacro,
+          Modo: trip.mode,
+          DuracionMin: trip.durationMin,
+          DistanciaKm: trip.distanceKm,
+          Genero: trip.gender,
+          Edad: trip.ageRange,
+          Estrato: trip.estrato,
+          Ingreso: trip.income,
+          Escolaridad: trip.edu,
+        }))
+      );
+
+      const personsSheet = XLSX.utils.json_to_sheet(
+        (filteredPersons || []).map((person) => ({
+          Persona: person.id,
+          Municipio: person.municipio,
+          Genero: person.gender,
+          Edad: person.ageRange,
+          Estrato: person.estrato,
+          Ingreso: person.income,
+          Escolaridad: person.edu,
+          Vehiculo: person.vehicleOwnership,
+        }))
+      );
+
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumen");
+      XLSX.utils.book_append_sheet(workbook, tripsSheet, "Viajes");
+      XLSX.utils.book_append_sheet(workbook, personsSheet, "Personas");
+
+      const wbout = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+
+      downloadBlob(new Blob([wbout], { type: "application/octet-stream" }), filename);
+    };
+
+    const buildPdf = async () => {
+      const { jsPDF } = await loadExternalLib(
+        "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js",
+        "jspdf"
+      );
+
+      const imageData = await captureDashboardImage();
+      const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+
+      pdf.setFontSize(12);
+      pdf.text("Reporte de viajes", 20, 28);
+      pdf.text(summaryText.split("\n"), 20, 48);
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imageData);
+      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
+
+      pdf.addImage(imageData, "PNG", 20, 140, pageWidth - 40, imgHeight);
+      pdf.save(filename);
+    };
+
+    const buildWord = async () => {
+      const imageData = await captureDashboardImage();
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial, sans-serif;}h1{color:#16a34a;}ul{padding-left:18px;}li{margin-bottom:4px;}img{max-width:100%;}</style></head><body><h1>Reporte de viajes</h1><ul>${summaryText
+        .split("\n")
+        .map((line) => `<li>${line}</li>`)
+        .join("")}</ul><h2>Captura del visor</h2><img src="${imageData}" alt="Visor" /></body></html>`;
+
+      const blob = new Blob([html], { type: "application/msword" });
+      downloadBlob(blob, filename);
+    };
+
+    if (format === "excel") {
+      buildExcel();
+      return;
+    }
+
+    if (format === "word") {
+      buildWord();
+      return;
+    }
+
+    buildPdf();
+  };
+
   return (
     <main
+      ref={dashboardRef}
       style={{
         width: "100%",
         maxWidth: "1500px",

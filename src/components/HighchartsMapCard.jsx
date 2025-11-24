@@ -3,6 +3,13 @@ import React from "react";
 import Highcharts from "highcharts/highmaps";
 import HighchartsReact from "highcharts-react-official";
 import ChartCard from "./ChartCard";
+import mapData from "../assets/macrozonas.geo.json";
+import TiledWebMapModule from "highcharts/modules/tiledwebmap";
+
+const TiledWebMap = TiledWebMapModule?.default || TiledWebMapModule;
+if (typeof TiledWebMap === "function") {
+  TiledWebMap(Highcharts);
+}
 import mapData from "@highcharts/map-collection/countries/co/co-all.geo.json";
 
 const HighchartsMapCard = ({ title, departamentoData, palette = "green" }) => {
@@ -35,6 +42,16 @@ const HighchartsMapCard = ({ title, departamentoData, palette = "green" }) => {
       height: 260,
       spacing: [0, 0, 0, 0],
     },
+    mapView: {
+      projection: {
+        name: "WebMercator",
+      },
+      center: {
+        lat: 6.2442,
+        lon: -75.5812,
+      },
+      zoom: 10,
+    },
     title: { text: "" },
     credits: { enabled: false },
     legend: {
@@ -53,9 +70,25 @@ const HighchartsMapCard = ({ title, departamentoData, palette = "green" }) => {
     },
     colorAxis,
     tooltip: {
-      pointFormat: "<b>{point.name}</b><br/>Viajes: {point.value:,.0f}",
+      useHTML: true,
+      pointFormatter: function pointFormatter() {
+        const [municipio, macrozona] = (this.name || "").split(" - ");
+        return `<span style="font-weight:600">${macrozona || this.name}</span><br/>Municipio: ${
+          municipio || ""
+        }<br/>Viajes: ${Highcharts.numberFormat(this.value || 0, 0)}`;
+      },
     },
     series: [
+      {
+        type: "tiledwebmap",
+        name: "Base OSM",
+        provider: {
+          type: "osm",
+          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        },
+        opacity: 0.6,
+        zIndex: 0,
+      },
       {
         type: "map",
         mapData: mapData,
@@ -65,10 +98,11 @@ const HighchartsMapCard = ({ title, departamentoData, palette = "green" }) => {
         name: "Viajes",
         borderColor: "#ffffff",
         borderWidth: 0.5,
-        nullColor: "#f3f4f6", // departamentos sin datos = gris claro
+        nullColor: "rgba(243, 244, 246, 0.6)",
         states: {
           hover: { brightness: 0.1 },
         },
+        zIndex: 1,
       },
     ],
   };

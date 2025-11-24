@@ -1,289 +1,207 @@
 // src/hooks/useTravelCrossfilterRecharts.js
 import { useMemo, useState } from "react";
-import crossfilter from "crossfilter2";
+import dataset from "../data/travelData.json";
 
-// Mock de viajes con género, edad, estrato, ingresos, escolaridad y DEPARTAMENTO
-const mockTrips = [
-  // HOMBRES 18–25
-  {
-    gender: "Hombre",
-    ageRange: "18–25",
-    estrato: 2,
-    income: "1–2 SM",
-    edu: "Secundaria",
-    distanceKm: 4.2,
-    durationMin: 28,
-    departamento: "Antioquia",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "18–25",
-    estrato: 2,
-    income: "1–2 SM",
-    edu: "Técnica",
-    distanceKm: 5.1,
-    durationMin: 32,
-    departamento: "Antioquia",
-  },
+const households = dataset.households;
+const persons = dataset.persons;
+const trips = dataset.trips;
+const MACROZONAS_POR_MUNICIPIO = dataset.metadata.macrozonasPorMunicipio;
+const MUNICIPIOS = dataset.metadata.municipios;
+const formatMacrozonaLabel = (municipio, macrozona) =>
+  `${municipio} - ${macrozona}`;
 
-  // HOMBRES 26–35
-  {
-    gender: "Hombre",
-    ageRange: "26–35",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 6.3,
-    durationMin: 35,
-    departamento: "Cundinamarca",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "26–35",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 6.8,
-    durationMin: 37,
-    departamento: "Valle del Cauca",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "26–35",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Posgrado",
-    distanceKm: 7.5,
-    durationMin: 40,
-    departamento: "Atlántico",
-  },
+const ALL_MACROZONAS = Object.entries(MACROZONAS_POR_MUNICIPIO)
+  .filter(([municipio]) => municipio !== "Zona Externa" && municipio !== "AMVA General")
+  .flatMap(([municipio, macros]) =>
+    macros.map((macro) => formatMacrozonaLabel(municipio, macro))
+  );
 
-  // HOMBRES 36–45
-  {
-    gender: "Hombre",
-    ageRange: "36–45",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 6.0,
-    durationMin: 34,
-    departamento: "Santander",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "36–45",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Universitaria",
-    distanceKm: 7.2,
-    durationMin: 39,
-    departamento: "Antioquia",
-  },
+const THEMATIC_OPTIONS = {
+  gender: ["Hombre", "Mujer"],
+  ageRange: ["18–25", "26–35", "36–45", "46–60", "60+"],
+  estrato: [1, 2, 3, 4, 5, 6],
+  income: ["0–1 SM", "1–2 SM", "2–4 SM", "4–6 SM", "6+ SM"],
+  mode: ["Metro", "Bus", "Moto", "Carro", "Bicicleta", "Caminata", "Taxi", "Tranvía"],
+};
 
-  // MUJERES 18–25
-  {
-    gender: "Mujer",
-    ageRange: "18–25",
-    estrato: 2,
-    income: "1–2 SM",
-    edu: "Secundaria",
-    distanceKm: 3.8,
-    durationMin: 26,
-    departamento: "Antioquia",
-  },
-  {
-    gender: "Mujer",
-    ageRange: "18–25",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Técnica",
-    distanceKm: 4.5,
-    durationMin: 29,
-    departamento: "Cundinamarca",
-  },
+const PERSON_THEMATIC_KEYS = Object.keys(THEMATIC_OPTIONS).filter(
+  (key) => key !== "mode"
+);
 
-  // MUJERES 26–35
-  {
-    gender: "Mujer",
-    ageRange: "26–35",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 5.9,
-    durationMin: 33,
-    departamento: "Valle del Cauca",
-  },
-  {
-    gender: "Mujer",
-    ageRange: "26–35",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Universitaria",
-    distanceKm: 6.4,
-    durationMin: 36,
-    departamento: "Antioquia",
-  },
-  {
-    gender: "Mujer",
-    ageRange: "26–35",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Posgrado",
-    distanceKm: 6.9,
-    durationMin: 38,
-    departamento: "Atlántico",
-  },
+function aggregatePercentages(data, field) {
+  if (!data.length) return [];
+  const counts = data.reduce((acc, item) => {
+    const key = item[field];
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
 
-  // MUJERES 36–45
-  {
-    gender: "Mujer",
-    ageRange: "36–45",
-    estrato: 3,
-    income: "2–4 SM",
-    edu: "Universitaria",
-    distanceKm: 5.7,
-    durationMin: 32,
-    departamento: "Santander",
-  },
-  {
-    gender: "Mujer",
-    ageRange: "36–45",
-    estrato: 2,
-    income: "1–2 SM",
-    edu: "Secundaria",
-    distanceKm: 4.1,
-    durationMin: 27,
-    departamento: "Antioquia",
-  },
+  return Object.entries(counts)
+    .map(([label, value]) => ({
+      label,
+      value: Number(((value / data.length) * 100).toFixed(1)),
+    }))
+    .sort((a, b) => b.value - a.value);
+}
 
-  // MUJERES 46–60
-  {
-    gender: "Mujer",
-    ageRange: "46–60",
-    estrato: 2,
-    income: "0–1 SM",
-    edu: "Primaria",
-    distanceKm: 3.2,
-    durationMin: 24,
-    departamento: "Nariño",
-  },
-  {
-    gender: "Mujer",
-    ageRange: "46–60",
-    estrato: 3,
-    income: "1–2 SM",
-    edu: "Secundaria",
-    distanceKm: 3.9,
-    durationMin: 26,
-    departamento: "Norte de Santander",
-  },
+function aggregatePie(data, field) {
+  return aggregatePercentages(data, field).map((item) => ({
+    name: item.label,
+    value: item.value,
+  }));
+}
 
-  // HOMBRES 46–60
-  {
-    gender: "Hombre",
-    ageRange: "46–60",
-    estrato: 4,
-    income: "4–6 SM",
-    edu: "Universitaria",
-    distanceKm: 7.0,
-    durationMin: 38,
-    departamento: "Bolívar",
-  },
-  {
-    gender: "Hombre",
-    ageRange: "46–60",
-    estrato: 5,
-    income: "6+ SM",
-    edu: "Posgrado",
-    distanceKm: 8.1,
-    durationMin: 42,
-    departamento: "Antioquia",
-  },
-];
+function aggregateHeat(data, field) {
+  const counts = data.reduce((acc, item) => {
+    const key = item[field];
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts).map(([name, value]) => ({ name, value }));
+}
 
 export function useTravelCrossfilterRecharts() {
-  const [filters, setFilters] = useState({ gender: "Todos", departamento: "Todos" });
+  const [municipio, setMunicipio] = useState("AMVA General");
+  const [macrozona, setMacrozona] = useState("Todas");
+  const [thematicFilters, setThematicFilters] = useState({
+    gender: [],
+    ageRange: [],
+    estrato: [],
+    income: [],
+    mode: [],
+  });
 
-  const result = useMemo(() => {
-    const cf = crossfilter(mockTrips);
+  const macrozones =
+    municipio === "AMVA General" || municipio === "Todos"
+      ? ALL_MACROZONAS
+      : (MACROZONAS_POR_MUNICIPIO[municipio] || []).map((macro) =>
+          formatMacrozonaLabel(municipio, macro)
+        );
 
-    // ---------- Filtro por género ----------
-    const genderDim = cf.dimension((d) => d.gender);
-    if (filters.gender !== "Todos") {
-      genderDim.filter(filters.gender);
-    }
+  const personsById = useMemo(
+    () => Object.fromEntries(persons.map((p) => [p.id, p])),
+    []
+  );
 
-    // ---------- Filtro por departamento ----------
-    const deptDimFilter = cf.dimension((d) => d.departamento);
-    if (filters.departamento !== "Todos") {
-      deptDimFilter.filter(filters.departamento);
-    }
+  const filtered = useMemo(() => {
+    const thematicMatch = (person) =>
+      PERSON_THEMATIC_KEYS.every((key) => {
+        const values = thematicFilters[key];
+        if (!values?.length) return true;
+        return values.includes(person[key]);
+      });
 
-    // Viajes filtrados (útil para KPIs más avanzados)
-    const filteredTrips = genderDim.top(Infinity);
-    const totalTrips = cf.groupAll().value();
+    const personsFiltered = persons.filter(thematicMatch);
+    const thematicPersonIds = new Set(personsFiltered.map((p) => p.id));
 
-    // ---------- Estrato ----------
-    const estratoDim = cf.dimension((d) => d.estrato);
-    const estratoData = estratoDim
-      .group()
-      .all()
-      .sort((a, b) => a.key - b.key)
-      .map((d) => ({ label: String(d.key), value: d.value }));
+    const tripsFiltered = trips.filter((trip) => {
+      if (!thematicPersonIds.has(trip.personId)) return false;
 
-    // ---------- Edad ----------
-    const edadDim = cf.dimension((d) => d.ageRange);
-    const edadData = edadDim
-      .group()
-      .all()
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((d) => ({ label: d.key, value: d.value }));
+      const person = personsById[trip.personId];
+      const originMunicipio = person?.municipio || "AMVA General";
+      const originKey = formatMacrozonaLabel(originMunicipio, trip.originMacro);
+      const destinationKey = formatMacrozonaLabel(
+        trip.destinationMunicipio,
+        trip.destinationMacro
+      );
 
-    // ---------- Escolaridad ----------
-    const eduDim = cf.dimension((d) => d.edu);
-    const escolaridadData = eduDim
-      .group()
-      .all()
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((d) => ({ label: d.key, value: d.value }));
+      const matchesMunicipio =
+        municipio === "AMVA General" ||
+        municipio === "Todos" ||
+        originMunicipio === municipio ||
+        trip.destinationMunicipio === municipio;
 
-    // ---------- Ingresos ----------
-    const incomeDim = cf.dimension((d) => d.income);
-    const ingresosData = incomeDim
-      .group()
-      .all()
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((d) => ({ label: d.key, value: d.value }));
+      const matchesMacrozona =
+        macrozona === "Todas" ||
+        originKey === macrozona ||
+        destinationKey === macrozona;
 
-    // ---------- Género (para pie) ----------
-    const generoData = genderDim
-      .group()
-      .all()
-      .map((d) => ({ name: d.key, value: d.value }));
+      if (!matchesMunicipio || !matchesMacrozona) return false;
 
-    // ---------- Departamentos (para mapa Highcharts) ----------
-    const deptDim = cf.dimension((d) => d.departamento);
-    const deptGroup = deptDim.group();
-    const departamentoData = deptGroup.all().map((d) => ({
-      name: d.key, // esto debe coincidir con properties.name del mapa de Colombia
-      value: d.value,
-    }));
+      if (thematicFilters.mode.length && !thematicFilters.mode.includes(trip.mode)) {
+        return false;
+      }
 
-    return {
-      filteredTrips,
-      totalTrips,
-      estratoData,
-      edadData,
-      escolaridadData,
-      ingresosData,
-      generoData,
-      departamentoData,
-    };
-  }, [filters]);
+      return true;
+    });
 
-  // API de filtros hacia afuera
-  const setGenderFilter = (gender) => {
-    setFilters((prev) => ({ ...prev, gender }));
+    const enrichedTrips = tripsFiltered.map((trip) => {
+      const person = personsById[trip.personId];
+      const originMunicipio = person?.municipio || "AMVA General";
+
+      return {
+        ...trip,
+        ...person,
+        originMunicipio,
+        originKey: formatMacrozonaLabel(originMunicipio, trip.originMacro),
+        destinationKey: formatMacrozonaLabel(
+          trip.destinationMunicipio,
+          trip.destinationMacro
+        ),
+      };
+    });
+
+    const activePersonIds = new Set(enrichedTrips.map((trip) => trip.personId));
+    const personsWithTrips = personsFiltered.filter((person) => activePersonIds.has(person.id));
+
+    return { personsFiltered: personsWithTrips, tripsFiltered: enrichedTrips };
+  }, [municipio, macrozona, thematicFilters]);
+
+  const estratoData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "estrato"),
+    [filtered.tripsFiltered]
+  );
+  const edadData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "ageRange"),
+    [filtered.tripsFiltered]
+  );
+  const generoData = useMemo(
+    () => aggregatePie(filtered.tripsFiltered, "gender"),
+    [filtered.tripsFiltered]
+  );
+  const escolaridadData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "edu"),
+    [filtered.tripsFiltered]
+  );
+  const ingresosData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "income"),
+    [filtered.tripsFiltered]
+  );
+  const modeData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "mode"),
+    [filtered.tripsFiltered]
+  );
+
+  const originHeatData = useMemo(
+    () => {
+      const heat = aggregateHeat(filtered.tripsFiltered, "originKey");
+
+      if (municipio === "AMVA General" || municipio === "Todos") {
+        return heat;
+      }
+
+      return heat.filter((item) => item.name?.startsWith(`${municipio} - `));
+    },
+    [filtered.tripsFiltered, municipio]
+  );
+  const destinationHeatData = useMemo(
+    () => {
+      const heat = aggregateHeat(filtered.tripsFiltered, "destinationKey");
+
+      if (municipio === "AMVA General" || municipio === "Todos") {
+        return heat;
+      }
+
+      return heat.filter((item) => item.name?.startsWith(`${municipio} - `));
+    },
+    [filtered.tripsFiltered, municipio]
+  );
+
+  const filters = {
+    municipio,
+    macrozona,
+    thematicFilters,
   };
 
   const setDepartamentoFilter = (departamento) => {
