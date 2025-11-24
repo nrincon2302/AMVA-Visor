@@ -3,8 +3,7 @@ import KpiCard from "./components/KpiCard";
 import FilterBar from "./components/FilterBar";
 import HighchartsMapCard from "./components/HighchartsMapCard";
 import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
-import BarChartCard from "./components/BarChartCard";
-import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts";
+import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts"
 import { useKpiStats } from "./hooks/useKpiStats";
 
 // ---------- Header + navbar + hero --------------
@@ -475,30 +474,20 @@ const Footer = () => {
 const DashboardSection = () => {
   const {
     filters,
-    macrozones,
-    municipios,
-    setMunicipio,
-    setMacrozona,
-    setThematicValue,
-    thematicOptions,
+    setGenderFilter,
+    setDepartamentoFilter,
     filteredTrips,
     filteredPersons,
     estratoData,
     edadData,
     generoData,
-    escolaridadData,
-    ingresosData,
-    modeData,
-    originHeatData,
-    destinationHeatData,
+    departamentoData,
   } = useTravelCrossfilterRecharts();
 
   const {
     totalTrips,
     avgDistance,
     avgTime,
-    pctMen,
-    pctWomen,
   } = useKpiStats(filteredTrips);
 
   const dashboardRef = useRef(null);
@@ -543,6 +532,21 @@ const DashboardSection = () => {
     link.click();
     URL.revokeObjectURL(url);
   };
+  const escolaridadData = [
+    { label: "Primaria", value: 6000 },
+    { label: "Secundaria", value: 19000 },
+    { label: "Técnica", value: 15000 },
+    { label: "Universitaria", value: 22000 },
+    { label: "Posgrado", value: 8000 },
+  ];
+
+  const ingresosData = [
+    { label: "0–1 SM", value: 12000 },
+    { label: "1–2 SM", value: 21000 },
+    { label: "2–4 SM", value: 18000 },
+    { label: "4–6 SM", value: 9000 },
+    { label: "6+ SM", value: 3000 },
+  ];
 
   const exportReport = (format) => {
     const filename = `reporte-viajes.${
@@ -683,54 +687,14 @@ const DashboardSection = () => {
         Visor de Viajes
       </h1>
       <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 16 }}>
-        Versión preliminar con jerarquías Municipio → Macrozona y entidades de Hogares,
-        Personas y Viajes.
+        Versión preliminar (datos de ejemplo)
       </p>
-
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        <button
-          onClick={() => exportReport("pdf")}
-          style={{
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            borderRadius: 8,
-            padding: "6px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Exportar PDF
-        </button>
-        <button
-          onClick={() => exportReport("word")}
-          style={{
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            borderRadius: 8,
-            padding: "6px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Exportar Word
-        </button>
-        <button
-          onClick={() => exportReport("excel")}
-          style={{
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            borderRadius: 8,
-            padding: "6px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Exportar Excel
-        </button>
-      </div>
 
       {/* KPIs */}
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
           gap: 20,
           marginBottom: 20,
         }}
@@ -738,83 +702,63 @@ const DashboardSection = () => {
         <KpiCard
           label="Viajes Totales (filtrados)"
           value={totalTrips.toLocaleString("es-CO")}
-          subLabel={`Filtro: ${filters.municipio} → ${filters.macrozona}`}
+          subLabel={`Filtro: género ${filters.gender}`}
           accentColor="#16a34a"
         />
 
         <KpiCard
-          label="Tiempo promedio"
+          label="Tiempo Promedio"
           value={`${avgTime.toFixed(1)} min`}
           subLabel="Basado en datos filtrados"
           accentColor="#3b82f6"
         />
 
         <KpiCard
-          label="Distancia promedio"
+          label="Distancia Promedio"
           value={`${avgDistance.toFixed(1)} km`}
           subLabel="Basado en datos filtrados"
           accentColor="#f97316"
         />
       </section>
 
-      <FilterBar
-        municipio={filters.municipio}
-        macrozona={filters.macrozona}
-        macrozones={macrozones}
-        municipios={municipios}
-        thematicFilters={filters.thematicFilters}
-        thematicOptions={thematicOptions}
-        onMunicipioChange={setMunicipio}
-        onMacrozonaChange={setMacrozona}
-        onThematicChange={setThematicValue}
+      {/* Filtros */}
+      <FilterBar 
+        departamentoFilter={filters.departamento}
+        onDepartamentoChange={setDepartamentoFilter}
       />
 
-      {/* Mapas y modos de transporte */}
-      <section
+      {/* Mapas */}
+       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))",
           gap: 24,
           marginBottom: 32,
         }}
       >
         <HighchartsMapCard
-          title="Mapa de calor de lugares de origen"
-          data={originHeatData}
+          title="Viajes por departamento"
+          departamentoData={departamentoData}
           palette="green"
         />
         <HighchartsMapCard
-          title="Mapa de calor de lugares de destino"
-          data={destinationHeatData}
+          title="Viajes por departamento (otra vista)"
+          departamentoData={departamentoData}
           palette="orange"
-        />
-        <BarChartCard
-          title="Distribución de viajes según modo de transporte"
-          data={modeData}
-          xKey="label"
-          yKey="value"
-          color="#0ea5e9"
         />
       </section>
 
       {/* Tabs + gráficos inferiores */}
-      <section
-        style={{
-          background: "#f9fafb",
-          borderRadius: 14,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>
-          Distribución del total de viajes por variables socioeconómicas
-        </h3>
+      <section>
         <TabbedChartsRecharts
           estratoData={estratoData}
           edadData={edadData}
           generoData={generoData}
           escolaridadData={escolaridadData}
           ingresosData={ingresosData}
+          filters={filters}
+          onGenderFilterChange={setGenderFilter}
+          onDepartamentoFilterChange={setDepartamentoFilter}
         />
       </section>
     </main>

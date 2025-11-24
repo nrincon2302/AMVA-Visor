@@ -6,7 +6,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  Label,
 } from "recharts";
 import ChartCard from "./ChartCard";
 
@@ -19,7 +18,7 @@ const PieChartCard = ({
 }) => {
   return (
     <ChartCard title={title}>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
             data={data}
@@ -27,8 +26,8 @@ const PieChartCard = ({
             nameKey={nameKey}
             cx="50%"
             cy="50%"
-            outerRadius={95}
-            innerRadius={52}
+            outerRadius={80}
+            innerRadius={45}
             paddingAngle={2}
           >
             {data.map((entry, index) => (
@@ -37,28 +36,8 @@ const PieChartCard = ({
                 fill={colors[index % colors.length]}
               />
             ))}
-            <Label
-              position="center"
-              content={({ viewBox }) => {
-                const total = data.reduce((acc, item) => acc + (item[dataKey] || 0), 0);
-                return (
-                  <text
-                    x={viewBox.cx}
-                    y={viewBox.cy}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    style={{ fontSize: 12, fill: "#111827" }}
-                  >
-                    {total ? "100%" : "Sin datos"}
-                  </text>
-                );
-              }}
-            />
           </Pie>
-          <Tooltip
-            contentStyle={{ borderRadius: 8, border: "none" }}
-            formatter={(value) => [`${value}%`, "Participación"]}
-          />
+          <Tooltip contentStyle={{ borderRadius: 8, border: "none" }} />
           <Legend verticalAlign="bottom" height={24} iconType="circle" />
         </PieChart>
       </ResponsiveContainer>

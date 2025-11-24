@@ -10,8 +10,9 @@ const TiledWebMap = TiledWebMapModule?.default || TiledWebMapModule;
 if (typeof TiledWebMap === "function") {
   TiledWebMap(Highcharts);
 }
+import mapData from "@highcharts/map-collection/countries/co/co-all.geo.json";
 
-const HighchartsMapCard = ({ title, data, palette = "green" }) => {
+const HighchartsMapCard = ({ title, departamentoData, palette = "green" }) => {
   const colorAxis =
     palette === "orange"
       ? {
@@ -38,7 +39,7 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
   const options = {
     chart: {
       map: mapData,
-      height: 320,
+      height: 260,
       spacing: [0, 0, 0, 0],
     },
     mapView: {
@@ -90,8 +91,9 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
       },
       {
         type: "map",
-        mapData,
-        data: data || [],
+        mapData: mapData,
+        data: departamentoData || [],
+        // name en el GeoJSON vs name en data
         joinBy: ["name", "name"],
         name: "Viajes",
         borderColor: "#ffffff",
