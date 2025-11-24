@@ -4,6 +4,7 @@ const FilterBar = ({
   municipio,
   macrozona,
   macrozones = [],
+  municipios = [],
   thematicFilters,
   thematicOptions,
   onMunicipioChange,
@@ -40,7 +41,11 @@ const FilterBar = ({
             background: "#ffffff",
           }}
         >
-          <option value="Medellín">Medellín</option>
+          {municipios.map((muni) => (
+            <option key={muni} value={muni}>
+              {muni}
+            </option>
+          ))}
         </select>
 
         <select

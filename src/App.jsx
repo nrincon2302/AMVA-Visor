@@ -476,6 +476,7 @@ const DashboardSection = () => {
   const {
     filters,
     macrozones,
+    municipios,
     setMunicipio,
     setMacrozona,
     setThematicValue,
@@ -614,6 +615,7 @@ const DashboardSection = () => {
         municipio={filters.municipio}
         macrozona={filters.macrozona}
         macrozones={macrozones}
+        municipios={municipios}
         thematicFilters={filters.thematicFilters}
         thematicOptions={thematicOptions}
         onMunicipioChange={setMunicipio}
