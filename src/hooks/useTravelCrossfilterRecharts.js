@@ -204,15 +204,30 @@ export function useTravelCrossfilterRecharts() {
     thematicFilters,
   };
 
-  const setDepartamentoFilter = (departamento) => {
-    setFilters((prev) => ({ ...prev, departamento }));
+  const setThematicValue = (key, values) => {
+    setThematicFilters((prev) => ({ ...prev, [key]: values }));
   };
 
   return {
+    households,
+    persons,
+    trips,
     filters,
-    setFilters,       // lo dejo expuesto por si en algún lado ya lo estabas usando
-    setGenderFilter,  // este es el que usamos para el filtro de género en los tabs
-    setDepartamentoFilter, // este es el que usamos para el filtro de departamento
-    ...result,
+    macrozones,
+    municipios: MUNICIPIOS,
+    filteredTrips: filtered.tripsFiltered,
+    filteredPersons: filtered.personsFiltered,
+    estratoData,
+    edadData,
+    generoData,
+    escolaridadData,
+    ingresosData,
+    modeData,
+    originHeatData,
+    destinationHeatData,
+    setMunicipio,
+    setMacrozona,
+    setThematicValue,
+    thematicOptions: THEMATIC_OPTIONS,
   };
 }
