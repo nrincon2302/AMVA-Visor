@@ -16,12 +16,16 @@ const TabbedChartsRecharts = ({
   generoData = [],
   escolaridadData = [],
   ingresosData = [],
+  filters,
+  onGenderFilterChange,
 }) => {
   const [selectedMetrics, setSelectedMetrics] = useState([
     "estrato",
     "edad",
     "genero",
   ]);
+
+  const currentGender = filters?.gender ?? "Todos";
 
   const handleMetricClick = (metricId) => {
     setSelectedMetrics((prev) => {
@@ -37,7 +41,7 @@ const TabbedChartsRecharts = ({
         return (
           <BarChartCard
             key="estrato"
-            title="Distribución de viajes según estrato"
+            title="Estrato"
             data={estratoData}
             xKey="label"
             yKey="value"
@@ -48,7 +52,7 @@ const TabbedChartsRecharts = ({
         return (
           <BarChartCard
             key="edad"
-            title="Distribución de viajes según edad"
+            title="Edad"
             data={edadData}
             xKey="label"
             yKey="value"
@@ -59,7 +63,7 @@ const TabbedChartsRecharts = ({
         return (
           <BarChartCard
             key="escolaridad"
-            title="Distribución de viajes según escolaridad"
+            title="Escolaridad"
             data={escolaridadData}
             xKey="label"
             yKey="value"
@@ -70,7 +74,7 @@ const TabbedChartsRecharts = ({
         return (
           <BarChartCard
             key="ingresos"
-            title="Distribución de viajes según ingresos"
+            title="Nivel de Ingresos"
             data={ingresosData}
             xKey="label"
             yKey="value"
@@ -82,7 +86,7 @@ const TabbedChartsRecharts = ({
         return (
           <PieChartCard
             key="genero"
-            title="Distribución de viajes según género"
+            title="Género"
             data={generoData}
             dataKey="value"
             nameKey="name"
@@ -93,6 +97,41 @@ const TabbedChartsRecharts = ({
 
   return (
     <div>
+      {/* Filtro por género */}
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          marginBottom: 12,
+          fontSize: 12,
+        }}
+      >
+        <span style={{ color: "#6b7280" }}>Filtro por género:</span>
+        {["Todos", "Hombre", "Mujer"].map((g) => {
+          const active = currentGender === g;
+          return (
+            <button
+              key={g}
+              onClick={() =>
+                onGenderFilterChange && onGenderFilterChange(g)
+              }
+              style={{
+                borderRadius: 9999,
+                border: active ? "1px solid #16a34a" : "1px solid #d1d5db",
+                background: active ? "#ecfdf3" : "#ffffff",
+                fontSize: 11,
+                padding: "4px 10px",
+                cursor: "pointer",
+              }}
+            >
+              {g}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tabs de métricas */}
       <div
         style={{
           display: "flex",
@@ -126,6 +165,7 @@ const TabbedChartsRecharts = ({
         })}
       </div>
 
+      {/* Gráficos */}
       <div
         style={{
           display: "grid",
