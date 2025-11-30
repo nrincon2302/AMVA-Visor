@@ -28,6 +28,35 @@ const PERSON_THEMATIC_KEYS = Object.keys(THEMATIC_OPTIONS).filter(
   (key) => key !== "mode"
 );
 
+const hashString = (value) =>
+  value.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+const deriveCategorical = (seedValue, options) => {
+  const seed = hashString(seedValue);
+  return options[seed % options.length];
+};
+
+const VEHICLE_BUCKETS = ["Sin vehículo", "1 vehículo", "2+ vehículos"];
+const PURPOSES = ["Trabajo", "Estudio", "Compras", "Gestiones", "Ocio"];
+const OCCUPATIONS = [
+  "Empleado",
+  "Estudiante",
+  "Independiente",
+  "Hogar",
+  "Desempleado",
+];
+
+const COLORS = [
+  "#0ea5e9",
+  "#16a34a",
+  "#f97316",
+  "#6366f1",
+  "#f43f5e",
+  "#22c55e",
+  "#8b5cf6",
+  "#eab308",
+];
+
 function aggregatePercentages(data, field) {
   if (!data.length) return [];
   const counts = data.reduce((acc, item) => {
@@ -64,6 +93,7 @@ function aggregateHeat(data, field) {
 export function useTravelCrossfilterRecharts() {
   const [municipio, setMunicipio] = useState("AMVA General");
   const [macrozona, setMacrozona] = useState("Todas");
+  const [macrozonaScope, setMacrozonaScope] = useState("ambos");
   const [thematicFilters, setThematicFilters] = useState({
     gender: [],
     ageRange: [],
@@ -83,6 +113,25 @@ export function useTravelCrossfilterRecharts() {
     () => Object.fromEntries(persons.map((p) => [p.id, p])),
     []
   );
+
+  const derivedHouseholds = useMemo(() => {
+    return households.reduce((acc, household) => {
+      const vehicleSeed = `${household.id}-${household.size}-${household.municipio}`;
+      const vehicleBucket = deriveCategorical(vehicleSeed, VEHICLE_BUCKETS);
+
+      acc[household.id] = {
+        ...household,
+        vehicleBucket,
+        vehicleCount:
+          vehicleBucket === "Sin vehículo"
+            ? 0
+            : vehicleBucket === "1 vehículo"
+            ? 1
+            : 2,
+      };
+      return acc;
+    }, {});
+  }, []);
 
   const filtered = useMemo(() => {
     const thematicMatch = (person) =>
@@ -112,10 +161,12 @@ export function useTravelCrossfilterRecharts() {
         originMunicipio === municipio ||
         trip.destinationMunicipio === municipio;
 
-      const matchesMacrozona =
-        macrozona === "Todas" ||
-        originKey === macrozona ||
-        destinationKey === macrozona;
+      const matchesMacrozona = (() => {
+        if (macrozona === "Todas") return true;
+        if (macrozonaScope === "origen") return originKey === macrozona;
+        if (macrozonaScope === "destino") return destinationKey === macrozona;
+        return originKey === macrozona || destinationKey === macrozona;
+      })();
 
       if (!matchesMunicipio || !matchesMacrozona) return false;
 
@@ -129,24 +180,56 @@ export function useTravelCrossfilterRecharts() {
     const enrichedTrips = tripsFiltered.map((trip) => {
       const person = personsById[trip.personId];
       const originMunicipio = person?.municipio || "AMVA General";
+      const household = person ? derivedHouseholds[person.householdId] : null;
+
+      const departureHour = hashString(trip.id) % 24;
+      const purpose = deriveCategorical(trip.id, PURPOSES);
 
       return {
         ...trip,
         ...person,
+        household,
         originMunicipio,
         originKey: formatMacrozonaLabel(originMunicipio, trip.originMacro),
         destinationKey: formatMacrozonaLabel(
           trip.destinationMunicipio,
           trip.destinationMacro
         ),
+        tripPurpose: purpose,
+        departureHour,
+        departureLabel: `${departureHour.toString().padStart(2, "0")}:00`,
       };
     });
 
     const activePersonIds = new Set(enrichedTrips.map((trip) => trip.personId));
-    const personsWithTrips = personsFiltered.filter((person) => activePersonIds.has(person.id));
+    const personsWithTrips = personsFiltered
+      .filter((person) => activePersonIds.has(person.id))
+      .map((person) => ({
+        ...person,
+        household: derivedHouseholds[person.householdId],
+      }));
 
-    return { personsFiltered: personsWithTrips, tripsFiltered: enrichedTrips };
-  }, [municipio, macrozona, thematicFilters]);
+    const activeHouseholdIds = new Set(
+      personsWithTrips.map((person) => person.householdId)
+    );
+
+    const householdsWithTrips = households
+      .map((household) => derivedHouseholds[household.id])
+      .filter((household) => activeHouseholdIds.has(household.id));
+
+    return {
+      personsFiltered: personsWithTrips,
+      tripsFiltered: enrichedTrips,
+      householdsFiltered: householdsWithTrips,
+    };
+  }, [
+    municipio,
+    macrozona,
+    macrozonaScope,
+    thematicFilters,
+    personsById,
+    derivedHouseholds,
+  ]);
 
   const estratoData = useMemo(
     () => aggregatePercentages(filtered.tripsFiltered, "estrato"),
@@ -198,9 +281,84 @@ export function useTravelCrossfilterRecharts() {
     [filtered.tripsFiltered, municipio]
   );
 
+  const purposeData = useMemo(
+    () => aggregatePercentages(filtered.tripsFiltered, "tripPurpose"),
+    [filtered.tripsFiltered]
+  );
+
+  const occupationData = useMemo(() => {
+    const persons = filtered.personsFiltered.map((person) => ({
+      ...person,
+      occupation: deriveCategorical(person.id, OCCUPATIONS),
+    }));
+    return aggregatePercentages(persons, "occupation");
+  }, [filtered.personsFiltered]);
+
+  const vehicleTenureData = useMemo(() => {
+    const households = filtered.householdsFiltered;
+    if (!households?.length) return [];
+    const counts = households.reduce((acc, household) => {
+      acc[household.vehicleBucket] = (acc[household.vehicleBucket] || 0) + 1;
+      return acc;
+    }, {});
+
+    const total = households.length;
+    return Object.entries(counts)
+      .map(([label, value]) => ({
+        label,
+        value: Number(((value / total) * 100).toFixed(1)),
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [filtered.householdsFiltered]);
+
+  const hourlyModeData = useMemo(() => {
+    if (!filtered.tripsFiltered.length) return [];
+
+    const hours = Array.from({ length: 24 }, (_, idx) => idx);
+    const countsByHour = hours.map((hour) => ({ hour, total: 0 }));
+    const modeTotals = {};
+
+    filtered.tripsFiltered.forEach((trip) => {
+      const hour = trip.departureHour;
+      const mode = trip.mode;
+      const record = countsByHour[hour];
+      record[mode] = (record[mode] || 0) + 1;
+      record.total += 1;
+      modeTotals[mode] = (modeTotals[mode] || 0) + 1;
+    });
+
+    const topModes = Object.entries(modeTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([mode]) => mode);
+
+    return countsByHour.map((record) => {
+      const total = record.total || 1;
+      const hourLabel = `${record.hour.toString().padStart(2, "0")}:00`;
+      const modeShares = topModes.reduce((acc, mode, index) => {
+        acc[mode] = Number((((record[mode] || 0) / total) * 100).toFixed(1));
+        acc[`${mode}Color`] = COLORS[index % COLORS.length];
+        return acc;
+      }, {});
+
+      return { hour: hourLabel, ...modeShares };
+    });
+  }, [filtered.tripsFiltered]);
+
+  const originRanking = useMemo(() => {
+    const base = aggregateHeat(filtered.tripsFiltered, "originKey");
+    return base.sort((a, b) => b.value - a.value).slice(0, 3);
+  }, [filtered.tripsFiltered]);
+
+  const destinationRanking = useMemo(() => {
+    const base = aggregateHeat(filtered.tripsFiltered, "destinationKey");
+    return base.sort((a, b) => b.value - a.value).slice(0, 3);
+  }, [filtered.tripsFiltered]);
+
   const filters = {
     municipio,
     macrozona,
+    macrozonaScope,
     thematicFilters,
   };
 
@@ -213,16 +371,25 @@ export function useTravelCrossfilterRecharts() {
     persons,
     trips,
     filters,
+    macrozonaScope,
+    setMacrozonaScope,
     macrozones,
     municipios: MUNICIPIOS,
     filteredTrips: filtered.tripsFiltered,
     filteredPersons: filtered.personsFiltered,
+    filteredHouseholds: filtered.householdsFiltered,
     estratoData,
     edadData,
     generoData,
     escolaridadData,
     ingresosData,
     modeData,
+    purposeData,
+    occupationData,
+    vehicleTenureData,
+    hourlyModeData,
+    originRanking,
+    destinationRanking,
     originHeatData,
     destinationHeatData,
     setMunicipio,

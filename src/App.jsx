@@ -1,9 +1,11 @@
-import React, { useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import KpiCard from "./components/KpiCard";
 import FilterBar from "./components/FilterBar";
 import HighchartsMapCard from "./components/HighchartsMapCard";
 import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
 import BarChartCard from "./components/BarChartCard";
+import PieChartCard from "./components/PieChartCard";
+import StackedAreaChartCard from "./components/StackedAreaChartCard";
 import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts";
 import { useKpiStats } from "./hooks/useKpiStats";
 
@@ -475,20 +477,29 @@ const Footer = () => {
 const DashboardSection = () => {
   const {
     filters,
+    macrozonaScope,
     macrozones,
     municipios,
     setMunicipio,
     setMacrozona,
+    setMacrozonaScope,
     setThematicValue,
     thematicOptions,
     filteredTrips,
     filteredPersons,
+    filteredHouseholds,
     estratoData,
     edadData,
     generoData,
     escolaridadData,
     ingresosData,
     modeData,
+    purposeData,
+    occupationData,
+    vehicleTenureData,
+    hourlyModeData,
+    originRanking,
+    destinationRanking,
     originHeatData,
     destinationHeatData,
   } = useTravelCrossfilterRecharts();
@@ -499,7 +510,26 @@ const DashboardSection = () => {
     avgTime,
     pctMen,
     pctWomen,
-  } = useKpiStats(filteredTrips);
+    tripsPerHousehold,
+    avgTripsByEstrato,
+    vehiclesPerHousehold,
+    vehiclesByEstrato,
+    topOrigin,
+    topDestination,
+  } = useKpiStats(filteredTrips, filteredPersons, filteredHouseholds);
+
+  const stackedModes = useMemo(() => {
+    if (!hourlyModeData.length) return [];
+    return Object.keys(hourlyModeData[0]).filter(
+      (key) => key !== "hour" && !key.endsWith("Color")
+    );
+  }, [hourlyModeData]);
+
+  const macrozonaScopeLabel = useMemo(() => {
+    if (macrozonaScope === "ambos") return "Origen y destino";
+    if (macrozonaScope === "origen") return "Solo origen";
+    return "Solo destino";
+  }, [macrozonaScope]);
 
   const dashboardRef = useRef(null);
 
@@ -545,15 +575,13 @@ const DashboardSection = () => {
   };
 
   const exportReport = (format) => {
-    const filename = `reporte-viajes.${
-      format === "excel" ? "xlsx" : format === "word" ? "doc" : "pdf"
-    }`;
+    const filename = `reporte-viajes.${format === "excel" ? "xlsx" : "pdf"}`;
 
-    const summaryText = `Municipio: ${filters.municipio}\nMacrozona: ${filters.macrozona}\nViajes filtrados: ${totalTrips}\nTiempo promedio: ${avgTime.toFixed(
+    const summaryText = `Municipio: ${filters.municipio}\nMacrozona: ${filters.macrozona} (${macrozonaScopeLabel})\nViajes filtrados: ${totalTrips}\nTiempo promedio: ${avgTime.toFixed(
       1
     )} min\nDistancia promedio: ${avgDistance.toFixed(
       1
-    )} km\nParticipación mujeres: ${pctWomen}%\nParticipación hombres: ${pctMen}%`;
+    )} km\nViajes por hogar: ${tripsPerHousehold}\nVehículos por hogar: ${vehiclesPerHousehold}\nParticipación mujeres: ${pctWomen}%\nParticipación hombres: ${pctMen}%`;
 
     const buildExcel = async () => {
       const XLSX = await loadExternalLib(
@@ -567,48 +595,89 @@ const DashboardSection = () => {
         {
           Municipio: filters.municipio,
           Macrozona: filters.macrozona,
+          "Ámbito de macrozona": macrozonaScopeLabel,
           "Viajes filtrados": totalTrips,
           "Tiempo promedio (min)": Number(avgTime.toFixed(1)),
           "Distancia promedio (km)": Number(avgDistance.toFixed(1)),
+          "Viajes por hogar": tripsPerHousehold,
+          "Promedio viajes por estrato": avgTripsByEstrato,
+          "Vehículos por hogar": vehiclesPerHousehold,
+          "Vehículos por estrato": vehiclesByEstrato,
           "% Mujeres": pctWomen,
           "% Hombres": pctMen,
         },
       ]);
 
-      const tripsSheet = XLSX.utils.json_to_sheet(
-        filteredTrips.map((trip) => ({
-          Persona: trip.personId,
-          MunicipioOrigen: trip.originMunicipio,
-          MacrozonaOrigen: trip.originMacro,
-          MunicipioDestino: trip.destinationMunicipio,
-          MacrozonaDestino: trip.destinationMacro,
-          Modo: trip.mode,
-          DuracionMin: trip.durationMin,
-          DistanciaKm: trip.distanceKm,
-          Genero: trip.gender,
-          Edad: trip.ageRange,
-          Estrato: trip.estrato,
-          Ingreso: trip.income,
-          Escolaridad: trip.edu,
-        }))
+      const modeSheet = XLSX.utils.json_to_sheet(
+        modeData.map((item) => ({ Modo: item.label, "% del total": item.value }))
       );
 
-      const personsSheet = XLSX.utils.json_to_sheet(
-        (filteredPersons || []).map((person) => ({
-          Persona: person.id,
-          Municipio: person.municipio,
-          Genero: person.gender,
-          Edad: person.ageRange,
-          Estrato: person.estrato,
-          Ingreso: person.income,
-          Escolaridad: person.edu,
-          Vehiculo: person.vehicleOwnership,
-        }))
+      const purposeSheet = XLSX.utils.json_to_sheet(
+        purposeData.map((item) => ({ Motivo: item.label, "% del total": item.value }))
+      );
+
+      const occupationSheet = XLSX.utils.json_to_sheet(
+        occupationData.map((item) => ({ Ocupacion: item.label, "% del total": item.value }))
+      );
+
+      const vehicleSheet = XLSX.utils.json_to_sheet(
+        vehicleTenureData.map((item) => ({ "Tenencia vehicular": item.label, "% del total": item.value }))
+      );
+
+      const hourlySheet = XLSX.utils.json_to_sheet(
+        hourlyModeData.map((row) => {
+          const { hour, ...rest } = row;
+          const clean = { Hora: hour };
+          Object.entries(rest).forEach(([key, value]) => {
+            if (!key.endsWith("Color")) {
+              clean[key] = value;
+            }
+          });
+          return clean;
+        })
+      );
+
+      const estratoSheet = XLSX.utils.json_to_sheet(
+        estratoData.map((item) => ({ Estrato: item.label, "% del total": item.value }))
+      );
+
+      const edadSheet = XLSX.utils.json_to_sheet(
+        edadData.map((item) => ({ Edad: item.label, "% del total": item.value }))
+      );
+
+      const generoSheet = XLSX.utils.json_to_sheet(
+        generoData.map((item) => ({ Genero: item.name, "% del total": item.value }))
+      );
+
+      const escolaridadSheet = XLSX.utils.json_to_sheet(
+        escolaridadData.map((item) => ({ Escolaridad: item.label, "% del total": item.value }))
+      );
+
+      const ingresosSheet = XLSX.utils.json_to_sheet(
+        ingresosData.map((item) => ({ Ingresos: item.label, "% del total": item.value }))
+      );
+
+      const origenSheet = XLSX.utils.json_to_sheet(
+        originRanking.map((item) => ({ Origen: item.name, Viajes: item.value }))
+      );
+
+      const destinoSheet = XLSX.utils.json_to_sheet(
+        destinationRanking.map((item) => ({ Destino: item.name, Viajes: item.value }))
       );
 
       XLSX.utils.book_append_sheet(workbook, summarySheet, "Resumen");
-      XLSX.utils.book_append_sheet(workbook, tripsSheet, "Viajes");
-      XLSX.utils.book_append_sheet(workbook, personsSheet, "Personas");
+      XLSX.utils.book_append_sheet(workbook, modeSheet, "Distribución modal");
+      XLSX.utils.book_append_sheet(workbook, purposeSheet, "Motivos de viaje");
+      XLSX.utils.book_append_sheet(workbook, occupationSheet, "Ocupación");
+      XLSX.utils.book_append_sheet(workbook, vehicleSheet, "Tenencia vehicular");
+      XLSX.utils.book_append_sheet(workbook, hourlySheet, "Distribución horaria");
+      XLSX.utils.book_append_sheet(workbook, estratoSheet, "Estrato");
+      XLSX.utils.book_append_sheet(workbook, edadSheet, "Edad");
+      XLSX.utils.book_append_sheet(workbook, generoSheet, "Género");
+      XLSX.utils.book_append_sheet(workbook, escolaridadSheet, "Escolaridad");
+      XLSX.utils.book_append_sheet(workbook, ingresosSheet, "Ingresos");
+      XLSX.utils.book_append_sheet(workbook, origenSheet, "Viajes por origen");
+      XLSX.utils.book_append_sheet(workbook, destinoSheet, "Viajes por destino");
 
       const wbout = XLSX.write(workbook, {
         bookType: "xlsx",
@@ -639,24 +708,8 @@ const DashboardSection = () => {
       pdf.save(filename);
     };
 
-    const buildWord = async () => {
-      const imageData = await captureDashboardImage();
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial, sans-serif;}h1{color:#16a34a;}ul{padding-left:18px;}li{margin-bottom:4px;}img{max-width:100%;}</style></head><body><h1>Reporte de viajes</h1><ul>${summaryText
-        .split("\n")
-        .map((line) => `<li>${line}</li>`)
-        .join("")}</ul><h2>Captura del visor</h2><img src="${imageData}" alt="Visor" /></body></html>`;
-
-      const blob = new Blob([html], { type: "application/msword" });
-      downloadBlob(blob, filename);
-    };
-
     if (format === "excel") {
       buildExcel();
-      return;
-    }
-
-    if (format === "word") {
-      buildWord();
       return;
     }
 
@@ -701,18 +754,6 @@ const DashboardSection = () => {
           Exportar PDF
         </button>
         <button
-          onClick={() => exportReport("word")}
-          style={{
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            borderRadius: 8,
-            padding: "6px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Exportar Word
-        </button>
-        <button
           onClick={() => exportReport("excel")}
           style={{
             border: "1px solid #d1d5db",
@@ -738,7 +779,7 @@ const DashboardSection = () => {
         <KpiCard
           label="Viajes Totales (filtrados)"
           value={totalTrips.toLocaleString("es-CO")}
-          subLabel={`Filtro: ${filters.municipio} → ${filters.macrozona}`}
+          subLabel={`Filtro: ${filters.municipio} → ${filters.macrozona} (${macrozonaScopeLabel})`}
           accentColor="#16a34a"
         />
 
@@ -755,17 +796,65 @@ const DashboardSection = () => {
           subLabel="Basado en datos filtrados"
           accentColor="#f97316"
         />
+
+        <KpiCard
+          label="Viajes por hogar"
+          value={tripsPerHousehold.toLocaleString("es-CO")}
+          subLabel="Promedio de hogares con viajes"
+          accentColor="#0ea5e9"
+        />
+
+        <KpiCard
+          label="Prom. viajes por estrato"
+          value={avgTripsByEstrato.toLocaleString("es-CO", { maximumFractionDigits: 2 })}
+          subLabel="Media simple entre estratos"
+          accentColor="#8b5cf6"
+        />
+
+        <KpiCard
+          label="Vehículos por hogar"
+          value={vehiclesPerHousehold.toLocaleString("es-CO", { maximumFractionDigits: 2 })}
+          subLabel="Estimación de tenencia vehicular"
+          accentColor="#f59e0b"
+        />
+
+        <KpiCard
+          label="Vehículos por estrato"
+          value={vehiclesByEstrato.toLocaleString("es-CO", { maximumFractionDigits: 2 })}
+          subLabel="Promedio ponderado por personas"
+          accentColor="#10b981"
+        />
+
+        {topOrigin && (
+          <KpiCard
+            label="Viajes por origen"
+            value={topOrigin.trips.toLocaleString("es-CO")}
+            subLabel={`Principal: ${topOrigin.label}`}
+            accentColor="#22c55e"
+          />
+        )}
+
+        {topDestination && (
+          <KpiCard
+            label="Viajes por destino"
+            value={topDestination.trips.toLocaleString("es-CO")}
+            subLabel={`Principal: ${topDestination.label}`}
+            accentColor="#ef4444"
+          />
+        )}
       </section>
 
       <FilterBar
         municipio={filters.municipio}
         macrozona={filters.macrozona}
+        macrozonaScope={macrozonaScope}
         macrozones={macrozones}
         municipios={municipios}
         thematicFilters={filters.thematicFilters}
         thematicOptions={thematicOptions}
         onMunicipioChange={setMunicipio}
         onMacrozonaChange={setMacrozona}
+        onMacrozonaScopeChange={setMacrozonaScope}
         onThematicChange={setThematicValue}
       />
 
@@ -794,6 +883,46 @@ const DashboardSection = () => {
           xKey="label"
           yKey="value"
           color="#0ea5e9"
+          orientation="horizontal"
+        />
+      </section>
+
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+          gap: 24,
+          marginBottom: 32,
+        }}
+      >
+        <PieChartCard
+          title="Motivos de viaje"
+          data={purposeData.map((item) => ({ name: item.label, value: item.value }))}
+          dataKey="value"
+          nameKey="name"
+        />
+
+        <StackedAreaChartCard
+          title="Distribución horaria de los viajes por modo"
+          data={hourlyModeData}
+          modes={stackedModes}
+        />
+
+        <BarChartCard
+          title="Tenencia vehicular estimada"
+          data={vehicleTenureData}
+          xKey="label"
+          yKey="value"
+          color="#f59e0b"
+          orientation="horizontal"
+        />
+
+        <BarChartCard
+          title="Ocupación de las personas viajeras"
+          data={occupationData}
+          xKey="label"
+          yKey="value"
+          color="#8b5cf6"
         />
       </section>
 

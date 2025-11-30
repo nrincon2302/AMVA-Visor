@@ -3,12 +3,14 @@ import React from "react";
 const FilterBar = ({
   municipio,
   macrozona,
+  macrozonaScope,
   macrozones = [],
   municipios = [],
   thematicFilters,
   thematicOptions,
   onMunicipioChange,
   onMacrozonaChange,
+  onMacrozonaScopeChange,
   onThematicChange,
 }) => {
   const handleMultiSelect = (key, value) => {
@@ -89,6 +91,29 @@ const FilterBar = ({
             ))}
           </select>
         </label>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
+            Aplicar macrozona a
+          </span>
+          {[{ key: "ambos", label: "Origen y destino" }, { key: "origen", label: "Solo origen" }, { key: "destino", label: "Solo destino" }].map(
+            (opt) => (
+              <label
+                key={opt.key}
+                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}
+              >
+                <input
+                  type="radio"
+                  name="macrozonaScope"
+                  value={opt.key}
+                  checked={macrozonaScope === opt.key}
+                  onChange={(e) => onMacrozonaScopeChange(e.target.value)}
+                />
+                {opt.label}
+              </label>
+            )
+          )}
+        </div>
       </div>
 
       <div
