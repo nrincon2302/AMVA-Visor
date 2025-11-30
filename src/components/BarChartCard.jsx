@@ -31,11 +31,11 @@ const BarChartCard = ({
 
   return (
     <ChartCard title={title} actions={actions}>
-      <ResponsiveContainer width="100%" height={isHorizontal ? 320 : 280}>
+      <ResponsiveContainer width="100%" height={isHorizontal ? 360 : 320}>
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 20, right: 12, left: 0, bottom: 12 }}
+          margin={{ top: 20, right: 18, left: isHorizontal ? 12 : 0, bottom: 12 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -48,21 +48,24 @@ const BarChartCard = ({
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
               tickFormatter={formatValue}
+              tick={{ fontSize: 12, fill: "#0f172a" }}
             />
           ) : (
             <XAxis
               dataKey={xKey}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
+              tick={{ fontSize: 12, fill: "#0f172a" }}
             />
           )}
           {isHorizontal ? (
             <YAxis
               dataKey={xKey}
               type="category"
-              width={150}
+              width={180}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
+              tick={{ fontSize: 12, fill: "#0f172a" }}
             />
           ) : (
             <YAxis
@@ -70,6 +73,7 @@ const BarChartCard = ({
               axisLine={{ stroke: "#e5e7eb" }}
               tickFormatter={formatValue}
               domain={showPercent ? [0, 100] : ["dataMin", "auto"]}
+              tick={{ fontSize: 12, fill: "#0f172a" }}
             />
           )}
           <Tooltip
@@ -97,6 +101,7 @@ const BarChartCard = ({
             <LabelList
               dataKey={yKey}
               position={isHorizontal ? "right" : "top"}
+              style={{ fontSize: 12, fill: "#0f172a" }}
               formatter={formatValue}
             />
           </Bar>

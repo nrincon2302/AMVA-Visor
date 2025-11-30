@@ -870,7 +870,7 @@ const DashboardSection = () => {
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
           gap: 24,
           marginBottom: 32,
         }}
@@ -925,7 +925,7 @@ const DashboardSection = () => {
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
           gap: 24,
           marginBottom: 32,
         }}

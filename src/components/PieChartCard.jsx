@@ -19,16 +19,16 @@ const PieChartCard = ({
 }) => {
   return (
     <ChartCard title={title}>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={320}>
         <PieChart>
           <Pie
             data={data}
             dataKey={dataKey}
             nameKey={nameKey}
-            cx="50%"
+            cx="38%"
             cy="50%"
-            outerRadius={95}
-            innerRadius={52}
+            outerRadius={105}
+            innerRadius={58}
             paddingAngle={2}
           >
             {data.map((entry, index) => (
@@ -59,7 +59,13 @@ const PieChartCard = ({
             contentStyle={{ borderRadius: 8, border: "none" }}
             formatter={(value) => [`${value}%`, "Participación"]}
           />
-          <Legend verticalAlign="bottom" height={24} iconType="circle" />
+          <Legend
+            layout="vertical"
+            verticalAlign="middle"
+            align="right"
+            iconType="circle"
+            wrapperStyle={{ paddingLeft: 12, fontSize: 12, width: 180 }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>
