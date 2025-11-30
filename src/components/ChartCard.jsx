@@ -1,6 +1,6 @@
 import React from "react";
 
-const ChartCard = ({ title, children }) => {
+const ChartCard = ({ title, actions, children }) => {
   return (
     <div
       style={{
@@ -15,17 +15,27 @@ const ChartCard = ({ title, children }) => {
       }}
     >
       {title && (
-        <h3
+        <div
           style={{
-            margin: 0,
-            marginBottom: "12px",
-            fontSize: "15px",
-            fontWeight: 600,
-            color: "#111827",
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            alignItems: "center",
+            marginBottom: 12,
           }}
         >
-          {title}
-        </h3>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: "15px",
+              fontWeight: 600,
+              color: "#111827",
+            }}
+          >
+            {title}
+          </h3>
+          {actions}
+        </div>
       )}
       <div style={{ flex: 1 }}>{children}</div>
     </div>

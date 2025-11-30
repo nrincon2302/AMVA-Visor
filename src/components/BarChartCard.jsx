@@ -2,6 +2,7 @@ import React from "react";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   Tooltip,
@@ -13,12 +14,15 @@ import ChartCard from "./ChartCard";
 
 const BarChartCard = ({
   title,
+  actions,
   data,
   xKey,
   yKey,
   color = "#22c55e",
   orientation = "vertical",
   showPercent = true,
+  highlightKey,
+  highlightColor = "#7AC143",
 }) => {
   const formatValue = (value) =>
     showPercent ? `${value}%` : value.toLocaleString("es-CO");
@@ -26,7 +30,7 @@ const BarChartCard = ({
   const isHorizontal = orientation === "horizontal";
 
   return (
-    <ChartCard title={title}>
+    <ChartCard title={title} actions={actions}>
       <ResponsiveContainer width="100%" height={isHorizontal ? 320 : 280}>
         <BarChart
           data={data}
@@ -79,6 +83,17 @@ const BarChartCard = ({
             fill={color}
             maxBarSize={48}
           >
+            {data?.map((entry) => (
+              <Cell
+                key={entry[xKey]}
+                fill={
+                  highlightKey && entry[xKey] === highlightKey
+                    ? highlightColor
+                    : color
+                }
+                opacity={highlightKey && entry[xKey] !== highlightKey ? 0.45 : 1}
+              />
+            ))}
             <LabelList
               dataKey={yKey}
               position={isHorizontal ? "right" : "top"}

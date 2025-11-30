@@ -1,11 +1,10 @@
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import KpiCard from "./components/KpiCard";
 import FilterBar from "./components/FilterBar";
 import HighchartsMapCard from "./components/HighchartsMapCard";
 import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
 import BarChartCard from "./components/BarChartCard";
 import PieChartCard from "./components/PieChartCard";
-import StackedAreaChartCard from "./components/StackedAreaChartCard";
 import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts";
 import { useKpiStats } from "./hooks/useKpiStats";
 
@@ -497,12 +496,12 @@ const DashboardSection = () => {
     purposeData,
     occupationData,
     vehicleTenureData,
-    hourlyModeData,
     originRanking,
     destinationRanking,
     originHeatData,
     destinationHeatData,
   } = useTravelCrossfilterRecharts();
+  const [heatView, setHeatView] = useState("origin");
 
   const {
     totalTrips,
@@ -518,12 +517,35 @@ const DashboardSection = () => {
     topDestination,
   } = useKpiStats(filteredTrips, filteredPersons, filteredHouseholds);
 
-  const stackedModes = useMemo(() => {
-    if (!hourlyModeData.length) return [];
-    return Object.keys(hourlyModeData[0]).filter(
-      (key) => key !== "hour" && !key.endsWith("Color")
-    );
-  }, [hourlyModeData]);
+  const selectedMacrozonaLabel = useMemo(() => {
+    if (filters.macrozona === "Todas") return null;
+    const prefix = `${filters.municipio} - `;
+    return filters.macrozona.startsWith(prefix)
+      ? filters.macrozona.replace(prefix, "")
+      : filters.macrozona;
+  }, [filters.macrozona, filters.municipio]);
+
+  const heatBarData = useMemo(() => {
+    const sourceData = heatView === "origin" ? originHeatData : destinationHeatData;
+    if (!sourceData?.length) return [];
+
+    const total = sourceData.reduce((acc, item) => acc + item.value, 0) || 1;
+
+    return sourceData
+      .map(({ name, value }) => {
+        const label =
+          filters.municipio !== "AMVA General" && name.startsWith(`${filters.municipio} - `)
+            ? name.replace(`${filters.municipio} - `, "")
+            : name;
+
+        return {
+          label,
+          value: Number(((value / total) * 100).toFixed(1)),
+          raw: value,
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [destinationHeatData, filters.municipio, heatView, originHeatData]);
 
   const macrozonaScopeLabel = useMemo(() => {
     if (macrozonaScope === "ambos") return "Origen y destino";
@@ -624,19 +646,6 @@ const DashboardSection = () => {
         vehicleTenureData.map((item) => ({ "Tenencia vehicular": item.label, "% del total": item.value }))
       );
 
-      const hourlySheet = XLSX.utils.json_to_sheet(
-        hourlyModeData.map((row) => {
-          const { hour, ...rest } = row;
-          const clean = { Hora: hour };
-          Object.entries(rest).forEach(([key, value]) => {
-            if (!key.endsWith("Color")) {
-              clean[key] = value;
-            }
-          });
-          return clean;
-        })
-      );
-
       const estratoSheet = XLSX.utils.json_to_sheet(
         estratoData.map((item) => ({ Estrato: item.label, "% del total": item.value }))
       );
@@ -670,7 +679,6 @@ const DashboardSection = () => {
       XLSX.utils.book_append_sheet(workbook, purposeSheet, "Motivos de viaje");
       XLSX.utils.book_append_sheet(workbook, occupationSheet, "Ocupación");
       XLSX.utils.book_append_sheet(workbook, vehicleSheet, "Tenencia vehicular");
-      XLSX.utils.book_append_sheet(workbook, hourlySheet, "Distribución horaria");
       XLSX.utils.book_append_sheet(workbook, estratoSheet, "Estrato");
       XLSX.utils.book_append_sheet(workbook, edadSheet, "Edad");
       XLSX.utils.book_append_sheet(workbook, generoSheet, "Género");
@@ -858,11 +866,11 @@ const DashboardSection = () => {
         onThematicChange={setThematicValue}
       />
 
-      {/* Mapas y modos de transporte */}
+      {/* Mapas y distribución de calor */}
       <section
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
           gap: 24,
           marginBottom: 32,
         }}
@@ -878,6 +886,51 @@ const DashboardSection = () => {
           palette="orange"
         />
         <BarChartCard
+          title={`Distribución de calor de ${heatView === "origin" ? "orígenes" : "destinos"}`}
+          actions={
+            <div style={{ display: "flex", gap: 6 }}>
+              {[{ key: "origin", label: "Orígenes" }, { key: "destination", label: "Destinos" }].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setHeatView(opt.key)}
+                  style={{
+                    borderRadius: 9999,
+                    border: heatView === opt.key ? "1px solid #2563eb" : "1px solid #e5e7eb",
+                    background:
+                      heatView === opt.key
+                        ? "linear-gradient(120deg, #dbeafe, #eef2ff)"
+                        : "#f8fafc",
+                    color: "#0f172a",
+                    fontSize: 11,
+                    padding: "6px 10px",
+                    cursor: "pointer",
+                    boxShadow:
+                      heatView === opt.key ? "0 6px 18px rgba(37, 99, 235, 0.25)" : "none",
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          }
+          data={heatBarData}
+          xKey="label"
+          yKey="value"
+          color="#16a34a"
+          orientation="horizontal"
+          highlightKey={selectedMacrozonaLabel}
+        />
+      </section>
+
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: 24,
+          marginBottom: 32,
+        }}
+      >
+        <BarChartCard
           title="Distribución de viajes según modo de transporte"
           data={modeData}
           xKey="label"
@@ -885,27 +938,12 @@ const DashboardSection = () => {
           color="#0ea5e9"
           orientation="horizontal"
         />
-      </section>
 
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-          gap: 24,
-          marginBottom: 32,
-        }}
-      >
         <PieChartCard
           title="Motivos de viaje"
           data={purposeData.map((item) => ({ name: item.label, value: item.value }))}
           dataKey="value"
           nameKey="name"
-        />
-
-        <StackedAreaChartCard
-          title="Distribución horaria de los viajes por modo"
-          data={hourlyModeData}
-          modes={stackedModes}
         />
 
         <BarChartCard
