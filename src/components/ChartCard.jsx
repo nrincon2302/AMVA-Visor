@@ -37,7 +37,16 @@ const ChartCard = ({ title, actions, children }) => {
           {actions}
         </div>
       )}
-      <div style={{ flex: 1 }}>{children}</div>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ width: "100%", height: "100%" }}>{children}</div>
+      </div>
     </div>
   );
 };

@@ -28,6 +28,13 @@ const BarChartCard = ({
     showPercent ? `${value}%` : value.toLocaleString("es-CO");
 
   const isHorizontal = orientation === "horizontal";
+  const categoryTickStyle = {
+    fontSize: 12,
+    fill: "#0f172a",
+    angle: isHorizontal ? 0 : -22,
+    textAnchor: isHorizontal ? "end" : "end",
+    dy: isHorizontal ? 0 : 8,
+  };
 
   return (
     <ChartCard title={title} actions={actions}>
@@ -55,17 +62,19 @@ const BarChartCard = ({
               dataKey={xKey}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
-              tick={{ fontSize: 12, fill: "#0f172a" }}
+              tick={categoryTickStyle}
+              interval={0}
+              height={isHorizontal ? undefined : 70}
             />
           )}
           {isHorizontal ? (
             <YAxis
               dataKey={xKey}
               type="category"
-              width={180}
+              width={200}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
-              tick={{ fontSize: 12, fill: "#0f172a" }}
+              tick={categoryTickStyle}
             />
           ) : (
             <YAxis

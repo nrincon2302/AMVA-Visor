@@ -5,6 +5,7 @@ import HighchartsMapCard from "./components/HighchartsMapCard";
 import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
 import BarChartCard from "./components/BarChartCard";
 import PieChartCard from "./components/PieChartCard";
+import StackedAreaChartCard from "./components/StackedAreaChartCard";
 import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts";
 import { useKpiStats } from "./hooks/useKpiStats";
 
@@ -496,6 +497,7 @@ const DashboardSection = () => {
     purposeData,
     occupationData,
     vehicleTenureData,
+    hourlyModeData,
     originRanking,
     destinationRanking,
     originHeatData,
@@ -546,6 +548,14 @@ const DashboardSection = () => {
       })
       .sort((a, b) => b.value - a.value);
   }, [destinationHeatData, filters.municipio, heatView, originHeatData]);
+
+  const hourlyModeSeries = useMemo(() => {
+    if (!hourlyModeData?.length) return [];
+    const sample = hourlyModeData[0];
+    return Object.keys(sample).filter(
+      (key) => key !== "hour" && !key.toLowerCase().includes("color")
+    );
+  }, [hourlyModeData]);
 
   const macrozonaScopeLabel = useMemo(() => {
     if (macrozonaScope === "ambos") return "Origen y destino";
@@ -961,6 +971,12 @@ const DashboardSection = () => {
           xKey="label"
           yKey="value"
           color="#8b5cf6"
+        />
+
+        <StackedAreaChartCard
+          title="Distribución horaria por modo de transporte"
+          data={hourlyModeData}
+          modes={hourlyModeSeries}
         />
       </section>
 
