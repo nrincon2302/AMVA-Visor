@@ -505,6 +505,16 @@ const DashboardSection = () => {
   } = useTravelCrossfilterRecharts();
   const [heatView, setHeatView] = useState("origin");
 
+  const heatPalette = useMemo(
+    () => ({
+      origin: { color: "#16a34a", highlight: "#22c55e" }, // verde (coincide con palette="green")
+      destination: { color: "#f97316", highlight: "#fb923c" }, // naranja (coincide con palette="orange")
+    }),
+    []
+  );
+
+  const currentHeatColors = heatPalette[heatView] ?? heatPalette.origin;
+
   const {
     totalTrips,
     avgDistance,
@@ -926,7 +936,8 @@ const DashboardSection = () => {
           data={heatBarData}
           xKey="label"
           yKey="value"
-          color="#16a34a"
+          color={currentHeatColors.color}
+          highlightColor={currentHeatColors.highlight}
           orientation="horizontal"
           highlightKey={selectedMacrozonaLabel}
         />
@@ -934,12 +945,19 @@ const DashboardSection = () => {
 
       <section
         style={{
+          background: "#f9fafb",
+          borderRadius: 14,
+          padding: 16,
+          border: "1px solid #e5e7eb",
+          marginBottom: 32,
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
           gap: 24,
-          marginBottom: 32,
         }}
       >
+        <h3 style={{ marginTop: 0, marginBottom: 16, gridColumn: "1 / -1" }}>
+          Análisis descriptivo de los viajes realizados
+        </h3>
         <BarChartCard
           title="Distribución de viajes según modo de transporte"
           data={modeData}
@@ -973,11 +991,13 @@ const DashboardSection = () => {
           color="#8b5cf6"
         />
 
-        <StackedAreaChartCard
-          title="Distribución horaria por modo de transporte"
-          data={hourlyModeData}
-          modes={hourlyModeSeries}
-        />
+        <div style={{ gridColumn: "span 2" }}>
+           <StackedAreaChartCard
+             title="Distribución horaria promedio por modo de transporte"
+             data={hourlyModeData}
+             modes={hourlyModeSeries}
+           />
+         </div>
       </section>
 
       {/* Tabs + gráficos inferiores */}

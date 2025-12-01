@@ -24,7 +24,7 @@ const StackedAreaChartCard = ({ title, data = [], modes = [] }) => {
             height={70}
           />
           <YAxis
-            tickFormatter={(v) => `${v}%`}
+            tickFormatter={(v) => `${v}`}
             domain={[0, 100]}
             tick={{ fontSize: 12, fill: "#0f172a" }}
           />

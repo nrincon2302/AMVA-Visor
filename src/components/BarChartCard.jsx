@@ -33,7 +33,7 @@ const BarChartCard = ({
     fill: "#0f172a",
     angle: isHorizontal ? 0 : -22,
     textAnchor: isHorizontal ? "end" : "end",
-    dy: isHorizontal ? 0 : 8,
+    dy: isHorizontal ? 0 : 2,
   };
 
   return (
@@ -42,7 +42,7 @@ const BarChartCard = ({
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 20, right: 18, left: isHorizontal ? 12 : 0, bottom: 12 }}
+          margin={{ top: 20, right: 35, left: isHorizontal ? 2 : 0, bottom: 1 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -71,7 +71,7 @@ const BarChartCard = ({
             <YAxis
               dataKey={xKey}
               type="category"
-              width={200}
+              width={100}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
               tick={categoryTickStyle}
