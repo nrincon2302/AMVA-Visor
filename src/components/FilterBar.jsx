@@ -3,12 +3,14 @@ import React from "react";
 const FilterBar = ({
   municipio,
   macrozona,
+  macrozonaScope,
   macrozones = [],
   municipios = [],
   thematicFilters,
   thematicOptions,
   onMunicipioChange,
   onMacrozonaChange,
+  onMacrozonaScopeChange,
   onThematicChange,
 }) => {
   const handleMultiSelect = (key, value) => {
@@ -21,24 +23,25 @@ const FilterBar = ({
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
+        display: "grid",
+        gridTemplateColumns: "minmax(280px, 1fr)",
+        gap: 12,
         marginTop: 8,
         marginBottom: 20,
-        background: "linear-gradient(120deg, #f8fafc, #eef2ff)",
+        background: "#f8fafc",
         border: "1px solid #e5e7eb",
-        borderRadius: 14,
-        padding: "14px 16px",
-        boxShadow: "0 10px 40px rgba(15, 23, 42, 0.04)",
+        borderRadius: 12,
+        padding: "12px 14px",
+        boxShadow: "0 10px 30px rgba(15, 23, 42, 0.03)",
       }}
     >
       <div
         style={{
           display: "flex",
-          gap: 12,
+          gap: 10,
           flexWrap: "wrap",
-          alignItems: "center",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
         }}
       >
         <label style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
@@ -49,7 +52,7 @@ const FilterBar = ({
             style={{
               borderRadius: 12,
               border: "1px solid #cbd5e1",
-              padding: "8px 12px",
+              padding: "6px 10px",
               fontSize: 13,
               color: "#0f172a",
               background: "#ffffff",
@@ -73,7 +76,7 @@ const FilterBar = ({
             style={{
               borderRadius: 12,
               border: "1px solid #cbd5e1",
-              padding: "8px 12px",
+              padding: "6px 10px",
               fontSize: 13,
               color: "#0f172a",
               background: "#ffffff",
@@ -89,14 +92,36 @@ const FilterBar = ({
             ))}
           </select>
         </label>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
+            Aplicar macrozona a
+          </span>
+          {[{ key: "ambos", label: "Origen y destino" }, { key: "origen", label: "Solo origen" }, { key: "destino", label: "Solo destino" }].map(
+            (opt) => (
+              <label
+                key={opt.key}
+                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}
+              >
+                <input
+                  type="radio"
+                  name="macrozonaScope"
+                  value={opt.key}
+                  checked={macrozonaScope === opt.key}
+                  onChange={(e) => onMacrozonaScopeChange(e.target.value)}
+                />
+                {opt.label}
+              </label>
+            )
+          )}
+        </div>
       </div>
 
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 16,
-          alignItems: "flex-start",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+          gap: 12,
         }}
       >
         {[
@@ -109,18 +134,18 @@ const FilterBar = ({
           <div
             key={group.key}
             style={{
-              minWidth: 180,
+              minWidth: 0,
               background: "#ffffff",
               border: "1px solid #e5e7eb",
-              borderRadius: 12,
-              padding: 12,
-              boxShadow: "0 8px 24px rgba(15, 23, 42, 0.05)",
+              borderRadius: 10,
+              padding: 10,
+              boxShadow: "0 6px 16px rgba(15, 23, 42, 0.04)",
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>
               {group.label}
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {(thematicOptions[group.key] || []).map((opt) => {
                 const active = thematicFilters[group.key]?.includes(opt);
                 return (
@@ -132,13 +157,13 @@ const FilterBar = ({
                       border: active ? "1px solid #2563eb" : "1px solid #e2e8f0",
                       background: active
                         ? "linear-gradient(120deg, #dbeafe, #eef2ff)"
-                        : "#f8fafc",
+                        : "#f1f5f9",
                       color: "#0f172a",
                       fontSize: 11,
-                      padding: "6px 10px",
+                      padding: "5px 9px",
                       cursor: "pointer",
                       whiteSpace: "nowrap",
-                      boxShadow: active ? "0 6px 18px rgba(37, 99, 235, 0.25)" : "none",
+                      boxShadow: active ? "0 6px 18px rgba(37, 99, 235, 0.18)" : "none",
                       transition: "all 120ms ease-in-out",
                     }}
                   >
