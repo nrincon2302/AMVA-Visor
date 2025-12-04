@@ -19,16 +19,16 @@ const ALL_MACROZONAS = Object.entries(MACROZONAS_POR_MUNICIPIO)
 const THEMATIC_OPTIONS = {
   gender: ["Hombre", "Mujer"],
   ageRange: [
-    "5 a 11 años",
-    "12 a 17 años",
-    "18–25",
-    "26–35",
-    "36–45",
-    "46–60",
+    "5-11",
+    "12-17",
+    "18-25",
+    "26-35",
+    "36-45",
+    "46-60",
     "60+",
   ],
   estrato: [1, 2, 3, 4, 5, 6],
-  income: ["0–1 SM", "1–2 SM", "2–4 SM", "4–6 SM", "6+ SM"],
+  income: ["0-1 SM", "1-2 SM", "2-4 SM", "4-6 SM", "6+ SM"],
   mode: ["Metro", "Bus", "Moto", "Carro", "Bicicleta", "Caminata", "Taxi", "Tranvía"],
 };
 
@@ -45,13 +45,13 @@ const deriveCategorical = (seedValue, options) => {
 };
 
 const normalizeAgeRange = (person) => {
-  if (person.ageRange === "5 a 11 años" || person.ageRange === "12 a 17 años") {
+  if (person.ageRange === "5-11" || person.ageRange === "12-17") {
     return person.ageRange;
   }
 
   const seed = hashString(person.id) % 10;
-  if (seed === 0 || seed === 1) return "5 a 11 años";
-  if (seed === 2 || seed === 3) return "12 a 17 años";
+  if (seed === 0 || seed === 1) return "5-11";
+  if (seed === 2 || seed === 3) return "12-17";
 
   return person.ageRange;
 };

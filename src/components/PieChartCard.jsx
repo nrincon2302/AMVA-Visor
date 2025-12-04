@@ -27,8 +27,8 @@ const PieChartCard = ({
             nameKey={nameKey}
             cx="50%"
             cy="50%"
-            outerRadius={105}
-            innerRadius={58}
+            outerRadius={95}
+            innerRadius={50}
             paddingAngle={2}
             labelLine={false}
             label={({ value }) => `${value}%`}
