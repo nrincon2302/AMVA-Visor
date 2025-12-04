@@ -18,7 +18,15 @@ const ALL_MACROZONAS = Object.entries(MACROZONAS_POR_MUNICIPIO)
 
 const THEMATIC_OPTIONS = {
   gender: ["Hombre", "Mujer"],
-  ageRange: ["18–25", "26–35", "36–45", "46–60", "60+"],
+  ageRange: [
+    "5 a 11 años",
+    "12 a 17 años",
+    "18–25",
+    "26–35",
+    "36–45",
+    "46–60",
+    "60+",
+  ],
   estrato: [1, 2, 3, 4, 5, 6],
   income: ["0–1 SM", "1–2 SM", "2–4 SM", "4–6 SM", "6+ SM"],
   mode: ["Metro", "Bus", "Moto", "Carro", "Bicicleta", "Caminata", "Taxi", "Tranvía"],
@@ -36,6 +44,18 @@ const deriveCategorical = (seedValue, options) => {
   return options[seed % options.length];
 };
 
+const normalizeAgeRange = (person) => {
+  if (person.ageRange === "5 a 11 años" || person.ageRange === "12 a 17 años") {
+    return person.ageRange;
+  }
+
+  const seed = hashString(person.id) % 10;
+  if (seed === 0 || seed === 1) return "5 a 11 años";
+  if (seed === 2 || seed === 3) return "12 a 17 años";
+
+  return person.ageRange;
+};
+
 const VEHICLE_BUCKETS = ["Sin vehículo", "1 vehículo", "2+ vehículos"];
 const PURPOSES = ["Trabajo", "Estudio", "Compras", "Gestiones", "Ocio"];
 const OCCUPATIONS = [
@@ -44,17 +64,6 @@ const OCCUPATIONS = [
   "Independiente",
   "Hogar",
   "Desempleado",
-];
-
-const COLORS = [
-  "#0ea5e9",
-  "#16a34a",
-  "#f97316",
-  "#6366f1",
-  "#f43f5e",
-  "#22c55e",
-  "#8b5cf6",
-  "#eab308",
 ];
 
 function aggregatePercentages(data, field) {
@@ -109,9 +118,14 @@ export function useTravelCrossfilterRecharts() {
           formatMacrozonaLabel(municipio, macro)
         );
 
-  const personsById = useMemo(
-    () => Object.fromEntries(persons.map((p) => [p.id, p])),
+  const personsNormalized = useMemo(
+    () => persons.map((person) => ({ ...person, ageRange: normalizeAgeRange(person) })),
     []
+  );
+
+  const personsById = useMemo(
+    () => Object.fromEntries(personsNormalized.map((p) => [p.id, p])),
+    [personsNormalized]
   );
 
   const derivedHouseholds = useMemo(() => {
@@ -141,7 +155,7 @@ export function useTravelCrossfilterRecharts() {
         return values.includes(person[key]);
       });
 
-    const personsFiltered = persons.filter(thematicMatch);
+    const personsFiltered = personsNormalized.filter(thematicMatch);
     const thematicPersonIds = new Set(personsFiltered.map((p) => p.id));
 
     const tripsFiltered = trips.filter((trip) => {
@@ -227,6 +241,7 @@ export function useTravelCrossfilterRecharts() {
     macrozona,
     macrozonaScope,
     thematicFilters,
+    personsNormalized,
     personsById,
     derivedHouseholds,
   ]);
@@ -311,37 +326,36 @@ export function useTravelCrossfilterRecharts() {
       .sort((a, b) => b.value - a.value);
   }, [filtered.householdsFiltered]);
 
-  const hourlyModeData = useMemo(() => {
+  const hourlyTripShareData = useMemo(() => {
     if (!filtered.tripsFiltered.length) return [];
 
     const hours = Array.from({ length: 24 }, (_, idx) => idx);
-    const countsByHour = hours.map((hour) => ({ hour, total: 0 }));
-    const modeTotals = {};
+    const modeKeys = THEMATIC_OPTIONS.mode;
+    const countsByHour = hours.map((hour) => ({
+      hour,
+      total: 0,
+      modes: {},
+    }));
 
     filtered.tripsFiltered.forEach((trip) => {
       const hour = trip.departureHour;
-      const mode = trip.mode;
       const record = countsByHour[hour];
-      record[mode] = (record[mode] || 0) + 1;
       record.total += 1;
-      modeTotals[mode] = (modeTotals[mode] || 0) + 1;
+      record.modes[trip.mode] = (record.modes[trip.mode] || 0) + 1;
     });
 
-    const topModes = Object.entries(modeTotals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 4)
-      .map(([mode]) => mode);
-
     return countsByHour.map((record) => {
-      const total = record.total || 1;
       const hourLabel = `${record.hour.toString().padStart(2, "0")}:00`;
-      const modeShares = topModes.reduce((acc, mode, index) => {
-        acc[mode] = Number((((record[mode] || 0) / total) * 100).toFixed(1));
-        acc[`${mode}Color`] = COLORS[index % COLORS.length];
+      const modeCounts = modeKeys.reduce((acc, mode) => {
+        acc[mode] = Number((record.modes[mode] || 0).toFixed(1));
         return acc;
       }, {});
 
-      return { hour: hourLabel, ...modeShares };
+      return {
+        hour: hourLabel,
+        total: Number(record.total.toFixed(1)),
+        ...modeCounts,
+      };
     });
   }, [filtered.tripsFiltered]);
 
@@ -368,7 +382,7 @@ export function useTravelCrossfilterRecharts() {
 
   return {
     households,
-    persons,
+    persons: personsNormalized,
     trips,
     filters,
     macrozonaScope,
@@ -387,7 +401,7 @@ export function useTravelCrossfilterRecharts() {
     purposeData,
     occupationData,
     vehicleTenureData,
-    hourlyModeData,
+    hourlyTripShareData,
     originRanking,
     destinationRanking,
     originHeatData,

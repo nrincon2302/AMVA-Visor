@@ -30,6 +30,8 @@ const PieChartCard = ({
             outerRadius={105}
             innerRadius={58}
             paddingAngle={2}
+            labelLine={false}
+            label={({ value }) => `${value}%`}
           >
             {data.map((entry, index) => (
               <Cell

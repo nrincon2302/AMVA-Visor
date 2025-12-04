@@ -5,7 +5,7 @@ import HighchartsMapCard from "./components/HighchartsMapCard";
 import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
 import BarChartCard from "./components/BarChartCard";
 import PieChartCard from "./components/PieChartCard";
-import StackedAreaChartCard from "./components/StackedAreaChartCard";
+import HourlyModeChartCard from "./components/HourlyModeChartCard";
 import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts";
 import { useKpiStats } from "./hooks/useKpiStats";
 
@@ -475,6 +475,8 @@ const Footer = () => {
 
 // ---------- Dashboard (contenido central) --------------
 const DashboardSection = () => {
+  const BASE_BAR_COLOR = "#22c55e";
+  const BASE_HIGHLIGHT_COLOR = "#86efac";
   const {
     filters,
     macrozonaScope,
@@ -497,7 +499,7 @@ const DashboardSection = () => {
     purposeData,
     occupationData,
     vehicleTenureData,
-    hourlyModeData,
+    hourlyTripShareData,
     originRanking,
     destinationRanking,
     originHeatData,
@@ -507,10 +509,10 @@ const DashboardSection = () => {
 
   const heatPalette = useMemo(
     () => ({
-      origin: { color: "#16a34a", highlight: "#22c55e" }, // verde (coincide con palette="green")
-      destination: { color: "#f97316", highlight: "#fb923c" }, // naranja (coincide con palette="orange")
+      origin: { color: BASE_BAR_COLOR, highlight: BASE_HIGHLIGHT_COLOR },
+      destination: { color: BASE_BAR_COLOR, highlight: BASE_HIGHLIGHT_COLOR },
     }),
-    []
+    [BASE_BAR_COLOR, BASE_HIGHLIGHT_COLOR]
   );
 
   const currentHeatColors = heatPalette[heatView] ?? heatPalette.origin;
@@ -558,14 +560,6 @@ const DashboardSection = () => {
       })
       .sort((a, b) => b.value - a.value);
   }, [destinationHeatData, filters.municipio, heatView, originHeatData]);
-
-  const hourlyModeSeries = useMemo(() => {
-    if (!hourlyModeData?.length) return [];
-    const sample = hourlyModeData[0];
-    return Object.keys(sample).filter(
-      (key) => key !== "hour" && !key.toLowerCase().includes("color")
-    );
-  }, [hourlyModeData]);
 
   const macrozonaScopeLabel = useMemo(() => {
     if (macrozonaScope === "ambos") return "Origen y destino";
@@ -963,7 +957,7 @@ const DashboardSection = () => {
           data={modeData}
           xKey="label"
           yKey="value"
-          color="#0ea5e9"
+          color={BASE_BAR_COLOR}
           orientation="horizontal"
         />
 
@@ -979,7 +973,7 @@ const DashboardSection = () => {
           data={vehicleTenureData}
           xKey="label"
           yKey="value"
-          color="#f59e0b"
+          color={BASE_BAR_COLOR}
           orientation="horizontal"
         />
 
@@ -988,16 +982,17 @@ const DashboardSection = () => {
           data={occupationData}
           xKey="label"
           yKey="value"
-          color="#8b5cf6"
+          color={BASE_BAR_COLOR}
         />
 
         <div style={{ gridColumn: "span 2" }}>
-           <StackedAreaChartCard
-             title="Distribución horaria promedio por modo de transporte"
-             data={hourlyModeData}
-             modes={hourlyModeSeries}
-           />
-         </div>
+          <HourlyModeChartCard
+            title="Distribución horaria promedio de viajes por modo"
+            data={hourlyTripShareData}
+            modes={thematicOptions.mode}
+            selectedModes={filters.thematicFilters.mode}
+          />
+        </div>
       </section>
 
       {/* Tabs + gráficos inferiores */}
