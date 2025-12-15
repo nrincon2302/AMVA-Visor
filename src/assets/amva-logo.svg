@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title>Área Metropolitana del Valle de Aburrá</title>
+  <desc>Logotipo estilizado en verde con la palabra Área y texto institucional debajo</desc>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7AC143"/>
+      <stop offset="100%" stop-color="#5ba828"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" fill="white" rx="12"/>
+  <path d="M32 196c38-54 70-109 116-172l14 10c-26 47-53 93-89 146 34-20 67-38 102-54l7 16c-40 15-79 36-119 60l-15-6q-8-3-16 0z" fill="url(#g)" opacity="0.95"/>
+  <path d="M128 46c14 3 23 9 26 18 4 14-7 26-24 38-10 7-23 14-34 20l-9-14c10-5 22-12 31-18 11-8 16-16 14-22-2-5-9-9-23-12z" fill="#7AC143" opacity="0.9"/>
+  <text x="32" y="202" fill="#62a425" font-family="Helvetica, Arial, sans-serif" font-size="32" font-weight="700">Área</text>
+  <text x="32" y="230" fill="#62a425" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700">METROPOLITANA</text>
+  <text x="32" y="246" fill="#62a425" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="600">Valle de Aburrá</text>
+</svg>

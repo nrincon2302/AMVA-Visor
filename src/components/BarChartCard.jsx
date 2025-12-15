@@ -12,25 +12,31 @@ import {
 } from "recharts";
 import ChartCard from "./ChartCard";
 
+const GRID_COLOR = "#BFBFBF";
+const AXIS_COLOR = "#A6A6A6";
+const TEXT_COLOR = "#0f172a";
+
 const BarChartCard = ({
   title,
   actions,
   data,
   xKey,
   yKey,
-  color = "#22c55e",
-  orientation = "vertical",
+  color = "#66CC33",
+  orientation = "horizontal",
   showPercent = true,
   highlightKey,
-  highlightColor = "#7AC143",
+  highlightColor,
+  onSelect,
 }) => {
   const formatValue = (value) =>
     showPercent ? `${value}%` : value.toLocaleString("es-CO");
 
   const isHorizontal = orientation === "horizontal";
+  const resolvedHighlightColor = highlightColor || color;
   const categoryTickStyle = {
-    fontSize: 12,
-    fill: "#0f172a",
+    fontSize: "8pt",
+    fill: TEXT_COLOR,
     angle: isHorizontal ? 0 : -22,
     textAnchor: isHorizontal ? "end" : "end",
     dy: isHorizontal ? 0 : 2,
@@ -42,10 +48,11 @@ const BarChartCard = ({
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 20, right: 35, left: isHorizontal ? 2 : 0, bottom: 1 }}
+          margin={{ top: 20, right: 40, left: isHorizontal ? 26 : 12, bottom: 8 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
+            stroke={GRID_COLOR}
             vertical={!isHorizontal}
             horizontal={isHorizontal}
           />
@@ -53,15 +60,15 @@ const BarChartCard = ({
             <XAxis
               type="number"
               tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+              axisLine={{ stroke: AXIS_COLOR }}
               tickFormatter={formatValue}
-              tick={{ fontSize: 12, fill: "#0f172a" }}
+              tick={{ fontSize: "8pt", fill: TEXT_COLOR }}
             />
           ) : (
             <XAxis
               dataKey={xKey}
               tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+              axisLine={{ stroke: AXIS_COLOR }}
               tick={categoryTickStyle}
               interval={0}
               height={isHorizontal ? undefined : 70}
@@ -73,16 +80,16 @@ const BarChartCard = ({
               type="category"
               width={100}
               tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+              axisLine={{ stroke: AXIS_COLOR }}
               tick={categoryTickStyle}
             />
           ) : (
             <YAxis
               tickLine={false}
-              axisLine={{ stroke: "#e5e7eb" }}
+              axisLine={{ stroke: AXIS_COLOR }}
               tickFormatter={formatValue}
               domain={showPercent ? [0, 100] : ["dataMin", "auto"]}
-              tick={{ fontSize: 12, fill: "#0f172a" }}
+              tick={{ fontSize: "8pt", fill: TEXT_COLOR }}
             />
           )}
           <Tooltip
@@ -95,22 +102,29 @@ const BarChartCard = ({
             radius={isHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
             fill={color}
             maxBarSize={48}
+            onClick={(data) => onSelect?.(data?.payload?.[xKey])}
           >
             {data?.map((entry) => (
               <Cell
                 key={entry[xKey]}
                 fill={
                   highlightKey && entry[xKey] === highlightKey
-                    ? highlightColor
+                    ? resolvedHighlightColor
                     : color
                 }
-                opacity={highlightKey && entry[xKey] !== highlightKey ? 0.45 : 1}
+                stroke={
+                  highlightKey && entry[xKey] === highlightKey
+                    ? resolvedHighlightColor
+                    : "none"
+                }
+                strokeWidth={highlightKey && entry[xKey] === highlightKey ? 2 : 0}
+                opacity={highlightKey && entry[xKey] !== highlightKey ? 0.25 : 1}
               />
             ))}
             <LabelList
               dataKey={yKey}
               position={isHorizontal ? "right" : "top"}
-              style={{ fontSize: 12, fill: "#0f172a" }}
+              style={{ fontSize: "8pt", fill: "#0f172a" }}
               formatter={formatValue}
             />
           </Bar>
