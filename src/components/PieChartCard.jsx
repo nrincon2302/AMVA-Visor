@@ -22,21 +22,25 @@ const PieChartCard = ({
   const getSliceColor = (entry, index) =>
     colorMap?.[entry[nameKey]] || colors[index % colors.length];
 
-  const renderLabel = (props) => {
+  const renderLabelOutside = (props) => {
     const RADIAN = Math.PI / 180;
     const {
       cx,
       cy,
       midAngle,
-      innerRadius,
       outerRadius,
       percent,
       index,
       payload,
     } = props;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.65;
+
+    // Empuja el texto fuera del pastel (ajusta si quieres más lejos)
+    const offset = 18;
+    const radius = outerRadius + offset;
+
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
     const fill = getSliceColor(payload, index);
     const value = `${(percent * 100).toFixed(1)}%`;
 
@@ -68,31 +72,30 @@ const PieChartCard = ({
               outerRadius={95}
               innerRadius={50}
               paddingAngle={2}
-              labelLine={false}
-              label={renderLabel}
+              labelLine={true}
+              label={renderLabelOutside}
               onClick={(entry) => onSelect?.(entry?.name)}
             >
               {data.map((entry, index) => (
                 <Cell
                   key={`slice-${index}`}
                   fill={getSliceColor(entry, index)}
-                  opacity={
-                    selectedKey && selectedKey !== entry[nameKey] ? 0.4 : 1
-                  }
+                  opacity={selectedKey && selectedKey !== entry[nameKey] ? 0.4 : 1}
                 />
               ))}
             </Pie>
-          <Tooltip
-            contentStyle={{ borderRadius: 8, border: "none" }}
-            formatter={(value, name) => [`${value}%`, name]}
-          />
-          <Legend
-            layout="vertical"
-            verticalAlign="middle"
-            align="right"
-            iconType="circle"
-            wrapperStyle={{ fontSize: "8pt", width: 200 }}
-          />
+
+            <Tooltip
+              contentStyle={{ borderRadius: 8, border: "none" }}
+              formatter={(value, name) => [`${value}%`, name]}
+            />
+            <Legend
+              layout="vertical"
+              verticalAlign="middle"
+              align="right"
+              iconType="circle"
+              wrapperStyle={{ fontSize: "8pt", width: 200 }}
+            />
           </PieChart>
         </ResponsiveContainer>
       </div>
