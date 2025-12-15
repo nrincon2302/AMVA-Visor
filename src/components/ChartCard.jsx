@@ -3,15 +3,18 @@ import React from "react";
 const ChartCard = ({ title, actions, children }) => {
   return (
     <div
+      className="chart-card"
+      data-title={title || "Visualización"}
       style={{
         background: "#ffffff",
         borderRadius: "14px",
         padding: "16px 20px",
-        boxShadow: "0 4px 12px rgba(15,23,42,0.08)",
+        boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
         height: "100%",
         display: "flex",
         flexDirection: "column",
         border: "1px solid #e5e7eb",
+        overflow: "visible",
       }}
     >
       {title && (
@@ -27,7 +30,7 @@ const ChartCard = ({ title, actions, children }) => {
           <h3
             style={{
               margin: 0,
-              fontSize: "15px",
+              fontSize: "10pt",
               fontWeight: 600,
               color: "#111827",
             }}

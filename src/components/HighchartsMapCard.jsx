@@ -23,11 +23,11 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
       ? {
           min: 0,
           stops: [
-            [0, "#fee7df"],
-            [0.25, "#fdc4aa"],
-            [0.5, "#fb9061"],
-            [0.75, "#f97316"],
-            [1, "#c2410c"],
+            [0, "#fff7d6"],
+            [0.25, "#ffe8a3"],
+            [0.5, "#ffd166"],
+            [0.75, "#ffad33"],
+            [1, "#ff8c00"],
           ],
         }
       : {
@@ -65,7 +65,7 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
       backgroundColor: "rgba(255,255,255,0.9)",
       borderRadius: 8,
       borderWidth: 0,
-      itemStyle: { fontSize: "10px" },
+      itemStyle: { fontSize: "8pt" },
     },
 
     mapNavigation: {
@@ -124,18 +124,18 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
         },
 
         name: "Viajes",
-        borderColor: "#6b7280", // Gris oscuro para definir bien el croquis
-        borderWidth: 1,
-        nullColor: "rgba(150, 150, 150, 0.2)", // Zonas sin datos
-        opacity: 0.85,
+          borderColor: "#808080", // Gris 50% para delimitar el croquis
+          borderWidth: 1,
+          nullColor: "rgba(191, 191, 191, 0.2)", // Gris 75% con opacidad para zonas sin datos
+          opacity: 0.85,
         
         states: {
-          hover: {
-            brightness: 0.1,
-            borderWidth: 2,
-            borderColor: "#000"
-          }
-        },
+            hover: {
+              brightness: 0.1,
+              borderWidth: 2,
+              borderColor: "#808080"
+            }
+          },
         zIndex: 1,
       },
     ],
