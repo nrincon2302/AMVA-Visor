@@ -2,12 +2,35 @@ import React from "react";
 import BarChartCard from "./BarChartCard";
 import PieChartCard from "./PieChartCard";
 
+const BAR_COLORS = {
+  estrato: "#66CC33",
+  edad: "#66CC33",
+  escolaridad: "#66CC33",
+  vehiculos: "#66CC33",
+};
+
+const GENDER_COLOR_MAP = {
+  Hombre: "#00A7F4",
+  Mujer: "#E770D3",
+};
+
+const PIE_COLORS = [
+  "#00A7F4",
+  "#E770D3",
+  "#66CC33",
+  "#339933",
+  "#FF9000",
+  "#FDEB00",
+];
+
 const TabbedChartsRecharts = ({
   estratoData = [],
   edadData = [],
   generoData = [],
   escolaridadData = [],
-  ingresosData = [],
+  vehicleData = [],
+  selectedFilters = {},
+  onSelect,
 }) => {
   const charts = [
     {
@@ -15,10 +38,13 @@ const TabbedChartsRecharts = ({
       content: (
         <BarChartCard
           key="estrato"
-          title="Distribución de viajes según estrato"
+          title="Estrato"
           data={estratoData}
           xKey="label"
           yKey="value"
+          color={BAR_COLORS.estrato}
+          highlightKey={selectedFilters.estrato}
+          onSelect={(value) => onSelect?.("estrato", value)}
         />
       ),
     },
@@ -27,10 +53,13 @@ const TabbedChartsRecharts = ({
       content: (
         <BarChartCard
           key="edad"
-          title="Distribución de viajes según edad"
+          title="Edad"
           data={edadData}
           xKey="label"
           yKey="value"
+          color={BAR_COLORS.edad}
+          highlightKey={selectedFilters.ageRange}
+          onSelect={(value) => onSelect?.("ageRange", value)}
         />
       ),
     },
@@ -39,22 +68,13 @@ const TabbedChartsRecharts = ({
       content: (
         <BarChartCard
           key="escolaridad"
-          title="Distribución de viajes según escolaridad"
+          title="Escolaridad"
           data={escolaridadData}
           xKey="label"
           yKey="value"
-        />
-      ),
-    },
-    {
-      id: "ingresos",
-      content: (
-        <BarChartCard
-          key="ingresos"
-          title="Distribución de viajes según ingresos"
-          data={ingresosData}
-          xKey="label"
-          yKey="value"
+          color={BAR_COLORS.escolaridad}
+          highlightKey={selectedFilters.edu}
+          onSelect={(value) => onSelect?.("edu", value)}
         />
       ),
     },
@@ -63,10 +83,29 @@ const TabbedChartsRecharts = ({
       content: (
         <PieChartCard
           key="genero"
-          title="Distribución de viajes según género"
+          title="Género"
           data={generoData}
           dataKey="value"
           nameKey="name"
+          colors={PIE_COLORS}
+          colorMap={GENDER_COLOR_MAP}
+          selectedKey={selectedFilters.gender}
+          onSelect={(value) => onSelect?.("gender", value)}
+        />
+      ),
+    },
+    {
+      id: "vehiculos",
+      content: (
+        <BarChartCard
+          key="vehiculos"
+          title="Tenencia vehicular por cada mil habitantes"
+          data={vehicleData}
+          xKey="label"
+          yKey="value"
+          color={BAR_COLORS.vehiculos}
+          highlightKey={selectedFilters.vehicleBucket}
+          onSelect={(value) => onSelect?.("vehicleBucket", value)}
         />
       ),
     },

@@ -4,12 +4,23 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
-    sans-serif;
+  font-family: "Segoe UI", "Segoe UI Semibold", "Segoe UI Bold",
+    "Segoe UI Bold Italic", sans-serif;
+  font-size: 10pt;
   background: #ffffff;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Avoid focus outlines inside Recharts when clicking anywhere on the plot */
+.chart-card :focus,
+.chart-card :focus-visible,
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.chart-card *:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 

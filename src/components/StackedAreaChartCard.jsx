@@ -20,13 +20,13 @@ const StackedAreaChartCard = ({ title, data = [], modes = [] }) => {
           <XAxis
             dataKey="hour"
             tickLine={false}
-            tick={{ fontSize: 12, fill: "#0f172a", angle: -20, textAnchor: "end", dy: 8 }}
+            tick={{ fontSize: "8pt", fill: "#0f172a", angle: -20, textAnchor: "end", dy: 8 }}
             height={70}
           />
           <YAxis
             tickFormatter={(v) => `${v}`}
             domain={[0, 100]}
-            tick={{ fontSize: 12, fill: "#0f172a" }}
+            tick={{ fontSize: "8pt", fill: "#0f172a" }}
           />
           <Tooltip
             formatter={(value) => [`${value}%`, "Participación" ]}

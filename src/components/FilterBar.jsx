@@ -44,7 +44,7 @@ const FilterBar = ({
           justifyContent: "space-between",
         }}
       >
-        <label style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
+        <label style={{ fontSize: "10pt", fontWeight: 600, color: "#0f172a" }}>
           Municipio
           <select
             value={municipio}
@@ -53,7 +53,7 @@ const FilterBar = ({
               borderRadius: 12,
               border: "1px solid #cbd5e1",
               padding: "6px 10px",
-              fontSize: 13,
+              fontSize: 10,
               color: "#0f172a",
               background: "#ffffff",
               marginLeft: 8,
@@ -68,7 +68,7 @@ const FilterBar = ({
           </select>
         </label>
 
-        <label style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
+        <label style={{ fontSize: "10pt", fontWeight: 600, color: "#0f172a" }}>
           Macrozona
           <select
             value={macrozona}
@@ -77,7 +77,7 @@ const FilterBar = ({
               borderRadius: 12,
               border: "1px solid #cbd5e1",
               padding: "6px 10px",
-              fontSize: 13,
+              fontSize: 10,
               color: "#0f172a",
               background: "#ffffff",
               marginLeft: 8,
@@ -94,14 +94,19 @@ const FilterBar = ({
         </label>
 
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
+          <span style={{ fontSize: "10pt", fontWeight: 600, color: "#0f172a" }}>
             Aplicar macrozona a
           </span>
           {[{ key: "ambos", label: "Origen y destino" }, { key: "origen", label: "Solo origen" }, { key: "destino", label: "Solo destino" }].map(
             (opt) => (
               <label
                 key={opt.key}
-                style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: "10pt",
+                }}
               >
                 <input
                   type="radio"
@@ -128,8 +133,7 @@ const FilterBar = ({
           { key: "gender", label: "Género" },
           { key: "ageRange", label: "Edad" },
           { key: "estrato", label: "Estrato" },
-          { key: "income", label: "Ingresos" },
-          { key: "mode", label: "Modo" },
+          { key: "mode", label: "Modo principal" },
         ].map((group) => (
           <div
             key={group.key}
@@ -142,7 +146,7 @@ const FilterBar = ({
               boxShadow: "0 6px 16px rgba(15, 23, 42, 0.04)",
             }}
           >
-            <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, fontSize: "10pt", marginBottom: 8 }}>
               {group.label}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -159,7 +163,7 @@ const FilterBar = ({
                         ? "linear-gradient(120deg, #dbeafe, #eef2ff)"
                         : "#f1f5f9",
                       color: "#0f172a",
-                      fontSize: 11,
+                      fontSize: "10pt",
                       padding: "5px 9px",
                       cursor: "pointer",
                       whiteSpace: "nowrap",
