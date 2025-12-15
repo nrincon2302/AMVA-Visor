@@ -56,17 +56,17 @@ const PieChartCard = ({
 
   return (
     <ChartCard title={title}>
-      <div style={{ width: "100%", height: 320, overflow: "visible", paddingLeft: 32 }}>
-        <ResponsiveContainer width="100%" height="100%">
+      <div style={{ width: "100%", height: 320, overflow: "visible", paddingLeft: 20 }}>
+        <ResponsiveContainer width="120%" height="100%">
           <PieChart>
             <Pie
               data={data}
               dataKey={dataKey}
               nameKey={nameKey}
-              cx="55%"
+              cx="50%"
               cy="50%"
-              outerRadius={105}
-              innerRadius={58}
+              outerRadius={95}
+              innerRadius={50}
               paddingAngle={2}
               labelLine={false}
               label={renderLabel}
@@ -91,7 +91,7 @@ const PieChartCard = ({
             verticalAlign="middle"
             align="right"
             iconType="circle"
-            wrapperStyle={{ paddingLeft: 12, fontSize: "8pt", width: 180 }}
+            wrapperStyle={{ fontSize: "8pt", width: 200 }}
           />
           </PieChart>
         </ResponsiveContainer>

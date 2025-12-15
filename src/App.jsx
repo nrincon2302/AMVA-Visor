@@ -8,8 +8,9 @@ import HourlyModeChartCard from "./components/HourlyModeChartCard";
 import ChartCard from "./components/ChartCard";
 import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts";
 import { useKpiStats } from "./hooks/useKpiStats";
-import logoAmva from "./assets/amva-logo.svg";
-import escudo from "./assets/escudo.svg";
+import logoAmva from "./assets/logo-area.png";
+import logoFoot from "./assets/logo-fott.png";
+import escudo from "./assets/escudo-colombia.png";
 
 const PRIMARY_GREEN = "#66CC33";
 const SECONDARY_GREEN = "#339933";
@@ -102,25 +103,25 @@ const Header = () => {
             gap: 18,
           }}
         >
-          <div
-            style={{
-              width: 160,
-              height: 70,
-              background: "#ffffff",
-              borderRadius: 6,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 10px",
-              boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
-            }}
-          >
-            <img
-              src={logoAmva}
-              alt="Logo Área Metropolitana"
-              style={{ width: "100%", height: "100%", objectFit: "contain" }}
-            />
-          </div>
+            <div
+              style={{
+                width: 150,
+                height: 60,
+                background: "rgba(124, 185, 40, 1)",
+                borderRadius: 6,
+                marginBottom: 10,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 6
+              }}
+            >
+              <img
+                src={logoAmva}
+                alt="Logo Área Metropolitana"
+                style={{ width: "120%", height: "120%", objectFit: "contain" }}
+              />
+            </div>
 
           <div
             style={{
@@ -166,12 +167,10 @@ const Header = () => {
               width: 70,
               height: 70,
               borderRadius: 4,
-              background: "#ffffff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: 6,
-              boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
+              padding: 6
             }}
           >
             <img
@@ -425,9 +424,9 @@ const Footer = () => {
               }}
             >
               <img
-                src={logoAmva}
+                src={logoFoot}
                 alt="Logo Área Metropolitana"
-                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                style={{ width: "100%", height: "100%", objectFit: "stretch" }}
               />
             </div>
             <p style={{ margin: "4px 0" }}>
@@ -605,7 +604,6 @@ const DashboardSection = () => {
     setMunicipio,
     setMacrozona,
     setThematicValue,
-    thematicOptions,
     filteredTrips,
     filteredPersons,
     filteredHouseholds,
@@ -1120,7 +1118,7 @@ const DashboardSection = () => {
           gap: 24,
         }}
       >
-        <ChartCard title="Intensidad de viajes y parque automotor">
+        <ChartCard title="Análisis de Viajes">
           <ul
             style={{
               listStyle: "none",
