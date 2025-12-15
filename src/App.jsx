@@ -839,100 +839,292 @@ const DashboardSection = () => {
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 36;
+      const contentWidth = pageWidth - margin * 2;
 
       let cursorY = margin;
 
+      const PRIMARY_TEXT = "#0f172a";
+      const MUTED_TEXT = "#475569";
+      const BORDER = "#e5e7eb";
+      const CARD_BG = "#f8fafc";
+      const ACCENT = "#22c55e"; // verde
+
+      const hexToRgb = (hex) => {
+        const clean = hex.replace("#", "");
+        const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
+        const n = parseInt(full, 16);
+        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+      };
+
+      const setFillHex = (hex) => {
+        const { r, g, b } = hexToRgb(hex);
+        pdf.setFillColor(r, g, b);
+      };
+
+      const setDrawHex = (hex) => {
+        const { r, g, b } = hexToRgb(hex);
+        pdf.setDrawColor(r, g, b);
+      };
+
+      const setTextHex = (hex) => {
+        const { r, g, b } = hexToRgb(hex);
+        pdf.setTextColor(r, g, b);
+      };
+
+      const addFooter = () => {
+        const pageCount = pdf.getNumberOfPages();
+        const current = pdf.getCurrentPageInfo().pageNumber;
+        pdf.setFontSize(9);
+        setTextHex(MUTED_TEXT);
+        pdf.text(
+          `Página ${current} de ${pageCount}`,
+          pageWidth - margin,
+          pageHeight - 18,
+          { align: "right" }
+        );
+        setTextHex(PRIMARY_TEXT);
+      };
+
+      const newPage = () => {
+        addFooter();
+        pdf.addPage();
+        cursorY = margin;
+      };
+
       const ensureSpace = (needed) => {
-        if (cursorY + needed > pageHeight - margin) {
-          pdf.addPage();
-          cursorY = margin;
+        if (cursorY + needed > pageHeight - margin - 24) {
+          newPage();
         }
       };
 
-      const drawBarSection = (title, data, color = PRIMARY_GREEN) => {
-        if (!data?.length) return;
-        ensureSpace(30 + data.length * 18);
-        pdf.setFontSize(12);
+      const drawH1 = (title) => {
+        ensureSpace(60);
+        pdf.setFontSize(18);
+        setTextHex(PRIMARY_TEXT);
         pdf.text(title, margin, cursorY);
-        cursorY += 12;
+        cursorY += 14;
 
-        const labelWidth = 170;
-        const maxWidth = pageWidth - margin * 2 - labelWidth - 40;
-        const maxValue = Math.max(...data.map((d) => d.value || 0), 1);
+        setDrawHex(ACCENT);
+        pdf.setLineWidth(2);
+        pdf.line(margin, cursorY, margin + 220, cursorY);
+        pdf.setLineWidth(1);
+        cursorY += 18;
+      };
 
-        data.forEach((item) => {
-          const barWidth = (Math.min(item.value || 0, maxValue) / maxValue) * maxWidth;
-          pdf.setFillColor(color);
-          pdf.roundedRect(margin + labelWidth, cursorY - 9, barWidth, 12, 3, 3, "F");
-          pdf.setFontSize(10);
-          pdf.text(String(item.label || item.name), margin, cursorY);
-          pdf.text(`${item.value}${item.value && item.value > 0 ? " %" : ""}`.trim(), margin + labelWidth + barWidth + 8, cursorY);
-          cursorY += 16;
-        });
+      const drawSectionTitle = (title) => {
+        ensureSpace(48);
+        pdf.setFontSize(14);
+        setTextHex(PRIMARY_TEXT);
+        pdf.text(title, margin, cursorY);
         cursorY += 8;
+
+        setDrawHex(BORDER);
+        pdf.line(margin, cursorY, pageWidth - margin, cursorY);
+        cursorY += 16;
+      };
+
+      const drawParagraphLines = (lines) => {
+        pdf.setFontSize(10);
+        setTextHex(MUTED_TEXT);
+        const lineHeight = 12;
+
+        const maxLinesPerPage = Math.floor((pageHeight - margin - cursorY - 40) / lineHeight);
+        const chunks = [];
+        for (let i = 0; i < lines.length; i += maxLinesPerPage) {
+          chunks.push(lines.slice(i, i + maxLinesPerPage));
+        }
+
+        chunks.forEach((chunk, idx) => {
+          ensureSpace(chunk.length * lineHeight + 10);
+          pdf.text(chunk, margin, cursorY);
+          cursorY += chunk.length * lineHeight + 8;
+          if (idx < chunks.length - 1) newPage();
+        });
+
+        setTextHex(PRIMARY_TEXT);
+      };
+
+      const drawCard = (height) => {
+        ensureSpace(height);
+        setFillHex(CARD_BG);
+        setDrawHex(BORDER);
+        pdf.roundedRect(margin, cursorY, contentWidth, height, 10, 10, "FD");
+      };
+
+      const drawBarSection = (title, data, color = PRIMARY_GREEN, opts = {}) => {
+        if (!data?.length) return;
+
+        const showPercent = opts.showPercent ?? true;
+        const maxItems = opts.maxItems ?? 12;
+        const items = data.slice(0, maxItems);
+
+        // Estimar altura del bloque
+        const headerH = 36;
+        const rowH = 18;
+        const padBottom = 16;
+        const blockH = headerH + items.length * rowH + padBottom;
+
+        drawCard(blockH);
+
+        // Header dentro de la tarjeta
+        const startY = cursorY;
+        const innerX = margin + 14;
+        let y = startY + 22;
+
+        pdf.setFontSize(12);
+        setTextHex(PRIMARY_TEXT);
+        pdf.text(title, innerX, y);
+
+        y += 10;
+        setDrawHex(BORDER);
+        pdf.line(innerX, y, margin + contentWidth - 14, y);
+        y += 14;
+
+        // Cálculo de barras
+        const labelWidth = 180;
+        const valueGap = 10;
+        const barAreaWidth = contentWidth - 14 * 2 - labelWidth - 60;
+        const maxValue = Math.max(...items.map((d) => Number(d.value ?? 0)), 1);
+
+        items.forEach((item) => {
+          const rawValue = Number(item.value ?? 0);
+          const valueNorm = Math.min(rawValue, maxValue);
+          const barW = (valueNorm / maxValue) * barAreaWidth;
+
+          // Etiqueta
+          pdf.setFontSize(10);
+          setTextHex(PRIMARY_TEXT);
+          const label = String(item.label ?? item.name ?? "");
+          pdf.text(label, innerX, y);
+
+          // Barra
+          const barX = innerX + labelWidth;
+          const barY = y - 10;
+          setFillHex(color);
+          pdf.roundedRect(barX, barY, Math.max(barW, 2), 12, 3, 3, "F");
+
+          // Valor
+          setTextHex(MUTED_TEXT);
+          const suffix = showPercent ? " %" : "";
+          const valueText = `${rawValue}${suffix}`.trim();
+          pdf.text(valueText, barX + Math.max(barW, 2) + valueGap, y);
+
+          y += rowH;
+        });
+
+        cursorY = startY + blockH + 18; // separación consistente tras cada tarjeta
+        setTextHex(PRIMARY_TEXT);
       };
 
       const drawLineSection = (title, points) => {
         if (!points?.length) return;
-        ensureSpace(180);
+
+        // Página propia para que respire
+        newPage();
+
+        drawSectionTitle(title);
+
+        const cardH = 260;
+        drawCard(cardH);
+
+        const startY = cursorY;
+        const innerX = margin + 14;
+        const innerW = contentWidth - 28;
+        let y = startY + 22;
+
         pdf.setFontSize(12);
-        pdf.text(title, margin, cursorY);
-        cursorY += 12;
+        setTextHex(PRIMARY_TEXT);
+        pdf.text(title, innerX, y);
 
-        const chartHeight = 110;
-        const chartWidth = pageWidth - margin * 2 - 20;
-        const startX = margin;
-        const startY = cursorY + chartHeight;
-        const maxValue = Math.max(...points.map((p) => p.value), 1);
+        y += 10;
+        setDrawHex(BORDER);
+        pdf.line(innerX, y, margin + contentWidth - 14, y);
+        y += 14;
 
-        pdf.setDrawColor("#e5e7eb");
-        pdf.rect(startX, cursorY, chartWidth, chartHeight);
+        const chartTop = y;
+        const chartH = 150;
+        const chartBottom = chartTop + chartH;
 
-        points.forEach((point, idx) => {
-          const x =
-            startX + (idx / Math.max(points.length - 1, 1)) * chartWidth;
-          const y = startY - (point.value / maxValue) * (chartHeight - 10);
-          if (idx === 0) {
-            pdf.setDrawColor("#22c55e");
-            pdf.moveTo(x, y);
-          } else {
-            pdf.lineTo(x, y);
-          }
+        // Marco
+        setDrawHex(BORDER);
+        pdf.rect(innerX, chartTop, innerW, chartH);
+
+        const values = points.map((p) => Number(p.value ?? 0));
+        const maxV = Math.max(...values, 1);
+
+        // Línea
+        setDrawHex(ACCENT);
+        pdf.setLineWidth(2);
+
+        points.forEach((p, idx) => {
+          const x = innerX + (idx / Math.max(points.length - 1, 1)) * innerW;
+          const v = Number(p.value ?? 0);
+          const yy = chartBottom - (v / maxV) * (chartH - 12) - 6;
+          if (idx === 0) pdf.moveTo(x, yy);
+          else pdf.lineTo(x, yy);
         });
         pdf.stroke();
+        pdf.setLineWidth(1);
 
+        // Etiquetas mínimas
         pdf.setFontSize(9);
-        pdf.text(`${points[0].hour} - ${points[points.length - 1].hour}`, startX, startY + 12);
-        cursorY = startY + 24;
+        setTextHex(MUTED_TEXT);
+        const first = points[0]?.hour ?? "";
+        const last = points[points.length - 1]?.hour ?? "";
+        pdf.text(`${first}`, innerX, chartBottom + 14);
+        pdf.text(`${last}`, innerX + innerW, chartBottom + 14, { align: "right" });
+
+        // Nota
+        pdf.setFontSize(9);
+        pdf.text("Valores expresados como participación (%)", innerX, chartBottom + 32);
+
+        cursorY = startY + cardH + 18;
+        setTextHex(PRIMARY_TEXT);
       };
 
-      pdf.setFontSize(16);
-      pdf.text("Reporte de viajes", margin, cursorY);
-      cursorY += 16;
-      pdf.setFontSize(10);
-      pdf.text(summaryText.split("\n"), margin, cursorY + 2);
-      cursorY += summaryText.split("\n").length * 12 + 10;
+      // ---------- Portada / encabezado ----------
+      drawH1("Reporte de viajes");
 
+      drawSectionTitle("Resumen del filtro actual");
+      drawParagraphLines(summaryText.split("\n"));
+
+      // ---------- Bloques de gráficas ----------
+      drawSectionTitle("Distribución del total de viajes");
       const chartSections = [
-        { title: "Modo principal", data: modeData, color: MODE_BAR_COLOR },
-        { title: "Motivo", data: purposeData, color: PRIMARY_GREEN },
-        { title: "Ocupación", data: occupationData, color: OCCUPATION_BAR_COLOR },
-        { title: "Cantidad de etapas", data: stageData, color: STAGE_BAR_COLOR },
+        { title: "Modo principal", data: modeData, color: MODE_BAR_COLOR, showPercent: true },
+        { title: "Motivo", data: purposeData, color: PRIMARY_GREEN, showPercent: true },
+        { title: "Ocupación", data: occupationData, color: OCCUPATION_BAR_COLOR, showPercent: true },
+        { title: "Cantidad de etapas", data: stageData, color: STAGE_BAR_COLOR, showPercent: true },
+      ];
+
+      chartSections.forEach((s) => drawBarSection(s.title, s.data, s.color, { showPercent: s.showPercent }));
+
+      // Variables socioeconómicas en otra sección (y con paginado más limpio)
+      newPage();
+      drawSectionTitle("Variables socioeconómicas");
+      const socioSections = [
         { title: "Estrato", data: estratoData, color: PRIMARY_GREEN },
         { title: "Edad", data: edadData, color: PRIMARY_GREEN },
         { title: "Escolaridad", data: escolaridadData, color: PRIMARY_GREEN },
         {
           title: "Género",
-          data: generoData.map((item) => ({ label: item.name, value: item.value })),
+          data: generoData.map((g) => ({ label: g.name, value: g.value })),
           color: PRIMARY_GREEN,
         },
         { title: "Tenencia vehicular por cada mil habitantes", data: vehicleTenureData, color: PRIMARY_GREEN },
       ];
 
-      chartSections.forEach((section) =>
-        drawBarSection(section.title, section.data, section.color)
-      );
+      // Forzar salto cada 2 tarjetas para que no queden apretadas
+      socioSections.forEach((s, idx) => {
+        drawBarSection(s.title, s.data, s.color, { showPercent: true, maxItems: 12 });
+        if ((idx + 1) % 2 === 0 && idx < socioSections.length - 1) newPage();
+      });
+
+      // Línea horaria en página propia
       drawLineSection("Distribución horaria", hourlyTripShareData);
+
+      // Footer final
+      addFooter();
 
       pdf.save(filename);
     };
