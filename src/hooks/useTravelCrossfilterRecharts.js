@@ -158,16 +158,6 @@ function aggregatePie(data, field) {
   }));
 }
 
-function aggregateHeat(data, field) {
-  const counts = data.reduce((acc, item) => {
-    const key = item[field];
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(counts).map(([name, value]) => ({ name, value }));
-}
-
 export function useTravelCrossfilterRecharts() {
   const [municipio, setMunicipio] = useState("AMVA General");
   const [thematicFilters, setThematicFilters] = useState({
