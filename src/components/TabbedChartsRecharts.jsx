@@ -6,7 +6,7 @@ const BAR_COLORS = {
   estrato: "#66CC33",
   edad: "#66CC33",
   escolaridad: "#66CC33",
-  vehiculos: "#66CC33",
+  ocupacion: "#00A7F4",
 };
 
 const GENDER_COLOR_MAP = {
@@ -28,7 +28,7 @@ const TabbedChartsRecharts = ({
   edadData = [],
   generoData = [],
   escolaridadData = [],
-  vehicleData = [],
+  occupationData = [],
   selectedFilters = {},
   onSelect,
 }) => {
@@ -95,17 +95,17 @@ const TabbedChartsRecharts = ({
       ),
     },
     {
-      id: "vehiculos",
+      id: "ocupacion",
       content: (
         <BarChartCard
-          key="vehiculos"
-          title="Tenencia vehicular por cada mil habitantes"
-          data={vehicleData}
+          key="ocupacion"
+          title="Ocupación"
+          data={occupationData}
           xKey="label"
           yKey="value"
-          color={BAR_COLORS.vehiculos}
-          highlightKey={selectedFilters.vehicleBucket}
-          onSelect={(value) => onSelect?.("vehicleBucket", value)}
+          color={BAR_COLORS.ocupacion}
+          highlightKey={selectedFilters.occupation}
+          onSelect={(value) => onSelect?.("occupation", value)}
         />
       ),
     },

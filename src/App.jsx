@@ -602,7 +602,6 @@ const DashboardSection = () => {
     filters,
     municipios,
     setMunicipio,
-    setMacrozona,
     setThematicValue,
     filteredTrips,
     filteredPersons,
@@ -616,9 +615,11 @@ const DashboardSection = () => {
     purposeData,
     occupationData,
     vehicleTenureData,
+    vehicleTypeData,
     hourlyTripShareData,
     macroHeatData,
     trips,
+    isLoading,
   } = useTravelCrossfilterRecharts();
 
   const originHeatData = macroHeatData?.origin || [];
@@ -656,21 +657,6 @@ const DashboardSection = () => {
     },
     [filters.thematicFilters, setThematicValue]
   );
-
-  const toggleMacrozona = useCallback(
-    (value) => {
-      setMacrozona(filters.macrozona === value ? null : value);
-    },
-    [filters.macrozona, setMacrozona]
-  );
-
-  const selectedMacrozonaLabel = useMemo(() => {
-    if (!filters.macrozona) return null;
-    const prefix = `${filters.municipio} - `;
-    return filters.macrozona.startsWith(prefix)
-      ? filters.macrozona.replace(prefix, "")
-      : filters.macrozona;
-  }, [filters.macrozona, filters.municipio]);
 
   const buildHeatDistribution = useCallback(
     (sourceData = []) => {
@@ -746,11 +732,9 @@ const DashboardSection = () => {
     setExportingFormat(format);
     const filename = `reporte-viajes.${format === "excel" ? "xlsx" : "pdf"}`;
 
-    const summaryText = `Municipio seleccionado: ${filters.municipio}\nMacrozona activa: ${
-      selectedMacrozonaLabel || "Todas"
-    }\nViajes totales (global): ${baseKpis.totalTrips}\nTiempo promedio global: ${baseKpis.avgTime.toFixed(
-      1
-    )} min\nViajes filtrados actuales: ${totalTrips}\nTiempo promedio filtrado: ${avgTime.toFixed(
+    const summaryText = `Municipio seleccionado: ${filters.municipio}\nViajes totales (global): ${
+      baseKpis.totalTrips
+    }\nTiempo promedio global: ${baseKpis.avgTime.toFixed(1)} min\nViajes filtrados actuales: ${totalTrips}\nTiempo promedio filtrado: ${avgTime.toFixed(
       1
     )} min\nViajes por hogar (filtrado): ${tripsPerHousehold}\nVehículos por hogar (filtrado): ${vehiclesPerHousehold}\nParticipación mujeres: ${pctWomen}%\nParticipación hombres: ${pctMen}%`;
 
@@ -765,7 +749,6 @@ const DashboardSection = () => {
       const summarySheet = XLSX.utils.json_to_sheet([
         {
           Municipio: filters.municipio,
-          Macrozona: selectedMacrozonaLabel || "Todas",
           "Viajes totales (global)": baseKpis.totalTrips,
           "Tiempo promedio global (min)": Number(baseKpis.avgTime.toFixed(1)),
           "Viajes filtrados": totalTrips,
@@ -795,6 +778,10 @@ const DashboardSection = () => {
         vehicleTenureData.map((item) => ({ "Tenencia vehicular por cada mil habitantes": item.label, "% del total": item.value }))
       );
 
+      const vehicleTypeSheet = XLSX.utils.json_to_sheet(
+        vehicleTypeData.map((item) => ({ "Tipo de vehículo": item.label, "% de hogares": item.value }))
+      );
+
       const estratoSheet = XLSX.utils.json_to_sheet(
         estratoData.map((item) => ({ Estrato: item.label, "% del total": item.value }))
       );
@@ -816,6 +803,7 @@ const DashboardSection = () => {
         XLSX.utils.book_append_sheet(workbook, purposeSheet, "Motivo");
         XLSX.utils.book_append_sheet(workbook, occupationSheet, "Ocupación");
         XLSX.utils.book_append_sheet(workbook, vehicleSheet, "Tenencia vehicular");
+        XLSX.utils.book_append_sheet(workbook, vehicleTypeSheet, "Tipo de vehículo");
         XLSX.utils.book_append_sheet(workbook, estratoSheet, "Estrato");
         XLSX.utils.book_append_sheet(workbook, edadSheet, "Edad");
         XLSX.utils.book_append_sheet(workbook, generoSheet, "Género");
@@ -834,298 +822,103 @@ const DashboardSection = () => {
         "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js",
         "jspdf"
       );
+      const html2canvas = await loadExternalLib(
+        "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",
+        "html2canvas"
+      );
 
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 36;
+      const margin = 28;
       const contentWidth = pageWidth - margin * 2;
 
       let cursorY = margin;
 
-      const PRIMARY_TEXT = "#0f172a";
-      const MUTED_TEXT = "#475569";
-      const BORDER = "#e5e7eb";
-      const CARD_BG = "#f8fafc";
-      const ACCENT = "#22c55e"; // verde
-
-      const hexToRgb = (hex) => {
-        const clean = hex.replace("#", "");
-        const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
-        const n = parseInt(full, 16);
-        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-      };
-
-      const setFillHex = (hex) => {
-        const { r, g, b } = hexToRgb(hex);
-        pdf.setFillColor(r, g, b);
-      };
-
-      const setDrawHex = (hex) => {
-        const { r, g, b } = hexToRgb(hex);
-        pdf.setDrawColor(r, g, b);
-      };
-
-      const setTextHex = (hex) => {
-        const { r, g, b } = hexToRgb(hex);
-        pdf.setTextColor(r, g, b);
+      const sectionLabels = {
+        filtros: "Filtros aplicados",
+        kpis: "Indicadores principales",
+        mapas: "Mapas de calor",
+        macros: "Macrozonas por municipio",
+        resumen: "Indicadores resumidos",
+        viajes: "Análisis de viajes",
+        socio: "Variables socioeconómicas",
+        vehiculos: "Parque automotor",
       };
 
       const addFooter = () => {
         const pageCount = pdf.getNumberOfPages();
         const current = pdf.getCurrentPageInfo().pageNumber;
         pdf.setFontSize(9);
-        setTextHex(MUTED_TEXT);
         pdf.text(
           `Página ${current} de ${pageCount}`,
           pageWidth - margin,
           pageHeight - 18,
           { align: "right" }
         );
-        setTextHex(PRIMARY_TEXT);
       };
 
-      const newPage = () => {
-        addFooter();
-        pdf.addPage();
-        cursorY = margin;
-      };
-
-      const ensureSpace = (needed) => {
-        if (cursorY + needed > pageHeight - margin - 24) {
-          newPage();
-        }
-      };
-
-      const drawH1 = (title) => {
-        ensureSpace(60);
+      const addTitle = (title) => {
         pdf.setFontSize(18);
-        setTextHex(PRIMARY_TEXT);
         pdf.text(title, margin, cursorY);
-        cursorY += 14;
-
-        setDrawHex(ACCENT);
-        pdf.setLineWidth(2);
-        pdf.line(margin, cursorY, margin + 220, cursorY);
-        pdf.setLineWidth(1);
         cursorY += 18;
       };
 
-      const drawSectionTitle = (title) => {
-        ensureSpace(48);
-        pdf.setFontSize(14);
-        setTextHex(PRIMARY_TEXT);
+      const addSubtitle = (title) => {
+        pdf.setFontSize(13);
         pdf.text(title, margin, cursorY);
-        cursorY += 8;
-
-        setDrawHex(BORDER);
-        pdf.line(margin, cursorY, pageWidth - margin, cursorY);
-        cursorY += 16;
+        cursorY += 12;
       };
 
-      const drawParagraphLines = (lines) => {
-        pdf.setFontSize(10);
-        setTextHex(MUTED_TEXT);
-        const lineHeight = 12;
+      const ensureSpace = (needed) => {
+        if (cursorY + needed > pageHeight - margin) {
+          addFooter();
+          pdf.addPage();
+          cursorY = margin;
+        }
+      };
 
-        const maxLinesPerPage = Math.floor((pageHeight - margin - cursorY - 40) / lineHeight);
-        const chunks = [];
-        for (let i = 0; i < lines.length; i += maxLinesPerPage) {
-          chunks.push(lines.slice(i, i + maxLinesPerPage));
+      addTitle("Reporte de viajes");
+      pdf.setFontSize(10);
+      summaryText.split("\\n").forEach((line) => {
+        ensureSpace(14);
+        pdf.text(line, margin, cursorY);
+        cursorY += 12;
+      });
+      cursorY += 8;
+
+      const sections = Array.from(
+        dashboardRef.current?.querySelectorAll("[data-print-section]") || []
+      );
+
+      for (const section of sections) {
+        const sectionKey = section.getAttribute("data-print-section");
+        const title = sectionLabels[sectionKey] || sectionKey;
+        ensureSpace(24);
+        addSubtitle(title);
+
+        const canvas = await html2canvas(section, {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          windowWidth: section.scrollWidth,
+        });
+
+        const imgWidth = contentWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        if (cursorY + imgHeight > pageHeight - margin) {
+          addFooter();
+          pdf.addPage();
+          cursorY = margin;
+          addSubtitle(title);
         }
 
-        chunks.forEach((chunk, idx) => {
-          ensureSpace(chunk.length * lineHeight + 10);
-          pdf.text(chunk, margin, cursorY);
-          cursorY += chunk.length * lineHeight + 8;
-          if (idx < chunks.length - 1) newPage();
-        });
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, cursorY, imgWidth, imgHeight);
+        cursorY += imgHeight + 14;
+      }
 
-        setTextHex(PRIMARY_TEXT);
-      };
-
-      const drawCard = (height) => {
-        ensureSpace(height);
-        setFillHex(CARD_BG);
-        setDrawHex(BORDER);
-        pdf.roundedRect(margin, cursorY, contentWidth, height, 10, 10, "FD");
-      };
-
-      const drawBarSection = (title, data, color = PRIMARY_GREEN, opts = {}) => {
-        if (!data?.length) return;
-
-        const showPercent = opts.showPercent ?? true;
-        const maxItems = opts.maxItems ?? 12;
-        const items = data.slice(0, maxItems);
-
-        // Estimar altura del bloque
-        const headerH = 36;
-        const rowH = 18;
-        const padBottom = 16;
-        const blockH = headerH + items.length * rowH + padBottom;
-
-        drawCard(blockH);
-
-        // Header dentro de la tarjeta
-        const startY = cursorY;
-        const innerX = margin + 14;
-        let y = startY + 22;
-
-        pdf.setFontSize(12);
-        setTextHex(PRIMARY_TEXT);
-        pdf.text(title, innerX, y);
-
-        y += 10;
-        setDrawHex(BORDER);
-        pdf.line(innerX, y, margin + contentWidth - 14, y);
-        y += 14;
-
-        // Cálculo de barras
-        const labelWidth = 180;
-        const valueGap = 10;
-        const barAreaWidth = contentWidth - 14 * 2 - labelWidth - 60;
-        const maxValue = Math.max(...items.map((d) => Number(d.value ?? 0)), 1);
-
-        items.forEach((item) => {
-          const rawValue = Number(item.value ?? 0);
-          const valueNorm = Math.min(rawValue, maxValue);
-          const barW = (valueNorm / maxValue) * barAreaWidth;
-
-          // Etiqueta
-          pdf.setFontSize(10);
-          setTextHex(PRIMARY_TEXT);
-          const label = String(item.label ?? item.name ?? "");
-          pdf.text(label, innerX, y);
-
-          // Barra
-          const barX = innerX + labelWidth;
-          const barY = y - 10;
-          setFillHex(color);
-          pdf.roundedRect(barX, barY, Math.max(barW, 2), 12, 3, 3, "F");
-
-          // Valor
-          setTextHex(MUTED_TEXT);
-          const suffix = showPercent ? " %" : "";
-          const valueText = `${rawValue}${suffix}`.trim();
-          pdf.text(valueText, barX + Math.max(barW, 2) + valueGap, y);
-
-          y += rowH;
-        });
-
-        cursorY = startY + blockH + 18; // separación consistente tras cada tarjeta
-        setTextHex(PRIMARY_TEXT);
-      };
-
-      const drawLineSection = (title, points) => {
-        if (!points?.length) return;
-
-        // Página propia para que respire
-        newPage();
-
-        drawSectionTitle(title);
-
-        const cardH = 260;
-        drawCard(cardH);
-
-        const startY = cursorY;
-        const innerX = margin + 14;
-        const innerW = contentWidth - 28;
-        let y = startY + 22;
-
-        pdf.setFontSize(12);
-        setTextHex(PRIMARY_TEXT);
-        pdf.text(title, innerX, y);
-
-        y += 10;
-        setDrawHex(BORDER);
-        pdf.line(innerX, y, margin + contentWidth - 14, y);
-        y += 14;
-
-        const chartTop = y;
-        const chartH = 150;
-        const chartBottom = chartTop + chartH;
-
-        // Marco
-        setDrawHex(BORDER);
-        pdf.rect(innerX, chartTop, innerW, chartH);
-
-        const values = points.map((p) => Number(p.value ?? 0));
-        const maxV = Math.max(...values, 1);
-
-        // Línea
-        setDrawHex(ACCENT);
-        pdf.setLineWidth(2);
-
-        points.forEach((p, idx) => {
-          const x = innerX + (idx / Math.max(points.length - 1, 1)) * innerW;
-          const v = Number(p.value ?? 0);
-          const yy = chartBottom - (v / maxV) * (chartH - 12) - 6;
-          if (idx === 0) pdf.moveTo(x, yy);
-          else pdf.lineTo(x, yy);
-        });
-        pdf.stroke();
-        pdf.setLineWidth(1);
-
-        // Etiquetas mínimas
-        pdf.setFontSize(9);
-        setTextHex(MUTED_TEXT);
-        const first = points[0]?.hour ?? "";
-        const last = points[points.length - 1]?.hour ?? "";
-        pdf.text(`${first}`, innerX, chartBottom + 14);
-        pdf.text(`${last}`, innerX + innerW, chartBottom + 14, { align: "right" });
-
-        // Nota
-        pdf.setFontSize(9);
-        pdf.text("Valores expresados como participación (%)", innerX, chartBottom + 32);
-
-        cursorY = startY + cardH + 18;
-        setTextHex(PRIMARY_TEXT);
-      };
-
-      // ---------- Portada / encabezado ----------
-      drawH1("Reporte de viajes");
-
-      drawSectionTitle("Resumen del filtro actual");
-      drawParagraphLines(summaryText.split("\n"));
-
-      // ---------- Bloques de gráficas ----------
-      drawSectionTitle("Distribución del total de viajes");
-      const chartSections = [
-        { title: "Modo principal", data: modeData, color: MODE_BAR_COLOR, showPercent: true },
-        { title: "Motivo", data: purposeData, color: PRIMARY_GREEN, showPercent: true },
-        { title: "Ocupación", data: occupationData, color: OCCUPATION_BAR_COLOR, showPercent: true },
-        { title: "Cantidad de etapas", data: stageData, color: STAGE_BAR_COLOR, showPercent: true },
-      ];
-
-      chartSections.forEach((s) => drawBarSection(s.title, s.data, s.color, { showPercent: s.showPercent }));
-
-      // Variables socioeconómicas en otra sección (y con paginado más limpio)
-      newPage();
-      drawSectionTitle("Variables socioeconómicas");
-      const socioSections = [
-        { title: "Estrato", data: estratoData, color: PRIMARY_GREEN },
-        { title: "Edad", data: edadData, color: PRIMARY_GREEN },
-        { title: "Escolaridad", data: escolaridadData, color: PRIMARY_GREEN },
-        {
-          title: "Género",
-          data: generoData.map((g) => ({ label: g.name, value: g.value })),
-          color: PRIMARY_GREEN,
-        },
-        { title: "Tenencia vehicular por cada mil habitantes", data: vehicleTenureData, color: PRIMARY_GREEN },
-      ];
-
-      // Forzar salto cada 2 tarjetas para que no queden apretadas
-      socioSections.forEach((s, idx) => {
-        drawBarSection(s.title, s.data, s.color, { showPercent: true, maxItems: 12 });
-        if ((idx + 1) % 2 === 0 && idx < socioSections.length - 1) newPage();
-      });
-
-      // Línea horaria en página propia
-      drawLineSection("Distribución horaria", hourlyTripShareData);
-
-      // Footer final
       addFooter();
-
       pdf.save(filename);
     };
 
@@ -1143,8 +936,77 @@ const DashboardSection = () => {
 
   const exportingLabel = exportingFormat === "excel" ? "Excel" : "PDF";
 
+  const loadingOverlay = (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(102,204,51,0.9)",
+        zIndex: 3000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 12,
+        color: "#ffffff",
+        textAlign: "center",
+        pointerEvents: "auto",
+        padding: 20,
+      }}
+    >
+      <style>
+        {`
+          @keyframes visorSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          @keyframes visorGlow { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        `}
+      </style>
+      <div style={{ position: "relative", width: 150, height: 150 }}>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            border: "6px solid rgba(255,255,255,0.24)",
+            borderTopColor: "#ffffff",
+            animation: "visorSpin 1s linear infinite",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 18,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.16)",
+            boxShadow: "0 14px 36px rgba(0,0,0,0.25)",
+            animation: "visorGlow 1.6s ease-in-out infinite",
+          }}
+        />
+        <img
+          src={logoAmva}
+          alt="Logo Área Metropolitana"
+          style={{
+            position: "absolute",
+            inset: 32,
+            width: "calc(100% - 64px)",
+            height: "calc(100% - 64px)",
+            objectFit: "contain",
+            filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.25))",
+          }}
+        />
+      </div>
+      <div style={{ fontWeight: 900, letterSpacing: 0.6, fontSize: 13 }}>
+        Cargando datos de movilidad
+      </div>
+      <p style={{ margin: 0, maxWidth: 520, fontSize: 11, lineHeight: 1.5 }}>
+        Estamos preparando los registros sintéticos y filtros personalizados. Este proceso
+        solo toma unos segundos.
+      </p>
+    </div>
+  );
+
   return (
     <>
+      {isLoading && loadingOverlay}
       <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
         <main
           ref={dashboardRef}
@@ -1155,66 +1017,16 @@ const DashboardSection = () => {
             padding: "32px 32px 48px",
           }}
         >
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        <button
-          onClick={() => exportReport("pdf")}
-          style={{
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            borderRadius: 8,
-            padding: "6px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Exportar PDF
-        </button>
-        <button
-          onClick={() => exportReport("excel")}
-          style={{
-            border: "1px solid #d1d5db",
-            background: "#fff",
-            borderRadius: 8,
-            padding: "6px 10px",
-            cursor: "pointer",
-          }}
-        >
-          Exportar Excel
-        </button>
-      </div>
-
-      {/* KPIs */}
-      <section
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: 20,
-          marginBottom: 20,
-        }}
-      >
-        <KpiCard
-          label="Viajes totales"
-          value={totalTrips.toLocaleString("es-CO")}
-          subLabel={`Base global: ${baseKpis.totalTrips.toLocaleString("es-CO")}`}
-          contextLines={[kpiContext.tripsLine]}
-          accentColor={PRIMARY_GREEN}
-        />
-
-        <KpiCard
-          label="Tiempo promedio"
-          value={`${avgTime.toFixed(1)} min`}
-          subLabel={`Promedio global: ${baseKpis.avgTime.toFixed(1)} min`}
-          contextLines={[kpiContext.timeLine]}
-          accentColor={TERTIARY_BLUE}
-        />
-      </section>
-
       <div
+        data-print-section="filtros"
         style={{
           display: "flex",
           gap: 16,
+          flexWrap: "wrap",
           alignItems: "center",
-          marginBottom: 16,
-          padding: "10px 12px",
+          justifyContent: "space-between",
+          marginBottom: 14,
+          padding: "12px 14px",
           background: "#f8fafc",
           border: "1px solid #e5e7eb",
           borderRadius: 12,
@@ -1241,14 +1053,64 @@ const DashboardSection = () => {
             ))}
           </select>
         </label>
-        <div style={{ fontSize: "10pt", color: "#475569" }}>
-          Selecciona macrozonas en la gráfica inferior para filtrar las demás
-          visualizaciones (los mapas permanecen a nivel municipal).
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            onClick={() => exportReport("pdf")}
+            style={{
+              border: "1px solid #d1d5db",
+              background: "#fff",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+            }}
+          >
+            Exportar PDF
+          </button>
+          <button
+            onClick={() => exportReport("excel")}
+            style={{
+              border: "1px solid #d1d5db",
+              background: "#fff",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+            }}
+          >
+            Exportar Excel
+          </button>
         </div>
       </div>
 
+      {/* KPIs */}
+      <section
+        data-print-section="kpis"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 20,
+          marginBottom: 24,
+        }}
+      >
+        <KpiCard
+          label="Viajes totales"
+          value={totalTrips.toLocaleString("es-CO")}
+          subLabel={`Base global: ${baseKpis.totalTrips.toLocaleString("es-CO")}`}
+          contextLines={[kpiContext.tripsLine]}
+          accentColor={PRIMARY_GREEN}
+        />
+
+        <KpiCard
+          label="Tiempo promedio"
+          value={`${avgTime.toFixed(1)} min`}
+          subLabel={`Promedio global: ${baseKpis.avgTime.toFixed(1)} min`}
+          contextLines={[kpiContext.timeLine]}
+          accentColor={TERTIARY_BLUE}
+        />
+      </section>
+
       {/* Mapas y distribución de calor */}
       <section
+        data-print-section="mapas"
         style={{
           marginBottom: 20,
           display: "grid",
@@ -1269,6 +1131,7 @@ const DashboardSection = () => {
       </section>
 
       <section
+        data-print-section="macros"
         style={{
           marginBottom: 28,
           display: "grid",
@@ -1277,28 +1140,25 @@ const DashboardSection = () => {
         }}
       >
         <BarChartCard
-          title="Macrozonas de origen"
+          title="Macrozonas de origen (solo municipio filtrado)"
           data={macroHeatBarData.origin}
           xKey="label"
           yKey="value"
           color={BASE_BAR_COLOR}
-          highlightKey={selectedMacrozonaLabel}
-          onSelect={toggleMacrozona}
           showPercent={false}
         />
         <BarChartCard
-          title="Macrozonas de destino"
+          title="Macrozonas de destino (solo municipio filtrado)"
           data={macroHeatBarData.destination}
           xKey="label"
           yKey="value"
           color={MACRO_DEST_BAR_COLOR}
-          highlightKey={selectedMacrozonaLabel}
-          onSelect={toggleMacrozona}
           showPercent={false}
         />
       </section>
 
       <section
+        data-print-section="resumen"
         style={{
           background: "#f9fafb",
           borderRadius: 14,
@@ -1320,13 +1180,11 @@ const DashboardSection = () => {
               gap: 10,
             }}
           >
-            {[ 
+            {[
               {
                 label: "Viajes filtrados",
                 value: totalTrips.toLocaleString("es-CO"),
-                detail: `${filters.municipio}${
-                  selectedMacrozonaLabel ? ` · ${selectedMacrozonaLabel}` : ""
-                }`,
+                detail: filters.municipio,
                 color: PRIMARY_GREEN,
               },
               {
@@ -1389,6 +1247,7 @@ const DashboardSection = () => {
       </section>
 
       <section
+        data-print-section="viajes"
         style={{
           background: "#f9fafb",
           borderRadius: 14,
@@ -1423,16 +1282,6 @@ const DashboardSection = () => {
         />
 
         <BarChartCard
-          title="Ocupación"
-          data={occupationData}
-          xKey="label"
-          yKey="value"
-          color={OCCUPATION_BAR_COLOR}
-          highlightKey={filters.thematicFilters.occupation}
-          onSelect={(value) => toggleFilter("occupation", value)}
-        />
-
-        <BarChartCard
           title="Cantidad de etapas"
           data={stageData}
           xKey="label"
@@ -1450,8 +1299,33 @@ const DashboardSection = () => {
         </div>
       </section>
 
-      {/* Tabs + gráficos inferiores */}
+      {/* Socioeconómico */}
       <section
+        data-print-section="socio"
+        style={{
+          background: "#f9fafb",
+          borderRadius: 14,
+          padding: 16,
+          border: "1px solid #e5e7eb",
+          marginBottom: 24,
+        }}
+      >
+        <h3 style={{ marginTop: 0 }}>
+          Distribución por variables socioeconómicas
+        </h3>
+        <TabbedChartsRecharts
+          estratoData={estratoData}
+          edadData={edadData}
+          generoData={generoData}
+          escolaridadData={escolaridadData}
+          occupationData={occupationData}
+          selectedFilters={filters.thematicFilters}
+          onSelect={toggleFilter}
+        />
+      </section>
+
+      <section
+        data-print-section="vehiculos"
         style={{
           background: "#f9fafb",
           borderRadius: 14,
@@ -1459,20 +1333,35 @@ const DashboardSection = () => {
           border: "1px solid #e5e7eb",
         }}
       >
-        <h3 style={{ marginTop: 0 }}>
-          Distribución del total de viajes por variables socioeconómicas
-        </h3>
-        <TabbedChartsRecharts
-          estratoData={estratoData}
-          edadData={edadData}
-          generoData={generoData}
-          escolaridadData={escolaridadData}
-          vehicleData={vehicleTenureData}
-          selectedFilters={filters.thematicFilters}
-          onSelect={toggleFilter}
-        />
+        <h3 style={{ marginTop: 0 }}>Parque automotor de los hogares</h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+            gap: 20,
+          }}
+        >
+          <BarChartCard
+            title="Tenencia vehicular por cada mil habitantes"
+            data={vehicleTenureData}
+            xKey="label"
+            yKey="value"
+            color={PRIMARY_GREEN}
+            highlightKey={filters.thematicFilters.vehicleBucket}
+            onSelect={(value) => toggleFilter("vehicleBucket", value)}
+          />
+          <BarChartCard
+            title="Tipo principal de vehículo en el hogar"
+            data={vehicleTypeData}
+            xKey="label"
+            yKey="value"
+            color={TERTIARY_ORANGE}
+            orientation="vertical"
+            showPercent
+          />
+        </div>
       </section>
-        </main>
+      </main>
 
         {exportingFormat && (
           <div
