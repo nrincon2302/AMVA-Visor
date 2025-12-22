@@ -9,7 +9,32 @@ const TARGET_TRIPS = 1_000_000;
 const formatMacrozonaLabel = (municipio, macrozona) =>
   `${municipio} - ${macrozona}`;
 
-const MODE_OPTIONS = metadataConstants.MODES;
+const MODE_OPTIONS = [
+  "Metro",
+  "Cable",
+  "Metroplús",
+  "Tranvía",
+  "Bus / Buseta / Microbús urbano o metropolitano (1)",
+  "Ruta integrada o alimentador C3 y C6",
+  "Bus / Buseta / Microbús intermunicipal (1)",
+  "Taxi individual (amarillo)",
+  "Taxi colectivo (amarillo)",
+  "Taxi intermunicipal o colectivo (blanco)",
+  "Transporte informal o particular",
+  "Vehículo de pago por plataforma",
+  "Auto particular (conductor)",
+  "Auto particular (acompañante)",
+  "Escolar",
+  "Vehículo empresarial",
+  "Moto (conductor)",
+  "Moto (acompañante)",
+  "Mototaxi",
+  "Motocarro",
+  "Bicicleta propia",
+  "Bicicleta pública",
+  "Patineta eléctrica",
+  "A pie",
+];
 
 const THEMATIC_OPTIONS = {
   gender: ["Hombre", "Mujer"],
@@ -78,14 +103,23 @@ const deriveCategorical = (seedValue, options) => {
 const normalizeMode = (mode, id) => {
   const baseMap = {
     Metro: "Metro",
-    Bus: "Bus urbano/metropolitano",
+    Bus: "Bus / Buseta / Microbús urbano o metropolitano (1)",
+    "Bus urbano/metropolitano": "Bus / Buseta / Microbús urbano o metropolitano (1)",
+    "Bus intermunicipal": "Bus / Buseta / Microbús intermunicipal (1)",
     Moto: "Moto (conductor)",
     Carro: "Auto particular (conductor)",
     Bicicleta: "Bicicleta propia",
+    "Bicicleta pública": "Bicicleta pública",
     Caminata: "A pie",
-    Taxi: "Taxi individual",
-    "Ruta integrada": "Ruta integrada/Alimentador C3-C6",
+    Taxi: "Taxi individual (amarillo)",
+    "Taxi individual": "Taxi individual (amarillo)",
+    "Taxi colectivo": "Taxi colectivo (amarillo)",
+    "Taxi intermunicipal": "Taxi intermunicipal o colectivo (blanco)",
+    "Ruta integrada": "Ruta integrada o alimentador C3 y C6",
+    "Ruta integrada/Alimentador C3-C6": "Ruta integrada o alimentador C3 y C6",
     Tranvía: "Tranvía",
+    "Transporte informal en calle": "Transporte informal o particular",
+    "Plataforma (Uber/Cabify/etc.)": "Vehículo de pago por plataforma",
   };
 
   if (baseMap[mode]) return baseMap[mode];
@@ -147,6 +181,12 @@ const VEHICLE_BUCKET_OPTIONS = [
   { value: "1 vehículo", weight: 45 },
   { value: "2+ vehículos", weight: 20 },
 ];
+
+const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const pickFromMap = (map, key, fallback = []) => {
+  const list = map?.[key] || fallback;
+  return list.length ? pickRandom(list) : null;
+};
 
 function aggregatePercentages(data, field) {
   if (!data.length) return [];
@@ -221,9 +261,30 @@ export function useTravelCrossfilterRecharts() {
       for (let i = 0; i < multiplier; i += 1) {
         for (let j = 0; j < baseTrips.length && expanded.length < TARGET_TRIPS; j += 1) {
           const trip = baseTrips[j];
+          const destinationMunicipio = pickRandom(
+            MUNICIPIOS.filter((item) => item && item !== "AMVA General")
+          );
+          const originMunicipio = trip.originMunicipio || destinationMunicipio;
+          const originMacro = pickFromMap(MACROZONAS_POR_MUNICIPIO, originMunicipio, [
+            "Urbana",
+          ]);
+          const destinationMacro = pickFromMap(
+            MACROZONAS_POR_MUNICIPIO,
+            destinationMunicipio,
+            ["Urbana"]
+          );
           expanded.push({
             ...trip,
             id: `T${idCounter}`,
+            mode: pickRandom(MODE_OPTIONS),
+            tripPurpose: pickRandom(PURPOSES.map((item) => item.value)),
+            stageBucket: pickRandom(STAGE_BUCKETS.map((item) => item.value)),
+            distanceKm: Number((Math.random() * 25 + 0.5).toFixed(1)),
+            durationMin: Math.max(6, Math.round(Math.random() * 80) + 8),
+            originMunicipio,
+            destinationMunicipio,
+            originMacro,
+            destinationMacro,
           });
           idCounter += 1;
         }
