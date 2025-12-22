@@ -28,7 +28,7 @@ const HourlyModeChartCard = ({ title, data = [] }) => {
             dataKey="hour"
             tickLine={false}
             axisLine={{ stroke: AXIS_COLOR }}
-            tick={{ fontSize: "8pt", fill: "#0f172a", angle: -35, textAnchor: "end" }}
+            tick={{ fontSize: "10pt", fill: "#0f172a", angle: -35, textAnchor: "end" }}
             interval={0}
             height={64}
           />
@@ -36,7 +36,7 @@ const HourlyModeChartCard = ({ title, data = [] }) => {
             tickFormatter={formatNumber}
             tickLine={false}
             axisLine={{ stroke: AXIS_COLOR }}
-            tick={{ fontSize: "8pt", fill: "#0f172a" }}
+            tick={{ fontSize: "10pt", fill: "#0f172a" }}
             allowDecimals={false}
           />
           <Tooltip

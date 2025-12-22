@@ -1,21 +1,26 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
+
+const defaultStats = {
+  totalTrips: 0,
+  avgDistance: 0,
+  avgTime: 0,
+  pctMen: 0,
+  pctWomen: 0,
+  tripsPerHousehold: 0,
+  avgTripsByEstrato: 0,
+  vehiclesPerHousehold: 0,
+  vehiclesByEstrato: 0,
+  topOrigin: null,
+  topDestination: null,
+};
 
 export function useKpiStats(filteredTrips, filteredPersons, filteredHouseholds) {
-  return useMemo(() => {
+  const [stats, setStats] = useState(defaultStats);
+
+  useEffect(() => {
     if (!filteredTrips || filteredTrips.length === 0) {
-      return {
-        totalTrips: 0,
-        avgDistance: 0,
-        avgTime: 0,
-        pctMen: 0,
-        pctWomen: 0,
-        tripsPerHousehold: 0,
-        avgTripsByEstrato: 0,
-        vehiclesPerHousehold: 0,
-        vehiclesByEstrato: 0,
-        topOrigin: null,
-        topDestination: null,
-      };
+      setStats(defaultStats);
+      return;
     }
 
     const totalTrips = filteredTrips.length;
@@ -115,7 +120,7 @@ export function useKpiStats(filteredTrips, filteredPersons, filteredHouseholds) 
       topDestination
     ).sort((a, b) => b[1] - a[1])[0];
 
-    return {
+    setStats({
       totalTrips,
       avgDistance,
       avgTime,
@@ -127,6 +132,8 @@ export function useKpiStats(filteredTrips, filteredPersons, filteredHouseholds) 
       vehiclesByEstrato,
       topOrigin: { label: originLabel, trips: originTrips },
       topDestination: { label: destinationLabel, trips: destinationTrips },
-    };
+    });
   }, [filteredTrips, filteredPersons, filteredHouseholds]);
+
+  return stats;
 }

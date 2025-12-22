@@ -1,39 +1,43 @@
 import React from "react";
-import ChartCard from "./ChartCard";
 
 const KpiCard = ({
   label,
   value,
   subLabel,
-  accentColor = "#66CC33",
+  headerColor = "#66CC33",
+  headerTextColor = "#ffffff",
   contextLines = [],
 }) => {
   return (
-    <ChartCard title={null}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <div
-          style={{
-            width: 6,
-            alignSelf: "stretch",
-            borderRadius: 9999,
-            background: accentColor,
-          }}
-        />
+    <div
+      style={{
+        borderRadius: 14,
+        overflow: "hidden",
+        boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
+        border: "1px solid #e5e7eb",
+        background: "#ffffff",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          background: headerColor,
+          color: headerTextColor,
+          padding: "8px 14px",
+          fontWeight: 700,
+          fontSize: 14,
+          letterSpacing: 0.2,
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ padding: "14px 16px" }}>
         <div style={{ flex: 1 }}>
           <div
             style={{
-              fontSize: 10,
-              fontWeight: 500,
-              color: "#6b7280",
-              marginBottom: 4,
-            }}
-          >
-            {label}
-          </div>
-          <div
-            style={{
-              fontSize: 24,
-              fontWeight: 700,
+              fontSize: 30,
+              fontWeight: 800,
               color: "#111827",
               lineHeight: 1.1,
             }}
@@ -43,8 +47,8 @@ const KpiCard = ({
           {subLabel && (
             <div
               style={{
-                fontSize: "10pt",
-                color: "#9ca3af",
+                fontSize: "11pt",
+                color: "#6b7280",
                 marginTop: 4,
               }}
             >
@@ -57,7 +61,7 @@ const KpiCard = ({
                 margin: "6px 0 0",
                 paddingLeft: 14,
                 color: "#475569",
-                fontSize: "10pt",
+                fontSize: "11pt",
                 lineHeight: 1.4,
               }}
             >
@@ -68,7 +72,7 @@ const KpiCard = ({
           )}
         </div>
       </div>
-    </ChartCard>
+    </div>
   );
 };
 

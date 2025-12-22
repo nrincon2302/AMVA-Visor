@@ -30,7 +30,7 @@ const ChartCard = ({ title, actions, children }) => {
           <h3
             style={{
               margin: 0,
-              fontSize: "10pt",
+              fontSize: "12pt",
               fontWeight: 600,
               color: "#111827",
             }}

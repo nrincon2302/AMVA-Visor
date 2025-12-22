@@ -1,5 +1,5 @@
 // src/components/HighchartsMapCard.jsx
-import React, { useMemo } from "react"; // 1. Importar useMemo
+import React, { useEffect, useState } from "react";
 import Highcharts from "highcharts/highmaps";
 import HighchartsReact from "highcharts-react-official";
 import ChartCard from "./ChartCard";
@@ -11,11 +11,12 @@ if (typeof TiledWebMap === "function") {
   TiledWebMap(Highcharts);
 }
 
-const HighchartsMapCard = ({ title, data, palette = "green" }) => {
+const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false }) => {
   
-  // 2. CLAVE: Clonar el GeoJSON para evitar que Highcharts lo corrompa al renderizar
-  const mapGeoJSON = useMemo(() => {
-    return JSON.parse(JSON.stringify(mapDataSource));
+  const [mapGeoJSON, setMapGeoJSON] = useState(null);
+
+  useEffect(() => {
+    setMapGeoJSON(JSON.parse(JSON.stringify(mapDataSource)));
   }, []);
 
   const colorAxis =
@@ -65,7 +66,7 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
       backgroundColor: "rgba(255,255,255,0.9)",
       borderRadius: 8,
       borderWidth: 0,
-      itemStyle: { fontSize: "8pt" },
+      itemStyle: { fontSize: "10pt" },
     },
 
     mapNavigation: {
@@ -91,22 +92,23 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
     },
 
     series: [
-      // Serie 1: Mapa base OSM
-      {
-        type: "tiledwebmap",
-        name: "Base OSM",
-        provider: {
-          type: "osm",
-          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        },
-        opacity: 0.7,
-        zIndex: 0,
-      },
-
-      // Serie 2: Polígonos del GeoJSON
+      ...(hideBaseMap
+        ? []
+        : [
+            {
+              type: "tiledwebmap",
+              name: "Base OSM",
+              provider: {
+                type: "osm",
+                url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+              },
+              opacity: 0.7,
+              zIndex: 0,
+            },
+          ]),
       {
         type: "map",
-        mapData: mapGeoJSON, // 3. Usar la copia clonada
+        mapData: mapGeoJSON || mapDataSource,
         data: data || [],
         
         // Configuraciones para forzar polígonos
