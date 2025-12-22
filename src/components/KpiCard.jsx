@@ -6,8 +6,18 @@ const KpiCard = ({
   subLabel,
   headerColor = "#66CC33",
   headerTextColor = "#ffffff",
+  bannerImageUrl,
   contextLines = [],
 }) => {
+  const headerBackgroundStyle = bannerImageUrl
+    ? {
+        backgroundImage: `linear-gradient(90deg, ${headerColor} 0%, ${headerColor} 45%, rgba(255,255,255,0.08) 100%), url('${bannerImageUrl}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }
+    : { background: headerColor };
+
   return (
     <div
       style={{
@@ -22,7 +32,7 @@ const KpiCard = ({
     >
       <div
         style={{
-          background: headerColor,
+          ...headerBackgroundStyle,
           color: headerTextColor,
           padding: "8px 14px",
           fontWeight: 700,
@@ -38,7 +48,7 @@ const KpiCard = ({
             style={{
               fontSize: 30,
               fontWeight: 800,
-              color: "#111827",
+              color: headerColor,
               lineHeight: 1.1,
             }}
           >

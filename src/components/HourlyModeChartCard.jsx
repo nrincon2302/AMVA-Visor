@@ -16,7 +16,7 @@ const AXIS_COLOR = "#A6A6A6";
 const LINE_COLOR = "#00A7F4";
 const DOT_STROKE = "#339933";
 
-const HourlyModeChartCard = ({ title, data = [] }) => {
+const HourlyModeChartCard = ({ title, data = [], series }) => {
   const formatNumber = (value) => Number(value || 0).toLocaleString("es-CO");
 
   return (
@@ -44,15 +44,30 @@ const HourlyModeChartCard = ({ title, data = [] }) => {
             formatter={(value) => [formatNumber(value), "Viajes"]}
           />
           <ReferenceLine y={0} stroke={AXIS_COLOR} />
-          <Line
-            type="monotone"
-            dataKey="value"
-            name="Viajes"
-            stroke={LINE_COLOR}
-            strokeWidth={2.6}
-            dot={{ r: 3.6, strokeWidth: 1.4, stroke: DOT_STROKE, fill: "#ffffff" }}
-            activeDot={{ r: 5 }}
-          />
+          {series?.length ? (
+            series.map((entry) => (
+              <Line
+                key={entry.key}
+                type="monotone"
+                dataKey={entry.key}
+                name={entry.label}
+                stroke={entry.color}
+                strokeWidth={2.6}
+                dot={{ r: 3.2, strokeWidth: 1.4, stroke: entry.color, fill: "#ffffff" }}
+                activeDot={{ r: 5 }}
+              />
+            ))
+          ) : (
+            <Line
+              type="monotone"
+              dataKey="value"
+              name="Viajes"
+              stroke={LINE_COLOR}
+              strokeWidth={2.6}
+              dot={{ r: 3.6, strokeWidth: 1.4, stroke: DOT_STROKE, fill: "#ffffff" }}
+              activeDot={{ r: 5 }}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </ChartCard>

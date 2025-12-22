@@ -22,9 +22,11 @@ const BarChartCard = ({
   data,
   xKey,
   yKey,
+  series,
   color = "#66CC33",
   orientation = "horizontal",
   showPercent = true,
+  chartHeight,
   highlightKey,
   highlightColor,
   onSelect,
@@ -35,7 +37,7 @@ const BarChartCard = ({
   const isHorizontal = orientation === "horizontal";
   const resolvedHighlightColor = highlightColor || color;
   const categoryTickStyle = {
-    fontSize: "10pt",
+    fontSize: "9pt",
     fill: TEXT_COLOR,
     angle: isHorizontal ? 0 : -22,
     textAnchor: isHorizontal ? "end" : "end",
@@ -44,11 +46,14 @@ const BarChartCard = ({
 
   return (
     <ChartCard title={title} actions={actions}>
-      <ResponsiveContainer width="100%" height={isHorizontal ? 360 : 320}>
+      <ResponsiveContainer
+        width="100%"
+        height={chartHeight ?? (isHorizontal ? 360 : 320)}
+      >
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 20, right: 40, left: isHorizontal ? 26 : 12, bottom: 8 }}
+          margin={{ top: 20, right: 40, left: isHorizontal ? 32 : 6, bottom: 8 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -78,7 +83,7 @@ const BarChartCard = ({
             <YAxis
               dataKey={xKey}
               type="category"
-              width={100}
+              width={120}
               tickLine={false}
               axisLine={{ stroke: AXIS_COLOR }}
               tick={categoryTickStyle}
@@ -97,37 +102,57 @@ const BarChartCard = ({
             contentStyle={{ borderRadius: 8, border: "none" }}
             formatter={(value) => [formatValue(value), showPercent ? "Participación" : "Valor"]}
           />
-          <Bar
-            dataKey={yKey}
-            radius={isHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
-            fill={color}
-            maxBarSize={48}
-            onClick={(data) => onSelect?.(data?.payload?.[xKey])}
-          >
-            {data?.map((entry) => (
-              <Cell
-                key={entry[xKey]}
-                fill={
-                  highlightKey && entry[xKey] === highlightKey
-                    ? resolvedHighlightColor
-                    : color
-                }
-                stroke={
-                  highlightKey && entry[xKey] === highlightKey
-                    ? resolvedHighlightColor
-                    : "none"
-                }
-                strokeWidth={highlightKey && entry[xKey] === highlightKey ? 2 : 0}
-                opacity={highlightKey && entry[xKey] !== highlightKey ? 0.25 : 1}
-              />
-            ))}
-            <LabelList
+          {series?.length ? (
+            series.map((entry) => (
+              <Bar
+                key={entry.key}
+                dataKey={entry.key}
+                name={entry.label}
+                radius={isHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
+                fill={entry.color}
+                maxBarSize={36}
+              >
+                <LabelList
+                  dataKey={entry.key}
+                  position={isHorizontal ? "right" : "top"}
+                  style={{ fontSize: "10pt", fill: "#0f172a" }}
+                  formatter={formatValue}
+                />
+              </Bar>
+            ))
+          ) : (
+            <Bar
               dataKey={yKey}
-              position={isHorizontal ? "right" : "top"}
-              style={{ fontSize: "10pt", fill: "#0f172a" }}
-              formatter={formatValue}
-            />
-          </Bar>
+              radius={isHorizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}
+              fill={color}
+              maxBarSize={48}
+              onClick={(data) => onSelect?.(data?.payload?.[xKey])}
+            >
+              {data?.map((entry) => (
+                <Cell
+                  key={entry[xKey]}
+                  fill={
+                    highlightKey && entry[xKey] === highlightKey
+                      ? resolvedHighlightColor
+                      : color
+                  }
+                  stroke={
+                    highlightKey && entry[xKey] === highlightKey
+                      ? resolvedHighlightColor
+                      : "none"
+                  }
+                  strokeWidth={highlightKey && entry[xKey] === highlightKey ? 2 : 0}
+                  opacity={highlightKey && entry[xKey] !== highlightKey ? 0.25 : 1}
+                />
+              ))}
+              <LabelList
+                dataKey={yKey}
+                position={isHorizontal ? "right" : "top"}
+                style={{ fontSize: "10pt", fill: "#0f172a" }}
+                formatter={formatValue}
+              />
+            </Bar>
+          )}
         </BarChart>
       </ResponsiveContainer>
     </ChartCard>

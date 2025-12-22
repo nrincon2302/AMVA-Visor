@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import KpiCard from "./components/KpiCard";
 import HighchartsMapCard from "./components/HighchartsMapCard";
 import BarChartCard from "./components/BarChartCard";
@@ -16,6 +16,15 @@ const TERTIARY_PINK = "#E770D3";
 const TERTIARY_ORANGE = "#FF9000";
 const TERTIARY_BLUE = "#00A7F4";
 const GRAY_65 = "#A6A6A6";
+const COMPARE_COLORS = [TERTIARY_BLUE, TERTIARY_PINK, TERTIARY_YELLOW];
+const BANNER_IMAGE_URL = "https://www.metropol.gov.co/BannerInternas/Observatorio.jpg";
+
+const buildBannerGradient = (color) => ({
+  backgroundImage: `linear-gradient(90deg, ${color} 0%, ${color} 45%, rgba(255,255,255,0.12) 100%), url('${BANNER_IMAGE_URL}')`,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundRepeat: "no-repeat",
+});
 
 // ---------- Header + navbar + hero --------------
 const Header = () => {
@@ -231,7 +240,7 @@ const Header = () => {
       <section
         style={{
           backgroundImage:
-            "linear-gradient(120deg, rgba(255,255,255,0.22), rgba(0,0,0,0.2)), url('https://www.metropol.gov.co/BannerInternas/Observatorio.jpg')",
+            `linear-gradient(120deg, rgba(255,255,255,0.22), rgba(0,0,0,0.2)), url('${BANNER_IMAGE_URL}')`,
           backgroundSize: "cover",
           backgroundPosition: "center top",
           backgroundRepeat: "no-repeat",
@@ -610,7 +619,6 @@ const DashboardSection = () => {
     municipios,
     setMunicipio,
     setThematicValues,
-    setExclusiveThematicValues,
     filteredTrips,
     filteredPersons,
     filteredHouseholds,
@@ -625,14 +633,20 @@ const DashboardSection = () => {
     vehicleTenureData,
     vehicleTypeData,
     hourlyTripShareData,
-    macroHeatData,
     trips,
     isLoading,
     thematicOptions,
   } = useTravelCrossfilterRecharts();
 
-  const originHeatData = macroHeatData?.origin || [];
-  const destinationHeatData = macroHeatData?.destination || [];
+  const buildHeatSeries = (tripsSource, key) => {
+    const counts = tripsSource.reduce((acc, trip) => {
+      const value = trip[key];
+      acc[value] = (acc[value] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  };
+
 
   const {
     totalTrips,
@@ -649,10 +663,6 @@ const DashboardSection = () => {
   const [isPdfExporting, setIsPdfExporting] = useState(false);
 
   const [baseKpis, setBaseKpis] = useState({ totalTrips: 0, avgTime: 0 });
-  const [macroHeatBarData, setMacroHeatBarData] = useState({
-    origin: [],
-    destination: [],
-  });
   const [displayOriginHeatData, setDisplayOriginHeatData] = useState([]);
   const [displayDestinationHeatData, setDisplayDestinationHeatData] = useState([]);
   const [destinationHighlightKeys, setDestinationHighlightKeys] = useState([]);
@@ -671,23 +681,81 @@ const DashboardSection = () => {
   const activeThematic = thematicConfig.find((item) => item.key === activeThematicKey);
 
   const selectedThematicValues = filters.thematicFilters[activeThematicKey] || [];
+  const [isCompareMode, setIsCompareMode] = useState(false);
+  const [activeMapThematicValue, setActiveMapThematicValue] = useState(null);
+  const [localSelectedValues, setLocalSelectedValues] = useState(selectedThematicValues);
+  const [isPending, startTransition] = useTransition();
+  const isSelectionLimitReached = isCompareMode && localSelectedValues.length >= 3;
+  const selectedCompareValues = isCompareMode ? localSelectedValues.slice(0, 3) : [];
+  const selectedColorMap = new Map(
+    selectedCompareValues.map((value, index) => [value, COMPARE_COLORS[index]])
+  );
+
+  useEffect(() => {
+    if (!isCompareMode) {
+      setActiveMapThematicValue(null);
+      return;
+    }
+    if (!selectedCompareValues.length) {
+      setActiveMapThematicValue(null);
+      return;
+    }
+    if (!selectedCompareValues.includes(activeMapThematicValue)) {
+      setActiveMapThematicValue(selectedCompareValues[0]);
+    }
+  }, [isCompareMode, selectedCompareValues, activeMapThematicValue]);
+
+  const mapTrips = useMemo(() => {
+    if (isCompareMode && activeMapThematicValue) {
+      return filteredTrips.filter(
+        (trip) => trip[activeThematicKey] === activeMapThematicValue
+      );
+    }
+    return filteredTrips;
+  }, [filteredTrips, isCompareMode, activeMapThematicValue, activeThematicKey]);
+
+  const originHeatData = useMemo(
+    () => buildHeatSeries(mapTrips, "originKey"),
+    [mapTrips]
+  );
+  const destinationHeatData = useMemo(
+    () => buildHeatSeries(mapTrips, "destinationKey"),
+    [mapTrips]
+  );
+
+  const macroHeatBarData = useMemo(
+    () => ({
+      origin: buildHeatDistribution(originHeatData),
+      destination: buildHeatDistribution(destinationHeatData),
+    }),
+    [originHeatData, destinationHeatData, filters.municipio]
+  );
 
   const toggleThematicValue = (value) => {
+    if (!isCompareMode) return;
     const normalizedValue =
       activeThematicKey === "estrato" ? Number(value) : value;
-    const current = filters.thematicFilters[activeThematicKey] || [];
+    const current = localSelectedValues || [];
     const exists = current.includes(normalizedValue);
+    if (!exists && current.length >= 3) return;
     const nextValues = exists
       ? current.filter((item) => item !== normalizedValue)
       : [...current, normalizedValue];
 
-    setThematicValues(activeThematicKey, nextValues);
+    setLocalSelectedValues(nextValues);
+    startTransition(() => {
+      setThematicValues(activeThematicKey, nextValues);
+    });
   };
 
   const handleThematicKeyChange = (value) => {
     setActiveThematicKey(value);
-    setExclusiveThematicValues(value, []);
+    setIsCompareMode(false);
   };
+
+  useEffect(() => {
+    setLocalSelectedValues(selectedThematicValues);
+  }, [selectedThematicValues, activeThematicKey]);
 
   useEffect(() => {
     const total = trips.length;
@@ -696,13 +764,6 @@ const DashboardSection = () => {
       : 0;
     setBaseKpis({ totalTrips: total, avgTime: avgTimeGlobal });
   }, [trips]);
-
-  useEffect(() => {
-    setMacroHeatBarData({
-      origin: buildHeatDistribution(originHeatData),
-      destination: buildHeatDistribution(destinationHeatData),
-    });
-  }, [originHeatData, destinationHeatData, filters.municipio]);
 
   useEffect(() => {
     if (!selectedOriginKeys.length) {
@@ -751,7 +812,66 @@ const DashboardSection = () => {
   }, [displayDestinationHeatData]);
 
 
-  const buildHeatDistribution = (sourceData = []) => {
+  const buildComparisonSeries = (tripsSource, categoryKey, categories = []) => {
+    const series = selectedCompareValues.map((value, index) => ({
+      key: `series_${index}`,
+      label: value,
+      color: COMPARE_COLORS[index],
+    }));
+    const categoryLabels = categories.map((item) => item.label);
+    const totals = Object.fromEntries(series.map((item) => [item.label, 0]));
+    const counts = Object.fromEntries(series.map((item) => [item.label, {}]));
+
+    tripsSource.forEach((trip) => {
+      const thematicValue = trip[activeThematicKey];
+      if (!totals.hasOwnProperty(thematicValue)) return;
+      totals[thematicValue] += 1;
+      const categoryValue = trip[categoryKey];
+      const categoryCounts = counts[thematicValue];
+      categoryCounts[categoryValue] = (categoryCounts[categoryValue] || 0) + 1;
+    });
+
+    const data = categoryLabels.map((label) => {
+      const row = { label };
+      series.forEach((item) => {
+        const total = totals[item.label] || 0;
+        const count = counts[item.label]?.[label] || 0;
+        row[item.key] = total ? Number(((count / total) * 100).toFixed(1)) : 0;
+      });
+      return row;
+    });
+
+    return { data, series };
+  };
+
+  const buildHourlySeries = (tripsSource) => {
+    const series = selectedCompareValues.map((value, index) => ({
+      key: `series_${index}`,
+      label: value,
+      color: COMPARE_COLORS[index],
+    }));
+    const hourlyCounts = Object.fromEntries(
+      series.map((item) => [item.label, Array.from({ length: 24 }, () => 0)])
+    );
+
+    tripsSource.forEach((trip) => {
+      const thematicValue = trip[activeThematicKey];
+      if (!hourlyCounts[thematicValue]) return;
+      hourlyCounts[thematicValue][trip.departureHour] += 1;
+    });
+
+    const data = Array.from({ length: 24 }, (_, hour) => {
+      const row = { hour: `${hour.toString().padStart(2, "0")}:00` };
+      series.forEach((item) => {
+        row[item.key] = hourlyCounts[item.label]?.[hour] || 0;
+      });
+      return row;
+    });
+
+    return { data, series };
+  };
+
+  function buildHeatDistribution(sourceData = []) {
     if (!sourceData?.length) return [];
 
     return sourceData
@@ -768,7 +888,19 @@ const DashboardSection = () => {
         };
       })
       .sort((a, b) => b.value - a.value);
-  };
+  }
+
+  const hasComparison = isCompareMode && selectedCompareValues.length > 0;
+  const modeComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "mode", modeData)
+    : null;
+  const purposeComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "tripPurpose", purposeData)
+    : null;
+  const stageComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "stageBucket", stageData)
+    : null;
+  const hourlyComparison = hasComparison ? buildHourlySeries(filteredTrips) : null;
 
   const dashboardRef = useRef(null);
 
@@ -1294,9 +1426,85 @@ const DashboardSection = () => {
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
                       {activeThematic?.label}
                     </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCompareMode(false);
+                          const nextValues = activeThematic?.options || [];
+                          setLocalSelectedValues(nextValues);
+                          startTransition(() => {
+                            setThematicValues(activeThematicKey, nextValues);
+                          });
+                        }}
+                        style={{
+                          border: "1px solid #d1d5db",
+                          background: !isCompareMode ? SECONDARY_GREEN : "#ffffff",
+                          color: !isCompareMode ? "#ffffff" : "#0f172a",
+                          borderRadius: 999,
+                          padding: "4px 8px",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Seleccionar todos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCompareMode(true);
+                          setLocalSelectedValues([]);
+                          startTransition(() => {
+                            setThematicValues(activeThematicKey, []);
+                          });
+                        }}
+                        style={{
+                          border: "1px solid #d1d5db",
+                          background: isCompareMode ? SECONDARY_GREEN : "#ffffff",
+                          color: isCompareMode ? "#ffffff" : "#0f172a",
+                          borderRadius: 999,
+                          padding: "4px 8px",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Elegir para comparar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCompareMode(true);
+                          setLocalSelectedValues([]);
+                          startTransition(() => {
+                            setThematicValues(activeThematicKey, []);
+                          });
+                        }}
+                        style={{
+                          border: "1px solid #d1d5db",
+                          background: "#ffffff",
+                          color: "#0f172a",
+                          borderRadius: 999,
+                          padding: "4px 8px",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Seleccionar ninguno
+                      </button>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#64748b" }}>
+                      {isCompareMode
+                        ? "Selecciona hasta 3 opciones para comparar."
+                        : "Todos los valores están incluidos."}
+                      {isPending ? " Aplicando cambios..." : ""}
+                    </div>
                     {(activeThematic?.options || []).map((option) => {
                       const optionValue = option;
-                      const isChecked = selectedThematicValues.includes(optionValue);
+                      const isChecked = localSelectedValues.includes(optionValue);
+                      const highlightColor = selectedColorMap.get(optionValue);
                       return (
                         <label
                           key={optionValue}
@@ -1306,12 +1514,31 @@ const DashboardSection = () => {
                             alignItems: "center",
                             fontSize: 12,
                             color: "#0f172a",
+                            fontWeight: isChecked ? 600 : 500,
                           }}
                         >
                           <input
                             type="checkbox"
                             checked={isChecked}
+                            disabled={!isCompareMode || (!isChecked && isSelectionLimitReached)}
                             onChange={() => toggleThematicValue(optionValue)}
+                            style={{ display: "none" }}
+                          />
+                          <span
+                            style={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: 4,
+                              border: "1px solid #cbd5e1",
+                              background: isChecked
+                                ? highlightColor || SECONDARY_GREEN
+                                : "#ffffff",
+                              boxShadow: isChecked
+                                ? "0 0 0 1px rgba(15,23,42,0.12) inset"
+                                : "none",
+                              opacity: !isCompareMode ? 0.6 : 1,
+                              flexShrink: 0,
+                            }}
                           />
                           {optionValue}
                         </label>
@@ -1325,13 +1552,14 @@ const DashboardSection = () => {
                 <button
                   onClick={() => exportReport("pdf")}
                   style={{
-                    border: "1px solid #d1d5db",
-                    background: "#fff",
+                    border: "none",
+                    background: SECONDARY_GREEN,
                     borderRadius: 10,
                     padding: "8px 12px",
                     cursor: "pointer",
                     fontSize: 12,
                     fontWeight: 600,
+                    color: "#ffffff",
                   }}
                 >
                   Exportar PDF
@@ -1339,13 +1567,14 @@ const DashboardSection = () => {
                 <button
                   onClick={() => exportReport("excel")}
                   style={{
-                    border: "1px solid #d1d5db",
-                    background: "#fff",
+                    border: "none",
+                    background: PRIMARY_GREEN,
                     borderRadius: 10,
                     padding: "8px 12px",
                     cursor: "pointer",
                     fontSize: 12,
                     fontWeight: 600,
+                    color: "#ffffff",
                   }}
                 >
                   Exportar Excel
@@ -1381,9 +1610,9 @@ const DashboardSection = () => {
                     value={totalTrips.toLocaleString("es-CO")}
                     subLabel={`Base global: ${baseKpis.totalTrips.toLocaleString("es-CO")}`}
                     contextLines={[kpiContext.tripsLine]}
-                    accentColor={TERTIARY_YELLOW}
-                    headerColor={TERTIARY_YELLOW}
-                    headerTextColor="#0f172a"
+                    accentColor={TERTIARY_PINK}
+                    headerColor={TERTIARY_PINK}
+                    bannerImageUrl={BANNER_IMAGE_URL}
                   />
                   <KpiCard
                     label="Tiempo promedio"
@@ -1392,6 +1621,7 @@ const DashboardSection = () => {
                     contextLines={[kpiContext.timeLine]}
                     accentColor={TERTIARY_BLUE}
                     headerColor={TERTIARY_BLUE}
+                    bannerImageUrl={BANNER_IMAGE_URL}
                   />
                   <KpiCard
                     label="Viajes por hogar"
@@ -1399,6 +1629,7 @@ const DashboardSection = () => {
                     subLabel="Promedio filtrado"
                     accentColor={SECONDARY_GREEN}
                     headerColor={SECONDARY_GREEN}
+                    bannerImageUrl={BANNER_IMAGE_URL}
                   />
                   <KpiCard
                     label="Vehículos por hogar"
@@ -1406,6 +1637,7 @@ const DashboardSection = () => {
                     subLabel="Promedio filtrado"
                     accentColor={TERTIARY_ORANGE}
                     headerColor={TERTIARY_ORANGE}
+                    bannerImageUrl={BANNER_IMAGE_URL}
                   />
                 </div>
               </section>
@@ -1424,6 +1656,36 @@ const DashboardSection = () => {
                 <h3 style={{ margin: "0 0 16px", fontSize: 18, color: "#0f172a" }}>
                   Distribución geográfica de los viajes
                 </h3>
+                {hasComparison && selectedCompareValues.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
+                      Ver mapas por {activeThematic?.label?.toLowerCase()}:
+                    </span>
+                    {selectedCompareValues.map((value, index) => {
+                      const color = COMPARE_COLORS[index];
+                      const isActive = activeMapThematicValue === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setActiveMapThematicValue(value)}
+                          style={{
+                            border: `1px solid ${color}`,
+                            background: isActive ? color : "#ffffff",
+                            color: isActive ? "#ffffff" : color,
+                            borderRadius: 999,
+                            padding: "4px 12px",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <div
                   className="map-grid"
                   style={{
@@ -1435,7 +1697,7 @@ const DashboardSection = () => {
                   <div style={{ display: "grid", gap: 12 }}>
                     <div
                       style={{
-                        background: "linear-gradient(90deg, #339933, #66CC33)",
+                        ...buildBannerGradient(SECONDARY_GREEN),
                         color: "#ffffff",
                         padding: "8px 12px",
                         borderRadius: 10,
@@ -1547,7 +1809,7 @@ const DashboardSection = () => {
                   <div style={{ display: "grid", gap: 12 }}>
                     <div
                       style={{
-                        background: "linear-gradient(90deg, #f59e0b, #f97316)",
+                        ...buildBannerGradient(TERTIARY_ORANGE),
                         color: "#ffffff",
                         padding: "8px 12px",
                         borderRadius: 10,
@@ -1668,48 +1930,91 @@ const DashboardSection = () => {
                 <p style={{ margin: "0 0 16px", fontSize: 12, color: "#475569" }}>
                   Filtros activos:{" "}
                   <strong>Municipio</strong> {filters.municipio}
-                  {Object.entries(filters.thematicFilters)
-                    .filter(([, values]) => values.length)
-                    .map(([key, values]) => {
-                      const label =
-                        thematicConfig.find((item) => item.key === key)?.label || key;
-                      return ` | ${label}: ${values.join(", ")}`;
-                    })
-                    .join("") || ""}
+                  {isCompareMode &&
+                    selectedCompareValues.length > 0 &&
+                    selectedCompareValues.length < (activeThematic?.options?.length || 0) &&
+                    ` | ${activeThematic?.label}: ${selectedCompareValues.join(", ")}`}
                 </p>
+                {hasComparison && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 12,
+                      marginBottom: 16,
+                      fontSize: 12,
+                      color: "#475569",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, color: "#0f172a" }}>
+                      Convención:
+                    </span>
+                    {selectedCompareValues.map((value, index) => (
+                      <span
+                        key={value}
+                        style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                      >
+                        <span
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: "50%",
+                            background: COMPARE_COLORS[index],
+                            display: "inline-block",
+                          }}
+                        />
+                        {value}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div
                   className="analysis-grid"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                    gridTemplateRows: "1fr 1fr",
+                    gridTemplateAreas: `"modo motivo etapas" "modo horas horas"`,
                     gap: 20,
+                    alignItems: "stretch",
                   }}
                 >
+                  <div style={{ gridArea: "modo", height: "100%" }}>
                   <BarChartCard
                     title="Modo principal"
-                    data={modeData}
+                    data={hasComparison ? modeComparison?.data : modeData}
+                    series={hasComparison ? modeComparison?.series : undefined}
                     xKey="label"
                     yKey="value"
                     color={SECONDARY_GREEN}
+                    chartHeight="100%"
                   />
-                  <BarChartCard
-                    title="Motivo"
-                    data={purposeData}
-                    xKey="label"
-                    yKey="value"
-                    color={SECONDARY_GREEN}
-                  />
-                  <BarChartCard
-                    title="Cantidad de etapas"
-                    data={stageData}
-                    xKey="label"
-                    yKey="value"
-                    color={SECONDARY_GREEN}
-                  />
-                  <div style={{ gridColumn: "1 / -1" }}>
+                  </div>
+                  <div style={{ gridArea: "motivo" }}>
+                    <BarChartCard
+                      title="Motivo"
+                      data={hasComparison ? purposeComparison?.data : purposeData}
+                      series={hasComparison ? purposeComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={SECONDARY_GREEN}
+                    />
+                  </div>
+                  <div style={{ gridArea: "etapas" }}>
+                    <BarChartCard
+                      title="Cantidad de etapas"
+                      data={hasComparison ? stageComparison?.data : stageData}
+                      series={hasComparison ? stageComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={SECONDARY_GREEN}
+                    />
+                  </div>
+                  <div style={{ gridArea: "horas" }}>
                     <HourlyModeChartCard
                       title="Distribución horaria"
-                      data={hourlyTripShareData}
+                      data={hasComparison ? hourlyComparison?.data : hourlyTripShareData}
+                      series={hasComparison ? hourlyComparison?.series : undefined}
                     />
                   </div>
                 </div>
