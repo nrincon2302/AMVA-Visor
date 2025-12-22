@@ -35,7 +35,7 @@ const BarChartCard = ({
   const isHorizontal = orientation === "horizontal";
   const resolvedHighlightColor = highlightColor || color;
   const categoryTickStyle = {
-    fontSize: "8pt",
+    fontSize: "10pt",
     fill: TEXT_COLOR,
     angle: isHorizontal ? 0 : -22,
     textAnchor: isHorizontal ? "end" : "end",
@@ -62,7 +62,7 @@ const BarChartCard = ({
               tickLine={false}
               axisLine={{ stroke: AXIS_COLOR }}
               tickFormatter={formatValue}
-              tick={{ fontSize: "8pt", fill: TEXT_COLOR }}
+              tick={{ fontSize: "10pt", fill: TEXT_COLOR }}
             />
           ) : (
             <XAxis
@@ -89,7 +89,7 @@ const BarChartCard = ({
               axisLine={{ stroke: AXIS_COLOR }}
               tickFormatter={formatValue}
               domain={showPercent ? [0, 100] : ["dataMin", "auto"]}
-              tick={{ fontSize: "8pt", fill: TEXT_COLOR }}
+              tick={{ fontSize: "10pt", fill: TEXT_COLOR }}
             />
           )}
           <Tooltip
@@ -124,7 +124,7 @@ const BarChartCard = ({
             <LabelList
               dataKey={yKey}
               position={isHorizontal ? "right" : "top"}
-              style={{ fontSize: "8pt", fill: "#0f172a" }}
+              style={{ fontSize: "10pt", fill: "#0f172a" }}
               formatter={formatValue}
             />
           </Bar>

@@ -40,3 +40,48 @@
 .read-the-docs {
   color: #888;
 }
+
+.macro-table-body {
+  max-height: 240px;
+  height: 240px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 0;
+}
+
+.macro-table-body table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-sidebar {
+    position: static !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-main {
+    padding: 16px 16px 32px !important;
+  }
+
+  .kpi-grid,
+  .map-grid,
+  .analysis-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -1,11 +1,8 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import KpiCard from "./components/KpiCard";
 import HighchartsMapCard from "./components/HighchartsMapCard";
-import TabbedChartsRecharts from "./components/TabbedChartsRecharts";
 import BarChartCard from "./components/BarChartCard";
-import PieChartCard from "./components/PieChartCard";
 import HourlyModeChartCard from "./components/HourlyModeChartCard";
-import ChartCard from "./components/ChartCard";
 import { useTravelCrossfilterRecharts } from "./hooks/useTravelCrossfilterRecharts";
 import { useKpiStats } from "./hooks/useKpiStats";
 import logoAmva from "./assets/logo-area.png";
@@ -253,7 +250,7 @@ const Header = () => {
           >
             Inicio &gt; Observatorio &gt; Encuesta origen destino
           </div>
-          <h2 style={{ margin: 0, fontSize: 16, marginBottom: 10, letterSpacing: 0.3 }}>
+          <h2 style={{ margin: 0, fontSize: 22, marginBottom: 10, letterSpacing: 0.4 }}>
             ENCUESTA ORIGEN DESTINO
           </h2>
 
@@ -369,16 +366,31 @@ const Header = () => {
               alignItems: "center",
               justifyContent: "flex-start",
               gap: 14,
-              fontSize: 12,
+              fontSize: 20,
               fontWeight: 700,
             }}
         >
-          <img
-            src={logoAmva}
-            alt="Logo Área Metropolitana"
-            style={{ height: 36, width: 36, objectFit: "contain" }}
-          />
-          <span>Encuesta de Origen - Destino - Análisis de Viajes</span>
+          <div
+            style={{
+              width: 74,
+              height: 74,
+              background: PRIMARY_GREEN,
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 6,
+            }}
+          >
+            <img
+              src={logoAmva}
+              alt="Logo Área Metropolitana"
+              style={{ height: "100%", width: "100%", objectFit: "contain" }}
+            />
+          </div>
+          <span style={{ fontSize: 26, fontWeight: 800 }}>
+            Encuesta de Origen - Destino - Análisis de Viajes
+          </span>
         </div>
       </section>
     </>
@@ -593,16 +605,12 @@ const Footer = () => {
 
 // ---------- Dashboard (contenido central) --------------
 const DashboardSection = () => {
-  const BASE_BAR_COLOR = PRIMARY_GREEN;
-  const MACRO_DEST_BAR_COLOR = TERTIARY_ORANGE;
-  const MODE_BAR_COLOR = PRIMARY_GREEN;
-  const OCCUPATION_BAR_COLOR = PRIMARY_GREEN;
-  const STAGE_BAR_COLOR = PRIMARY_GREEN;
   const {
     filters,
     municipios,
     setMunicipio,
-    setThematicValue,
+    setThematicValues,
+    setExclusiveThematicValues,
     filteredTrips,
     filteredPersons,
     filteredHouseholds,
@@ -620,6 +628,7 @@ const DashboardSection = () => {
     macroHeatData,
     trips,
     isLoading,
+    thematicOptions,
   } = useTravelCrossfilterRecharts();
 
   const originHeatData = macroHeatData?.origin || [];
@@ -638,57 +647,89 @@ const DashboardSection = () => {
 
   const [exportingFormat, setExportingFormat] = useState(null);
 
-  const baseKpis = useMemo(() => {
+  const [baseKpis, setBaseKpis] = useState({ totalTrips: 0, avgTime: 0 });
+  const [macroHeatBarData, setMacroHeatBarData] = useState({
+    origin: [],
+    destination: [],
+  });
+  const [displayOriginHeatData, setDisplayOriginHeatData] = useState([]);
+  const [displayDestinationHeatData, setDisplayDestinationHeatData] = useState([]);
+  const [destinationHighlightKeys, setDestinationHighlightKeys] = useState([]);
+  const [selectedOriginKeys, setSelectedOriginKeys] = useState([]);
+  const [destinationTableData, setDestinationTableData] = useState([]);
+  const [kpiContext, setKpiContext] = useState({ tripsLine: "", timeLine: "" });
+  const thematicConfig = [
+    { key: "estrato", label: "Estrato", options: thematicOptions.estrato },
+    { key: "ageRange", label: "Edad", options: thematicOptions.ageRange },
+    { key: "gender", label: "Género", options: thematicOptions.gender },
+    { key: "occupation", label: "Ocupación", options: thematicOptions.occupation },
+    { key: "edu", label: "Escolaridad", options: thematicOptions.edu },
+  ];
+
+  const [activeThematicKey, setActiveThematicKey] = useState("estrato");
+  const activeThematic = thematicConfig.find((item) => item.key === activeThematicKey);
+
+  const selectedThematicValues = filters.thematicFilters[activeThematicKey] || [];
+
+  const toggleThematicValue = (value) => {
+    const normalizedValue =
+      activeThematicKey === "estrato" ? Number(value) : value;
+    const current = filters.thematicFilters[activeThematicKey] || [];
+    const exists = current.includes(normalizedValue);
+    const nextValues = exists
+      ? current.filter((item) => item !== normalizedValue)
+      : [...current, normalizedValue];
+
+    setThematicValues(activeThematicKey, nextValues);
+  };
+
+  const handleThematicKeyChange = (value) => {
+    setActiveThematicKey(value);
+    setExclusiveThematicValues(value, []);
+  };
+
+  useEffect(() => {
     const total = trips.length;
     const avgTimeGlobal = total
       ? trips.reduce((acc, trip) => acc + (trip.durationMin ?? 0), 0) / total
       : 0;
-
-    return {
-      totalTrips: total,
-      avgTime: avgTimeGlobal,
-    };
+    setBaseKpis({ totalTrips: total, avgTime: avgTimeGlobal });
   }, [trips]);
 
-  const toggleFilter = useCallback(
-    (key, value) => {
-      const current = filters.thematicFilters[key];
-      setThematicValue(key, current === value ? null : value);
-    },
-    [filters.thematicFilters, setThematicValue]
-  );
-
-  const buildHeatDistribution = useCallback(
-    (sourceData = []) => {
-      if (!sourceData?.length) return [];
-
-      return sourceData
-        .map(({ name, value }) => {
-          const label =
-            filters.municipio !== "AMVA General" && name.startsWith(`${filters.municipio} - `)
-              ? name.replace(`${filters.municipio} - `, "")
-              : name;
-
-          return {
-            label,
-            value,
-          };
-        })
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 8);
-    },
-    [filters.municipio]
-  );
-
-  const macroHeatBarData = useMemo(
-    () => ({
+  useEffect(() => {
+    setMacroHeatBarData({
       origin: buildHeatDistribution(originHeatData),
       destination: buildHeatDistribution(destinationHeatData),
-    }),
-    [buildHeatDistribution, destinationHeatData, originHeatData]
-  );
+    });
+  }, [originHeatData, destinationHeatData, filters.municipio]);
 
-  const kpiContext = useMemo(() => {
+  useEffect(() => {
+    if (!selectedOriginKeys.length) {
+      setDisplayOriginHeatData(originHeatData);
+      setDisplayDestinationHeatData(destinationHeatData);
+      setDestinationHighlightKeys([]);
+      return;
+    }
+
+    const selectedSet = new Set(selectedOriginKeys);
+    const originFiltered = originHeatData.filter((item) => selectedSet.has(item.name));
+    setDisplayOriginHeatData(originFiltered);
+
+    const selectedTrips = filteredTrips.filter((trip) => selectedSet.has(trip.originKey));
+    const destinationCounts = selectedTrips.reduce((acc, trip) => {
+      acc[trip.destinationKey] = (acc[trip.destinationKey] || 0) + 1;
+      return acc;
+    }, {});
+
+    const destinationSeries = Object.entries(destinationCounts).map(([name, value]) => ({
+      name,
+      value,
+    }));
+    setDisplayDestinationHeatData(destinationSeries);
+    setDestinationHighlightKeys(destinationSeries.map((item) => item.name));
+  }, [selectedOriginKeys, originHeatData, destinationHeatData, filteredTrips]);
+
+  useEffect(() => {
     const tripsShare = baseKpis.totalTrips
       ? (totalTrips / baseKpis.totalTrips) * 100
       : 0;
@@ -696,13 +737,37 @@ const DashboardSection = () => {
       ? ((avgTime - baseKpis.avgTime) / baseKpis.avgTime) * 100
       : 0;
 
-    return {
+    setKpiContext({
       tripsLine: `${tripsShare.toFixed(1)}% del total`,
       timeLine: `${Math.abs(timeDelta).toFixed(1)} ${
         timeDelta >= 0 ? "más" : "menos"
       } que el promedio total`,
-    };
+    });
   }, [avgTime, baseKpis, totalTrips]);
+
+  useEffect(() => {
+    setDestinationTableData(buildHeatDistribution(displayDestinationHeatData));
+  }, [displayDestinationHeatData]);
+
+
+  const buildHeatDistribution = (sourceData = []) => {
+    if (!sourceData?.length) return [];
+
+    return sourceData
+      .map(({ name, value }) => {
+        const label =
+          filters.municipio !== "AMVA General" && name.startsWith(`${filters.municipio} - `)
+            ? name.replace(`${filters.municipio} - `, "")
+            : name;
+
+        return {
+          fullName: name,
+          label,
+          value,
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  };
 
   const dashboardRef = useRef(null);
 
@@ -732,7 +797,9 @@ const DashboardSection = () => {
     setExportingFormat(format);
     const filename = `reporte-viajes.${format === "excel" ? "xlsx" : "pdf"}`;
 
-    const summaryText = `Municipio seleccionado: ${filters.municipio}\nViajes totales (global): ${
+    const geoSelectionLabel = `Municipio seleccionado: ${filters.municipio}`;
+
+    const summaryText = `${geoSelectionLabel}\nViajes totales (global): ${
       baseKpis.totalTrips
     }\nTiempo promedio global: ${baseKpis.avgTime.toFixed(1)} min\nViajes filtrados actuales: ${totalTrips}\nTiempo promedio filtrado: ${avgTime.toFixed(
       1
@@ -748,7 +815,7 @@ const DashboardSection = () => {
 
       const summarySheet = XLSX.utils.json_to_sheet([
         {
-          Municipio: filters.municipio,
+          "Filtro geográfico": geoSelectionLabel,
           "Viajes totales (global)": baseKpis.totalTrips,
           "Tiempo promedio global (min)": Number(baseKpis.avgTime.toFixed(1)),
           "Viajes filtrados": totalTrips,
@@ -835,17 +902,6 @@ const DashboardSection = () => {
 
       let cursorY = margin;
 
-      const sectionLabels = {
-        filtros: "Filtros aplicados",
-        kpis: "Indicadores principales",
-        mapas: "Mapas de calor",
-        macros: "Macrozonas por municipio",
-        resumen: "Indicadores resumidos",
-        viajes: "Análisis de viajes",
-        socio: "Variables socioeconómicas",
-        vehiculos: "Parque automotor",
-      };
-
       const addFooter = () => {
         const pageCount = pdf.getNumberOfPages();
         const current = pdf.getCurrentPageInfo().pageNumber;
@@ -859,15 +915,17 @@ const DashboardSection = () => {
       };
 
       const addTitle = (title) => {
-        pdf.setFontSize(18);
+        pdf.setFontSize(20);
+        pdf.setTextColor("#0f172a");
         pdf.text(title, margin, cursorY);
-        cursorY += 18;
+        cursorY += 22;
       };
 
       const addSubtitle = (title) => {
         pdf.setFontSize(13);
+        pdf.setTextColor("#0f172a");
         pdf.text(title, margin, cursorY);
-        cursorY += 12;
+        cursorY += 14;
       };
 
       const ensureSpace = (needed) => {
@@ -878,44 +936,142 @@ const DashboardSection = () => {
         }
       };
 
-      addTitle("Reporte de viajes");
+      const loadImageDataUrl = async (url) => {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error("No se pudo leer el logo"));
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          return null;
+        }
+      };
+
+      const logoDataUrl = await loadImageDataUrl(logoAmva);
+
+      if (logoDataUrl) {
+        pdf.setFillColor(102, 204, 51);
+        pdf.roundedRect(margin - 6, cursorY - 6, 60, 60, 8, 8, "F");
+        pdf.addImage(logoDataUrl, "PNG", margin, cursorY, 48, 48);
+      }
+      pdf.setFontSize(16);
+      pdf.setTextColor("#0f172a");
+      pdf.text("Encuesta Origen - Destino", margin + 60, cursorY + 18);
+      pdf.setFontSize(12);
+      pdf.text("Análisis de Viajes", margin + 60, cursorY + 36);
+      cursorY += 60;
+
+      const generatedAt = new Date().toLocaleString("es-CO");
       pdf.setFontSize(10);
-      summaryText.split("\\n").forEach((line) => {
+      pdf.setTextColor("#475569");
+      pdf.text(`Fecha de generación: ${generatedAt}`, margin, cursorY);
+      cursorY += 16;
+
+      addSubtitle("Filtros aplicados");
+
+      const filterRows = [
+        ["Municipio", filters.municipio],
+      ];
+      const thematicRows = Object.entries(filters.thematicFilters)
+        .filter(([, values]) => values.length)
+        .map(([key, values]) => {
+          const label =
+            thematicConfig.find((item) => item.key === key)?.label || key;
+          return [label, values.join(", ")];
+        });
+      const allRows = [...filterRows, ...thematicRows];
+
+      const tableStartY = cursorY;
+      const col1Width = contentWidth * 0.35;
+      const col2Width = contentWidth * 0.65;
+      const rowHeight = 18;
+
+      pdf.setDrawColor("#cbd5e1");
+      pdf.rect(margin, tableStartY, contentWidth, rowHeight, "S");
+      pdf.setFontSize(10);
+      pdf.setTextColor("#0f172a");
+      pdf.text("Filtro", margin + 6, tableStartY + 12);
+      pdf.text("Selección", margin + col1Width + 6, tableStartY + 12);
+
+      let tableCursor = tableStartY + rowHeight;
+      allRows.forEach(([label, value]) => {
+        pdf.rect(margin, tableCursor, contentWidth, rowHeight, "S");
+        pdf.text(label, margin + 6, tableCursor + 12);
+        pdf.text(value || "Todos", margin + col1Width + 6, tableCursor + 12);
+        tableCursor += rowHeight;
+      });
+
+      cursorY = tableCursor + 12;
+
+      addSubtitle("KPIs principales");
+      pdf.setFontSize(10);
+      pdf.setTextColor("#0f172a");
+      [
+        `Viajes totales: ${totalTrips.toLocaleString("es-CO")}`,
+        `Tiempo promedio: ${avgTime.toFixed(1)} min`,
+        `Viajes por hogar: ${tripsPerHousehold}`,
+        `Vehículos por hogar: ${vehiclesPerHousehold}`,
+      ].forEach((line) => {
         ensureSpace(14);
         pdf.text(line, margin, cursorY);
         cursorY += 12;
       });
-      cursorY += 8;
 
-      const sections = Array.from(
-        dashboardRef.current?.querySelectorAll("[data-print-section]") || []
-      );
+      addFooter();
+      pdf.addPage();
+      cursorY = margin;
 
-      for (const section of sections) {
-        const sectionKey = section.getAttribute("data-print-section");
-        const title = sectionLabels[sectionKey] || sectionKey;
-        ensureSpace(24);
-        addSubtitle(title);
-
-        const canvas = await html2canvas(section, {
+      addSubtitle("Mapas y distribución geográfica");
+      const mapsSection = dashboardRef.current?.querySelector("[data-print-section='mapas']");
+      if (mapsSection) {
+        const canvas = await html2canvas(mapsSection, {
           scale: 2,
           backgroundColor: "#ffffff",
           useCORS: true,
-          windowWidth: section.scrollWidth,
+          windowWidth: mapsSection.scrollWidth,
         });
-
         const imgWidth = contentWidth;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const maxHeight = pageHeight - margin * 2;
+        const finalHeight = Math.min(imgHeight, maxHeight);
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, cursorY, imgWidth, finalHeight);
+        cursorY += finalHeight + 14;
+      }
 
-        if (cursorY + imgHeight > pageHeight - margin) {
-          addFooter();
-          pdf.addPage();
-          cursorY = margin;
-          addSubtitle(title);
+      addFooter();
+      pdf.addPage();
+      cursorY = margin;
+
+      addSubtitle("Gráficas de análisis");
+      const analysisSection = dashboardRef.current?.querySelector("[data-print-section='viajes']");
+      if (analysisSection) {
+        const charts = Array.from(analysisSection.querySelectorAll(".chart-card"));
+        const renderBlocks = charts.length ? charts : [analysisSection];
+
+        for (const chart of renderBlocks) {
+          const canvas = await html2canvas(chart, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            windowWidth: chart.scrollWidth,
+          });
+          const imgWidth = contentWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          const availableHeight = pageHeight - margin - cursorY;
+
+          if (imgHeight > availableHeight) {
+            addFooter();
+            pdf.addPage();
+            cursorY = margin;
+          }
+
+          pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, cursorY, imgWidth, imgHeight);
+          cursorY += imgHeight + 14;
         }
-
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, cursorY, imgWidth, imgHeight);
-        cursorY += imgHeight + 14;
       }
 
       addFooter();
@@ -1010,6 +1166,7 @@ const DashboardSection = () => {
       <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
         <main
           ref={dashboardRef}
+          className="dashboard-main"
           style={{
             width: "100%",
             maxWidth: "1500px",
@@ -1017,351 +1174,508 @@ const DashboardSection = () => {
             padding: "32px 32px 48px",
           }}
         >
-      <div
-        data-print-section="filtros"
-        style={{
-          display: "flex",
-          gap: 16,
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 14,
-          padding: "12px 14px",
-          background: "#f8fafc",
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-        }}
-      >
-        <label style={{ fontSize: "10pt", fontWeight: 700, color: "#0f172a" }}>
-          Municipio
-          <select
-            value={filters.municipio}
-            onChange={(e) => setMunicipio(e.target.value)}
+          <div
+            className="dashboard-layout"
             style={{
-              borderRadius: 10,
-              border: "1px solid #cbd5e1",
-              padding: "6px 8px",
-              marginLeft: 8,
-              background: "#fff",
-              fontSize: 10,
-            }}
-          >
-            {municipios.map((muni) => (
-              <option key={muni} value={muni}>
-                {muni}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            onClick={() => exportReport("pdf")}
-            style={{
-              border: "1px solid #d1d5db",
-              background: "#fff",
-              borderRadius: 8,
-              padding: "6px 10px",
-              cursor: "pointer",
-            }}
-          >
-            Exportar PDF
-          </button>
-          <button
-            onClick={() => exportReport("excel")}
-            style={{
-              border: "1px solid #d1d5db",
-              background: "#fff",
-              borderRadius: 8,
-              padding: "6px 10px",
-              cursor: "pointer",
-            }}
-          >
-            Exportar Excel
-          </button>
-        </div>
-      </div>
-
-      {/* KPIs */}
-      <section
-        data-print-section="kpis"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: 20,
-          marginBottom: 24,
-        }}
-      >
-        <KpiCard
-          label="Viajes totales"
-          value={totalTrips.toLocaleString("es-CO")}
-          subLabel={`Base global: ${baseKpis.totalTrips.toLocaleString("es-CO")}`}
-          contextLines={[kpiContext.tripsLine]}
-          accentColor={PRIMARY_GREEN}
-        />
-
-        <KpiCard
-          label="Tiempo promedio"
-          value={`${avgTime.toFixed(1)} min`}
-          subLabel={`Promedio global: ${baseKpis.avgTime.toFixed(1)} min`}
-          contextLines={[kpiContext.timeLine]}
-          accentColor={TERTIARY_BLUE}
-        />
-      </section>
-
-      {/* Mapas y distribución de calor */}
-      <section
-        data-print-section="mapas"
-        style={{
-          marginBottom: 20,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
-          gap: 16,
-        }}
-      >
-        <HighchartsMapCard
-          title="Mapa de calor de orígenes"
-          data={originHeatData}
-          palette="green"
-        />
-        <HighchartsMapCard
-          title="Mapa de calor de destinos"
-          data={destinationHeatData}
-          palette="orange"
-        />
-      </section>
-
-      <section
-        data-print-section="macros"
-        style={{
-          marginBottom: 28,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-          gap: 16,
-        }}
-      >
-        <BarChartCard
-          title="Macrozonas de origen (solo municipio filtrado)"
-          data={macroHeatBarData.origin}
-          xKey="label"
-          yKey="value"
-          color={BASE_BAR_COLOR}
-          showPercent={false}
-        />
-        <BarChartCard
-          title="Macrozonas de destino (solo municipio filtrado)"
-          data={macroHeatBarData.destination}
-          xKey="label"
-          yKey="value"
-          color={MACRO_DEST_BAR_COLOR}
-          showPercent={false}
-        />
-      </section>
-
-      <section
-        data-print-section="resumen"
-        style={{
-          background: "#f9fafb",
-          borderRadius: 14,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-          marginBottom: 32,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
-          gap: 24,
-        }}
-      >
-        <ChartCard title="Análisis de Viajes">
-          <ul
-            style={{
-              listStyle: "none",
-              padding: 0,
-              margin: 0,
               display: "grid",
-              gap: 10,
+              gridTemplateColumns: "280px minmax(0, 1fr)",
+              gap: 24,
+              alignItems: "start",
             }}
           >
-            {[
-              {
-                label: "Viajes filtrados",
-                value: totalTrips.toLocaleString("es-CO"),
-                detail: filters.municipio,
-                color: PRIMARY_GREEN,
-              },
-              {
-                label: "Viajes por hogar",
-                value: tripsPerHousehold,
-                color: TERTIARY_BLUE,
-              },
-              {
-                label: "Prom. viajes por estrato",
-                value: avgTripsByEstrato,
-                color: SECONDARY_GREEN,
-              },
-              {
-                label: "Vehículos por hogar",
-                value: vehiclesPerHousehold,
-                color: TERTIARY_ORANGE,
-              },
-              {
-                label: "Vehículos por estrato",
-                value: vehiclesByEstrato,
-                color: TERTIARY_PINK,
-              },
-            ].map((item) => (
-              <li
-                key={item.label}
+            <aside
+              className="dashboard-sidebar"
+              data-print-section="filtros"
+              style={{
+                position: "sticky",
+                top: 24,
+                alignSelf: "start",
+                borderRadius: 16,
+                border: "1px solid #e5e7eb",
+                background: "#f8fafc",
+                padding: 16,
+                boxShadow: "0 12px 24px rgba(15,23,42,0.08)",
+                display: "grid",
+                gap: 16,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>
+                  Variables geográficas
+                </div>
+                <label style={{ fontSize: 12, fontWeight: 600 }}>
+                  Municipio
+                  <select
+                    value={filters.municipio}
+                    onChange={(e) => setMunicipio(e.target.value)}
+                    style={{
+                      marginTop: 6,
+                      width: "100%",
+                      borderRadius: 10,
+                      border: "1px solid #cbd5e1",
+                      padding: "8px 10px",
+                      background: "#fff",
+                      fontSize: 12,
+                    }}
+                  >
+                    {municipios.map((muni) => (
+                      <option key={muni} value={muni}>
+                        {muni}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>
+                  Variables temáticas
+                </div>
+                <div style={{ display: "grid", gap: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600 }}>
+                    Selecciona variable
+                    <select
+                      value={activeThematicKey}
+                      onChange={(e) => handleThematicKeyChange(e.target.value)}
+                      style={{
+                        marginTop: 6,
+                        width: "100%",
+                        borderRadius: 10,
+                        border: "1px solid #cbd5e1",
+                        padding: "8px 10px",
+                        background: "#fff",
+                        fontSize: 12,
+                      }}
+                    >
+                      {thematicConfig.map((item) => (
+                        <option key={item.key} value={item.key}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div
+                    style={{
+                      borderRadius: 12,
+                      border: "1px solid #e2e8f0",
+                      padding: "10px 12px",
+                      background: "#ffffff",
+                      maxHeight: 220,
+                      overflowY: "auto",
+                      display: "grid",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                      {activeThematic?.label}
+                    </div>
+                    {(activeThematic?.options || []).map((option) => {
+                      const optionValue = option;
+                      const isChecked = selectedThematicValues.includes(optionValue);
+                      return (
+                        <label
+                          key={optionValue}
+                          style={{
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "center",
+                            fontSize: 12,
+                            color: "#0f172a",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleThematicValue(optionValue)}
+                          />
+                          {optionValue}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: 8 }}>
+                <button
+                  onClick={() => exportReport("pdf")}
+                  style={{
+                    border: "1px solid #d1d5db",
+                    background: "#fff",
+                    borderRadius: 10,
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  Exportar PDF
+                </button>
+                <button
+                  onClick={() => exportReport("excel")}
+                  style={{
+                    border: "1px solid #d1d5db",
+                    background: "#fff",
+                    borderRadius: 10,
+                    padding: "8px 12px",
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}
+                >
+                  Exportar Excel
+                </button>
+              </div>
+            </aside>
+
+            <div className="dashboard-content" style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+              <section
+                data-print-section="kpis"
+                className="section-card"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 16,
+                  padding: 16,
+                  boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
                 }}
               >
-                <span
+                <h3 style={{ margin: "0 0 16px", fontSize: 18, color: "#0f172a" }}>
+                  Cifras generales
+                </h3>
+                <div
+                  className="kpi-grid"
                   style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: item.color,
-                    flexShrink: 0,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: 20,
                   }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{item.label}</div>
-                  {item.detail && (
-                    <div style={{ fontSize: "10pt", color: "#475569" }}>
-                      {item.detail}
+                >
+                  <KpiCard
+                    label="Viajes totales"
+                    value={totalTrips.toLocaleString("es-CO")}
+                    subLabel={`Base global: ${baseKpis.totalTrips.toLocaleString("es-CO")}`}
+                    contextLines={[kpiContext.tripsLine]}
+                    accentColor={TERTIARY_YELLOW}
+                    headerColor={TERTIARY_YELLOW}
+                    headerTextColor="#0f172a"
+                  />
+                  <KpiCard
+                    label="Tiempo promedio"
+                    value={`${avgTime.toFixed(1)} min`}
+                    subLabel={`Promedio global: ${baseKpis.avgTime.toFixed(1)} min`}
+                    contextLines={[kpiContext.timeLine]}
+                    accentColor={TERTIARY_BLUE}
+                    headerColor={TERTIARY_BLUE}
+                  />
+                  <KpiCard
+                    label="Viajes por hogar"
+                    value={tripsPerHousehold}
+                    subLabel="Promedio filtrado"
+                    accentColor={SECONDARY_GREEN}
+                    headerColor={SECONDARY_GREEN}
+                  />
+                  <KpiCard
+                    label="Vehículos por hogar"
+                    value={vehiclesPerHousehold}
+                    subLabel="Promedio filtrado"
+                    accentColor={TERTIARY_ORANGE}
+                    headerColor={TERTIARY_ORANGE}
+                  />
+                </div>
+              </section>
+
+              <section
+                data-print-section="mapas"
+                className="section-card"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 16,
+                  padding: 16,
+                  boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
+                }}
+              >
+                <h3 style={{ margin: "0 0 16px", fontSize: 18, color: "#0f172a" }}>
+                  Distribución geográfica de los viajes
+                </h3>
+                <div
+                  className="map-grid"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+                    gap: 20,
+                  }}
+                >
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <div
+                      style={{
+                        background: "linear-gradient(90deg, #339933, #66CC33)",
+                        color: "#ffffff",
+                        padding: "8px 12px",
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontSize: 14,
+                      }}
+                    >
+                      Orígenes de viajes
                     </div>
-                  )}
+                    <HighchartsMapCard title={null} data={displayOriginHeatData} palette="green" />
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: 12,
+                        border: "1px solid #e5e7eb",
+                        overflow: "hidden",
+                        boxShadow: "0 10px 20px rgba(15,23,42,0.08)",
+                      }}
+                    >
+                      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                        <colgroup>
+                          <col style={{ width: "70%" }} />
+                          <col style={{ width: "30%" }} />
+                        </colgroup>
+                        <thead style={{ background: "rgba(102, 204, 51, 0.2)" }}>
+                          <tr>
+                            <th
+                              style={{
+                                textAlign: "left",
+                                padding: "8px 12px",
+                                fontSize: 12,
+                              }}
+                            >
+                              Macrozona
+                            </th>
+                            <th
+                              style={{
+                                textAlign: "right",
+                                padding: "8px 12px",
+                                fontSize: 12,
+                              }}
+                            >
+                              Viajes
+                            </th>
+                          </tr>
+                        </thead>
+                      </table>
+                        <div className="macro-table-body" style={{ height: 120, maxHeight: 120, overflowY: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                            <colgroup>
+                              <col style={{ width: "70%" }} />
+                              <col style={{ width: "30%" }} />
+                            </colgroup>
+                            <tbody>
+                              {macroHeatBarData.origin.map((row) => {
+                                const isSelected = selectedOriginKeys.includes(row.fullName);
+                                return (
+                                  <tr
+                                    key={row.fullName}
+                                    style={{
+                                      borderTop: "1px solid #e5e7eb",
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() => {
+                                      const exists = selectedOriginKeys.includes(row.fullName);
+                                      const next = exists
+                                        ? selectedOriginKeys.filter((item) => item !== row.fullName)
+                                        : [...selectedOriginKeys, row.fullName];
+                                      setSelectedOriginKeys(next);
+                                    }}
+                                  >
+                                    <td
+                                      style={{
+                                        padding: "8px 12px",
+                                        fontSize: 12,
+                                        color: isSelected ? SECONDARY_GREEN : "#0f172a",
+                                        fontWeight: isSelected ? 700 : 500,
+                                      }}
+                                    >
+                                      {row.label}
+                                    </td>
+                                    <td
+                                      style={{
+                                        padding: "8px 12px",
+                                        fontSize: 12,
+                                        textAlign: "right",
+                                        fontWeight: isSelected ? 800 : 700,
+                                        color: isSelected ? SECONDARY_GREEN : "#0f172a",
+                                      }}
+                                    >
+                                      {row.value.toLocaleString("es-CO")}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <div
+                      style={{
+                        background: "linear-gradient(90deg, #f59e0b, #f97316)",
+                        color: "#ffffff",
+                        padding: "8px 12px",
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontSize: 14,
+                      }}
+                    >
+                      Destinos de viajes
+                    </div>
+                    <HighchartsMapCard title={null} data={displayDestinationHeatData} palette="orange" />
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        borderRadius: 12,
+                        border: "1px solid #e5e7eb",
+                        overflow: "hidden",
+                        boxShadow: "0 10px 20px rgba(15,23,42,0.08)",
+                      }}
+                    >
+                      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                        <colgroup>
+                          <col style={{ width: "70%" }} />
+                          <col style={{ width: "30%" }} />
+                        </colgroup>
+                        <thead style={{ background: "#fef3c7" }}>
+                          <tr>
+                            <th
+                              style={{
+                                textAlign: "left",
+                                padding: "8px 12px",
+                                fontSize: 12,
+                              }}
+                            >
+                              Macrozona
+                            </th>
+                            <th
+                              style={{
+                                textAlign: "right",
+                                padding: "8px 12px",
+                                fontSize: 12,
+                              }}
+                            >
+                              Viajes
+                            </th>
+                          </tr>
+                        </thead>
+                      </table>
+                        <div className="macro-table-body" style={{ height: 120, maxHeight: 120, overflowY: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                            <colgroup>
+                              <col style={{ width: "70%" }} />
+                              <col style={{ width: "30%" }} />
+                            </colgroup>
+                            <tbody>
+                          {destinationTableData.map((row) => {
+                            const isHighlighted = destinationHighlightKeys.includes(row.fullName);
+                            return (
+                                  <tr
+                                    key={row.fullName}
+                                    style={{
+                                      borderTop: "1px solid #e5e7eb",
+                                    }}
+                                  >
+                                    <td
+                                      style={{
+                                        padding: "8px 12px",
+                                        fontSize: 12,
+                                        color: isHighlighted ? TERTIARY_ORANGE : "#0f172a",
+                                        fontWeight: isHighlighted ? 700 : 500,
+                                      }}
+                                    >
+                                      {row.label}
+                                    </td>
+                                    <td
+                                      style={{
+                                        padding: "8px 12px",
+                                        fontSize: 12,
+                                        textAlign: "right",
+                                        fontWeight: isHighlighted ? 800 : 700,
+                                        color: isHighlighted ? TERTIARY_ORANGE : "#0f172a",
+                                      }}
+                                    >
+                                      {row.value.toLocaleString("es-CO")}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontWeight: 800, color: "#0f172a" }}>
-                  {typeof item.value === "number" ? item.value.toLocaleString("es-CO") : item.value}
+              </section>
+
+              <section
+                data-print-section="viajes"
+                className="section-card"
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 16,
+                  padding: 16,
+                  boxShadow: "0 10px 24px rgba(15,23,42,0.08)",
+                }}
+              >
+                <h3 style={{ margin: "0 0 16px", fontSize: 18, color: "#0f172a" }}>
+                  Análisis de viajes
+                </h3>
+                <p style={{ margin: "0 0 16px", fontSize: 12, color: "#475569" }}>
+                  Filtros activos:{" "}
+                  <strong>Municipio</strong> {filters.municipio}
+                  {Object.entries(filters.thematicFilters)
+                    .filter(([, values]) => values.length)
+                    .map(([key, values]) => {
+                      const label =
+                        thematicConfig.find((item) => item.key === key)?.label || key;
+                      return ` | ${label}: ${values.join(", ")}`;
+                    })
+                    .join("") || ""}
+                </p>
+                <div
+                  className="analysis-grid"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                    gap: 20,
+                  }}
+                >
+                  <BarChartCard
+                    title="Modo principal"
+                    data={modeData}
+                    xKey="label"
+                    yKey="value"
+                    color={SECONDARY_GREEN}
+                  />
+                  <BarChartCard
+                    title="Motivo"
+                    data={purposeData}
+                    xKey="label"
+                    yKey="value"
+                    color={SECONDARY_GREEN}
+                  />
+                  <BarChartCard
+                    title="Cantidad de etapas"
+                    data={stageData}
+                    xKey="label"
+                    yKey="value"
+                    color={SECONDARY_GREEN}
+                  />
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <HourlyModeChartCard
+                      title="Distribución horaria"
+                      data={hourlyTripShareData}
+                    />
+                  </div>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </ChartCard>
-      </section>
-
-      <section
-        data-print-section="viajes"
-        style={{
-          background: "#f9fafb",
-          borderRadius: 14,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-          marginBottom: 32,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
-          gap: 24,
-        }}
-      >
-        <h3 style={{ marginTop: 0, marginBottom: 16, gridColumn: "1 / -1" }}>
-          Análisis descriptivo de los viajes realizados
-        </h3>
-        <BarChartCard
-          title="Modo principal"
-          data={modeData}
-          xKey="label"
-          yKey="value"
-          color={MODE_BAR_COLOR}
-          highlightKey={filters.thematicFilters.mode}
-          onSelect={(value) => toggleFilter("mode", value)}
-        />
-
-        <PieChartCard
-          title="Motivo"
-          data={purposeData.map((item) => ({ name: item.label, value: item.value }))}
-          dataKey="value"
-          nameKey="name"
-          selectedKey={filters.thematicFilters.tripPurpose}
-          onSelect={(value) => toggleFilter("tripPurpose", value)}
-        />
-
-        <BarChartCard
-          title="Cantidad de etapas"
-          data={stageData}
-          xKey="label"
-          yKey="value"
-          color={STAGE_BAR_COLOR}
-          highlightKey={filters.thematicFilters.stageBucket}
-          onSelect={(value) => toggleFilter("stageBucket", value)}
-        />
-
-        <div style={{ gridColumn: "span 2" }}>
-          <HourlyModeChartCard
-            title="Distribución horaria"
-            data={hourlyTripShareData}
-          />
-        </div>
-      </section>
-
-      {/* Socioeconómico */}
-      <section
-        data-print-section="socio"
-        style={{
-          background: "#f9fafb",
-          borderRadius: 14,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-          marginBottom: 24,
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>
-          Distribución por variables socioeconómicas
-        </h3>
-        <TabbedChartsRecharts
-          estratoData={estratoData}
-          edadData={edadData}
-          generoData={generoData}
-          escolaridadData={escolaridadData}
-          occupationData={occupationData}
-          selectedFilters={filters.thematicFilters}
-          onSelect={toggleFilter}
-        />
-      </section>
-
-      <section
-        data-print-section="vehiculos"
-        style={{
-          background: "#f9fafb",
-          borderRadius: 14,
-          padding: 16,
-          border: "1px solid #e5e7eb",
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>Parque automotor de los hogares</h3>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-            gap: 20,
-          }}
-        >
-          <BarChartCard
-            title="Tenencia vehicular por cada mil habitantes"
-            data={vehicleTenureData}
-            xKey="label"
-            yKey="value"
-            color={PRIMARY_GREEN}
-            highlightKey={filters.thematicFilters.vehicleBucket}
-            onSelect={(value) => toggleFilter("vehicleBucket", value)}
-          />
-          <BarChartCard
-            title="Tipo principal de vehículo en el hogar"
-            data={vehicleTypeData}
-            xKey="label"
-            yKey="value"
-            color={TERTIARY_ORANGE}
-            orientation="vertical"
-            showPercent
-          />
-        </div>
-      </section>
-      </main>
+              </section>
+            </div>
+          </div>
+        </main>
 
         {exportingFormat && (
           <div
