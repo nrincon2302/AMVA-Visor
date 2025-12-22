@@ -11,7 +11,7 @@ if (typeof TiledWebMap === "function") {
   TiledWebMap(Highcharts);
 }
 
-const HighchartsMapCard = ({ title, data, palette = "green" }) => {
+const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false }) => {
   
   const [mapGeoJSON, setMapGeoJSON] = useState(null);
 
@@ -92,19 +92,20 @@ const HighchartsMapCard = ({ title, data, palette = "green" }) => {
     },
 
     series: [
-      // Serie 1: Mapa base OSM
-      {
-        type: "tiledwebmap",
-        name: "Base OSM",
-        provider: {
-          type: "osm",
-          url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        },
-        opacity: 0.7,
-        zIndex: 0,
-      },
-
-      // Serie 2: Polígonos del GeoJSON
+      ...(hideBaseMap
+        ? []
+        : [
+            {
+              type: "tiledwebmap",
+              name: "Base OSM",
+              provider: {
+                type: "osm",
+                url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+              },
+              opacity: 0.7,
+              zIndex: 0,
+            },
+          ]),
       {
         type: "map",
         mapData: mapGeoJSON || mapDataSource,
