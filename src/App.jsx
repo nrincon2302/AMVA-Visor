@@ -1477,7 +1477,7 @@ const DashboardSection = () => {
                                 fontSize: 12,
                               }}
                             >
-                              Macrozona
+                              Macrozona de origen
                             </th>
                             <th
                               style={{
@@ -1589,7 +1589,7 @@ const DashboardSection = () => {
                                 fontSize: 12,
                               }}
                             >
-                              Macrozona
+                              Macrozona de destino
                             </th>
                             <th
                               style={{
