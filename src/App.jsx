@@ -646,6 +646,7 @@ const DashboardSection = () => {
   } = useKpiStats(filteredTrips, filteredPersons, filteredHouseholds);
 
   const [exportingFormat, setExportingFormat] = useState(null);
+  const [isPdfExporting, setIsPdfExporting] = useState(false);
 
   const [baseKpis, setBaseKpis] = useState({ totalTrips: 0, avgTime: 0 });
   const [macroHeatBarData, setMacroHeatBarData] = useState({
@@ -796,6 +797,9 @@ const DashboardSection = () => {
   const exportReport = async (format) => {
     setExportingFormat(format);
     const filename = `reporte-viajes.${format === "excel" ? "xlsx" : "pdf"}`;
+    if (format === "pdf") {
+      setIsPdfExporting(true);
+    }
 
     const geoSelectionLabel = `Municipio seleccionado: ${filters.municipio}`;
 
@@ -1026,20 +1030,38 @@ const DashboardSection = () => {
       cursorY = margin;
 
       addSubtitle("Mapas y distribución geográfica");
-      const mapsSection = dashboardRef.current?.querySelector("[data-print-section='mapas']");
-      if (mapsSection) {
-        const canvas = await html2canvas(mapsSection, {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const mapBlocks = Array.from(
+        dashboardRef.current?.querySelectorAll("[data-print-map]") || []
+      );
+
+      for (const mapBlock of mapBlocks) {
+        const canvas = await html2canvas(mapBlock, {
           scale: 2,
           backgroundColor: "#ffffff",
           useCORS: true,
-          windowWidth: mapsSection.scrollWidth,
+          windowWidth: mapBlock.scrollWidth,
         });
         const imgWidth = contentWidth;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         const maxHeight = pageHeight - margin * 2;
         const finalHeight = Math.min(imgHeight, maxHeight);
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", margin, cursorY, imgWidth, finalHeight);
+        pdf.addImage(
+          canvas.toDataURL("image/png"),
+          "PNG",
+          margin,
+          cursorY,
+          imgWidth,
+          finalHeight
+        );
         cursorY += finalHeight + 14;
+
+        if (cursorY + finalHeight > pageHeight - margin) {
+          addFooter();
+          pdf.addPage();
+          cursorY = margin;
+        }
       }
 
       addFooter();
@@ -1087,6 +1109,9 @@ const DashboardSection = () => {
       await buildPdf();
     } finally {
       setExportingFormat(null);
+      if (format === "pdf") {
+        setIsPdfExporting(false);
+      }
     }
   };
 
@@ -1420,9 +1445,17 @@ const DashboardSection = () => {
                     >
                       Orígenes de viajes
                     </div>
-                    <HighchartsMapCard title={null} data={displayOriginHeatData} palette="green" />
+                    <div data-print-map>
+                      <HighchartsMapCard
+                        title={null}
+                        data={displayOriginHeatData}
+                        palette="green"
+                        hideBaseMap={isPdfExporting}
+                      />
+                    </div>
                     <div
                       style={{
+                        display: isPdfExporting ? "none" : "block",
                         background: "#ffffff",
                         borderRadius: 12,
                         border: "1px solid #e5e7eb",
@@ -1524,9 +1557,17 @@ const DashboardSection = () => {
                     >
                       Destinos de viajes
                     </div>
-                    <HighchartsMapCard title={null} data={displayDestinationHeatData} palette="orange" />
+                    <div data-print-map>
+                      <HighchartsMapCard
+                        title={null}
+                        data={displayDestinationHeatData}
+                        palette="orange"
+                        hideBaseMap={isPdfExporting}
+                      />
+                    </div>
                     <div
                       style={{
+                        display: isPdfExporting ? "none" : "block",
                         background: "#ffffff",
                         borderRadius: 12,
                         border: "1px solid #e5e7eb",

@@ -5,6 +5,7 @@ import { metadataConstants } from "../data/syntheticDataBuilder";
 
 const MACROZONAS_POR_MUNICIPIO = baseDataset.metadata?.macrozonasPorMunicipio || {};
 const MUNICIPIOS = baseDataset.metadata?.municipios || [];
+const TARGET_TRIPS = 1_000_000;
 const formatMacrozonaLabel = (municipio, macrozona) =>
   `${municipio} - ${macrozona}`;
 
@@ -206,7 +207,30 @@ export function useTravelCrossfilterRecharts() {
     setIsLoading(true);
     setHouseholds(baseDataset.households || []);
     setPersons(baseDataset.persons || []);
-    setTrips(baseDataset.trips || []);
+    setTimeout(() => {
+      const baseTrips = baseDataset.trips || [];
+      if (!baseTrips.length) {
+        setTrips([]);
+        return;
+      }
+
+      const multiplier = Math.ceil(TARGET_TRIPS / baseTrips.length);
+      const expanded = [];
+      let idCounter = 1;
+
+      for (let i = 0; i < multiplier; i += 1) {
+        for (let j = 0; j < baseTrips.length && expanded.length < TARGET_TRIPS; j += 1) {
+          const trip = baseTrips[j];
+          expanded.push({
+            ...trip,
+            id: `T${idCounter}`,
+          });
+          idCounter += 1;
+        }
+      }
+
+      setTrips(expanded);
+    }, 0);
   }, []);
 
   useEffect(() => {
