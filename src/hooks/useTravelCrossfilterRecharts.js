@@ -36,6 +36,33 @@ const MODE_OPTIONS = [
   "A pie",
 ];
 
+const MODE_DISTRIBUTION = [
+  { value: "Metro", weight: 18 },
+  { value: "Cable", weight: 6 },
+  { value: "Metroplús", weight: 7 },
+  { value: "Tranvía", weight: 4 },
+  { value: "Bus / Buseta / Microbús urbano o metropolitano (1)", weight: 28 },
+  { value: "Ruta integrada o alimentador C3 y C6", weight: 16 },
+  { value: "Bus / Buseta / Microbús intermunicipal (1)", weight: 8 },
+  { value: "Taxi individual (amarillo)", weight: 6 },
+  { value: "Taxi colectivo (amarillo)", weight: 4 },
+  { value: "Taxi intermunicipal o colectivo (blanco)", weight: 3 },
+  { value: "Transporte informal o particular", weight: 4 },
+  { value: "Vehículo de pago por plataforma", weight: 5 },
+  { value: "Auto particular (conductor)", weight: 18 },
+  { value: "Auto particular (acompañante)", weight: 9 },
+  { value: "Escolar", weight: 3 },
+  { value: "Vehículo empresarial", weight: 2 },
+  { value: "Moto (conductor)", weight: 14 },
+  { value: "Moto (acompañante)", weight: 6 },
+  { value: "Mototaxi", weight: 2 },
+  { value: "Motocarro", weight: 2 },
+  { value: "Bicicleta propia", weight: 6 },
+  { value: "Bicicleta pública", weight: 2 },
+  { value: "Patineta eléctrica", weight: 1 },
+  { value: "A pie", weight: 20 },
+];
+
 const THEMATIC_OPTIONS = {
   gender: ["Hombre", "Mujer"],
   ageRange: [
@@ -187,6 +214,27 @@ const pickFromMap = (map, key, fallback = []) => {
   const list = map?.[key] || fallback;
   return list.length ? pickRandom(list) : null;
 };
+const pickWeighted = (options) => {
+  const total = options.reduce((acc, item) => acc + (item.weight || 1), 0);
+  let cursor = Math.random() * total;
+  for (const item of options) {
+    cursor -= item.weight || 1;
+    if (cursor <= 0) return item.value;
+  }
+  return options[options.length - 1].value;
+};
+
+const DEFAULT_THEMATIC_FILTERS = {
+  gender: THEMATIC_OPTIONS.gender,
+  ageRange: THEMATIC_OPTIONS.ageRange,
+  estrato: THEMATIC_OPTIONS.estrato,
+  mode: MODE_OPTIONS,
+  edu: THEMATIC_OPTIONS.edu,
+  occupation: OCCUPATIONS.map((item) => item.value),
+  vehicleBucket: VEHICLE_BUCKET_OPTIONS.map((item) => item.value),
+  tripPurpose: PURPOSES.map((item) => item.value),
+  stageBucket: STAGE_BUCKETS.map((item) => item.value),
+};
 
 function aggregatePercentages(data, field) {
   if (!data.length) return [];
@@ -206,17 +254,7 @@ function aggregatePercentages(data, field) {
 
 export function useTravelCrossfilterRecharts() {
   const [municipio, setMunicipio] = useState("AMVA General");
-  const [thematicFilters, setThematicFilters] = useState({
-    gender: [],
-    ageRange: [],
-    estrato: [],
-    mode: [],
-    edu: [],
-    occupation: [],
-    vehicleBucket: [],
-    tripPurpose: [],
-    stageBucket: [],
-  });
+  const [thematicFilters, setThematicFilters] = useState(DEFAULT_THEMATIC_FILTERS);
   const [isLoading, setIsLoading] = useState(true);
 
   const [households, setHouseholds] = useState([]);
@@ -276,11 +314,11 @@ export function useTravelCrossfilterRecharts() {
           expanded.push({
             ...trip,
             id: `T${idCounter}`,
-            mode: pickRandom(MODE_OPTIONS),
-            tripPurpose: pickRandom(PURPOSES.map((item) => item.value)),
-            stageBucket: pickRandom(STAGE_BUCKETS.map((item) => item.value)),
-            distanceKm: Number((Math.random() * 25 + 0.5).toFixed(1)),
-            durationMin: Math.max(6, Math.round(Math.random() * 80) + 8),
+            mode: pickWeighted(MODE_DISTRIBUTION),
+            tripPurpose: pickWeighted(PURPOSES),
+            stageBucket: pickWeighted(STAGE_BUCKETS),
+            distanceKm: Number((Math.random() ** 0.8 * 32 + 0.3).toFixed(1)),
+            durationMin: Math.max(5, Math.round(Math.random() ** 0.7 * 120) + 6),
             originMunicipio,
             destinationMunicipio,
             originMacro,

@@ -74,6 +74,10 @@ const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false
       buttonOptions: { verticalAlign: "top" },
     },
 
+    accessibility: {
+      enabled: false,
+    },
+
     colorAxis,
 
     tooltip: {
