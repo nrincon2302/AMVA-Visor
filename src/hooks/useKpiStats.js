@@ -9,6 +9,7 @@ const defaultStats = {
   tripsPerHousehold: 0,
   avgTripsByEstrato: 0,
   vehiclesPerHousehold: 0,
+  vehiclesPerPerson: 0,
   vehiclesByEstrato: 0,
   topOrigin: null,
   topDestination: null,
@@ -80,6 +81,14 @@ export function useKpiStats(filteredTrips, filteredPersons, filteredHouseholds) 
         )
       : 0;
 
+    const totalVehicles = filteredHouseholds.reduce(
+      (acc, household) => acc + (household.vehicleCount || 0),
+      0
+    );
+    const vehiclesPerPerson = filteredPersons?.length
+      ? Number((totalVehicles / filteredPersons.length).toFixed(2))
+      : 0;
+
     const vehiclesByEstratoMap = filteredPersons.reduce((acc, person) => {
       const vehicleCount = person.household?.vehicleCount ?? 0;
       acc[person.estrato] = acc[person.estrato] || { count: 0, people: 0 };
@@ -129,6 +138,7 @@ export function useKpiStats(filteredTrips, filteredPersons, filteredHouseholds) 
       tripsPerHousehold,
       avgTripsByEstrato,
       vehiclesPerHousehold,
+      vehiclesPerPerson,
       vehiclesByEstrato,
       topOrigin: { label: originLabel, trips: originTrips },
       topDestination: { label: destinationLabel, trips: destinationTrips },

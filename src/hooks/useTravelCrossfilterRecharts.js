@@ -177,6 +177,8 @@ const normalizeAgeRange = (person) => {
 };
 
 const VEHICLE_BUCKETS = metadataConstants.VEHICLE_BUCKETS;
+const VEHICLE_TYPES = metadataConstants.VEHICLE_TYPES;
+const VEHICLE_MODELS = metadataConstants.VEHICLE_MODELS;
 const PURPOSES = [
   { value: "Trabajo", weight: 38 },
   { value: "Regreso al hogar", weight: 30 },
@@ -254,6 +256,7 @@ function aggregatePercentages(data, field) {
 
 export function useTravelCrossfilterRecharts() {
   const [municipio, setMunicipio] = useState("AMVA General");
+  const [destinationMunicipio, setDestinationMunicipio] = useState("AMVA General");
   const [thematicFilters, setThematicFilters] = useState(DEFAULT_THEMATIC_FILTERS);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -278,6 +281,7 @@ export function useTravelCrossfilterRecharts() {
   const [occupationData, setOccupationData] = useState([]);
   const [vehicleTenureData, setVehicleTenureData] = useState([]);
   const [vehicleTypeData, setVehicleTypeData] = useState([]);
+  const [vehicleModelData, setVehicleModelData] = useState([]);
   const [hourlyTripShareData, setHourlyTripShareData] = useState([]);
   const [macroHeatData, setMacroHeatData] = useState({ origin: [], destination: [] });
 
@@ -337,10 +341,16 @@ export function useTravelCrossfilterRecharts() {
       const vehicleSeed = `${household.id}-${household.size}-${household.municipio}`;
       const vehicleBucket =
         household.vehicleBucket || deriveCategorical(vehicleSeed, VEHICLE_BUCKET_OPTIONS);
+      const vehicleType =
+        household.vehicleType || deriveCategorical(`${vehicleSeed}-type`, VEHICLE_TYPES);
+      const vehicleModel =
+        household.vehicleModel || deriveCategorical(`${vehicleSeed}-model`, VEHICLE_MODELS);
 
       acc[household.id] = {
         ...household,
         vehicleBucket,
+        vehicleType,
+        vehicleModel,
         vehicleCount:
           vehicleBucket === "Sin vehículo"
             ? 0
@@ -363,6 +373,10 @@ export function useTravelCrossfilterRecharts() {
         occupation: deriveCategorical(person.id, OCCUPATIONS),
         vehicleBucket:
           household?.vehicleBucket || deriveCategorical(person.id, VEHICLE_BUCKET_OPTIONS),
+        vehicleType:
+          household?.vehicleType || deriveCategorical(`${person.id}-type`, VEHICLE_TYPES),
+        vehicleModel:
+          household?.vehicleModel || deriveCategorical(`${person.id}-model`, VEHICLE_MODELS),
         household,
         macrozonaKey: formatMacrozonaLabel(person.municipio, person.macrozona),
       };
@@ -436,6 +450,13 @@ export function useTravelCrossfilterRecharts() {
           municipio !== "AMVA General" &&
           municipio !== "Todos" &&
           trip.originMunicipio !== municipio
+        ) {
+          return false;
+        }
+        if (
+          destinationMunicipio !== "AMVA General" &&
+          destinationMunicipio !== "Todos" &&
+          trip.destinationMunicipio !== destinationMunicipio
         ) {
           return false;
         }
@@ -523,22 +544,36 @@ export function useTravelCrossfilterRecharts() {
     }
 
     if (filtered.householdsFiltered?.length) {
-      const counts = filtered.householdsFiltered.reduce((acc, household) => {
-        const key = household.vehicleType || "Sin vehículo";
+      const typeCounts = filtered.householdsFiltered.reduce((acc, household) => {
+        const key = household.vehicleType || "Otro";
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+      const modelCounts = filtered.householdsFiltered.reduce((acc, household) => {
+        const key = household.vehicleModel || "(En blanco)";
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {});
 
       const total = filtered.householdsFiltered.length;
-      const vehicleTypes = Object.entries(counts)
+      const vehicleTypes = Object.entries(typeCounts)
+        .map(([label, value]) => ({
+          label,
+          value: Number(((value / total) * 100).toFixed(1)),
+        }))
+        .sort((a, b) => b.value - a.value);
+      const vehicleModels = Object.entries(modelCounts)
         .map(([label, value]) => ({
           label,
           value: Number(((value / total) * 100).toFixed(1)),
         }))
         .sort((a, b) => b.value - a.value);
       setVehicleTypeData(vehicleTypes);
+      setVehicleModelData(vehicleModels);
     } else {
       setVehicleTypeData([]);
+      setVehicleModelData([]);
     }
 
     const originCounts = filtered.tripsForMaps.reduce((acc, trip) => {
@@ -581,11 +616,13 @@ export function useTravelCrossfilterRecharts() {
     households,
     derivedHouseholds,
     municipio,
+    destinationMunicipio,
     thematicFilters,
   ]);
 
   const filters = {
     municipio,
+    destinationMunicipio,
     thematicFilters,
   };
 
@@ -623,10 +660,12 @@ export function useTravelCrossfilterRecharts() {
     occupationData,
     vehicleTenureData,
     vehicleTypeData,
+    vehicleModelData,
     hourlyTripShareData,
     macroHeatData,
     isLoading,
     setMunicipio,
+    setDestinationMunicipio,
     setThematicValues,
     setExclusiveThematicValues,
     thematicOptions: THEMATIC_OPTIONS,

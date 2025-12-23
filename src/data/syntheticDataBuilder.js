@@ -64,11 +64,19 @@ const VEHICLE_BUCKETS = [
 ];
 
 const VEHICLE_TYPES = [
-  { value: "Auto", weight: 32 },
+  { value: "Automóvil", weight: 32 },
   { value: "Moto", weight: 30 },
   { value: "Bicicleta", weight: 14 },
   { value: "Camioneta", weight: 12 },
-  { value: "Sin vehículo", weight: 12 },
+  { value: "Otro", weight: 12 },
+];
+
+const VEHICLE_MODELS = [
+  { value: "Menor de 5 años", weight: 22 },
+  { value: "Entre 5 y 10 años", weight: 24 },
+  { value: "(En blanco)", weight: 10 },
+  { value: "Entre 10 y 15 años", weight: 22 },
+  { value: "Más de 15 años", weight: 22 },
 ];
 
 const OCCUPATIONS = [
@@ -142,6 +150,7 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
     const estrato = pickWeighted(rand, WEIGHTED_ESTRATO);
     const vehicleBucket = pickWeighted(rand, VEHICLE_BUCKETS);
     const vehicleType = pickWeighted(rand, VEHICLE_TYPES);
+    const vehicleModel = pickWeighted(rand, VEHICLE_MODELS);
 
     return {
       id: `H${idx + 1}`,
@@ -151,6 +160,7 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
       estrato,
       vehicleBucket,
       vehicleType,
+      vehicleModel,
     };
   });
 
@@ -216,6 +226,7 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
 
 export const metadataConstants = {
   VEHICLE_TYPES,
+  VEHICLE_MODELS,
   VEHICLE_BUCKETS: VEHICLE_BUCKETS.map((item) => item.value),
   MODES,
 };

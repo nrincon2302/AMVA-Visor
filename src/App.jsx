@@ -254,13 +254,11 @@ const Header = () => {
             padding: "40px 16px 60px",
           }}
         >
-          <div
-            style={{ fontSize: "10pt", opacity: 0.95, marginBottom: 10 }}
-          >
+          <div style={{ fontSize: "10pt", opacity: 0.95, marginBottom: 10 }}>
             Inicio &gt; Observatorio &gt; Encuesta origen destino
           </div>
           <h2 style={{ margin: 0, fontSize: 22, marginBottom: 10, letterSpacing: 0.4 }}>
-            ENCUESTA ORIGEN DESTINO
+            ENCUESTA ORIGEN DESTINO 2025
           </h2>
 
           <div
@@ -398,7 +396,7 @@ const Header = () => {
             />
           </div>
           <span style={{ fontSize: 26, fontWeight: 800 }}>
-            Encuesta de Origen - Destino - Análisis de Viajes
+            Encuesta Origen Destino 2025 - Análisis de Viajes
           </span>
         </div>
       </section>
@@ -618,6 +616,7 @@ const DashboardSection = () => {
     filters,
     municipios,
     setMunicipio,
+    setDestinationMunicipio,
     setThematicValues,
     filteredTrips,
     filteredPersons,
@@ -632,6 +631,7 @@ const DashboardSection = () => {
     occupationData,
     vehicleTenureData,
     vehicleTypeData,
+    vehicleModelData,
     hourlyTripShareData,
     trips,
     isLoading,
@@ -656,6 +656,7 @@ const DashboardSection = () => {
     tripsPerHousehold,
     avgTripsByEstrato,
     vehiclesPerHousehold,
+    vehiclesPerPerson,
     vehiclesByEstrato,
   } = useKpiStats(filteredTrips, filteredPersons, filteredHouseholds);
 
@@ -665,8 +666,10 @@ const DashboardSection = () => {
   const [baseKpis, setBaseKpis] = useState({ totalTrips: 0, avgTime: 0 });
   const [displayOriginHeatData, setDisplayOriginHeatData] = useState([]);
   const [displayDestinationHeatData, setDisplayDestinationHeatData] = useState([]);
+  const [originHighlightKeys, setOriginHighlightKeys] = useState([]);
   const [destinationHighlightKeys, setDestinationHighlightKeys] = useState([]);
   const [selectedOriginKeys, setSelectedOriginKeys] = useState([]);
+  const [selectedDestinationKeys, setSelectedDestinationKeys] = useState([]);
   const [destinationTableData, setDestinationTableData] = useState([]);
   const [kpiContext, setKpiContext] = useState({ tripsLine: "", timeLine: "" });
   const thematicConfig = [
@@ -685,8 +688,10 @@ const DashboardSection = () => {
   const [activeMapThematicValue, setActiveMapThematicValue] = useState(null);
   const [localSelectedValues, setLocalSelectedValues] = useState(selectedThematicValues);
   const [isPending, startTransition] = useTransition();
+  const [analysisView, setAnalysisView] = useState("viajes");
   const isSelectionLimitReached = isCompareMode && localSelectedValues.length >= 3;
   const selectedCompareValues = isCompareMode ? localSelectedValues.slice(0, 3) : [];
+  const isAllSelected = localSelectedValues.length === (activeThematic?.options?.length || 0);
   const selectedColorMap = new Map(
     selectedCompareValues.map((value, index) => [value, COMPARE_COLORS[index]])
   );
@@ -725,10 +730,10 @@ const DashboardSection = () => {
 
   const macroHeatBarData = useMemo(
     () => ({
-      origin: buildHeatDistribution(originHeatData),
-      destination: buildHeatDistribution(destinationHeatData),
+      origin: buildHeatDistribution(originHeatData, filters.municipio),
+      destination: buildHeatDistribution(destinationHeatData, filters.destinationMunicipio),
     }),
-    [originHeatData, destinationHeatData, filters.municipio]
+    [originHeatData, destinationHeatData, filters.municipio, filters.destinationMunicipio]
   );
 
   const toggleThematicValue = (value) => {
@@ -766,9 +771,18 @@ const DashboardSection = () => {
   }, [trips]);
 
   useEffect(() => {
+    setSelectedOriginKeys([]);
+    setSelectedDestinationKeys([]);
+  }, [filters.municipio, filters.destinationMunicipio]);
+
+  useEffect(() => {
+    if (selectedDestinationKeys.length) {
+      return;
+    }
     if (!selectedOriginKeys.length) {
       setDisplayOriginHeatData(originHeatData);
       setDisplayDestinationHeatData(destinationHeatData);
+      setOriginHighlightKeys([]);
       setDestinationHighlightKeys([]);
       return;
     }
@@ -776,6 +790,7 @@ const DashboardSection = () => {
     const selectedSet = new Set(selectedOriginKeys);
     const originFiltered = originHeatData.filter((item) => selectedSet.has(item.name));
     setDisplayOriginHeatData(originFiltered);
+    setOriginHighlightKeys(selectedOriginKeys);
 
     const selectedTrips = filteredTrips.filter((trip) => selectedSet.has(trip.originKey));
     const destinationCounts = selectedTrips.reduce((acc, trip) => {
@@ -792,6 +807,32 @@ const DashboardSection = () => {
   }, [selectedOriginKeys, originHeatData, destinationHeatData, filteredTrips]);
 
   useEffect(() => {
+    if (!selectedDestinationKeys.length) {
+      return;
+    }
+
+    const selectedSet = new Set(selectedDestinationKeys);
+    const destinationFiltered = destinationHeatData.filter((item) => selectedSet.has(item.name));
+    setDisplayDestinationHeatData(destinationFiltered);
+    setDestinationHighlightKeys(selectedDestinationKeys);
+
+    const selectedTrips = filteredTrips.filter((trip) =>
+      selectedSet.has(trip.destinationKey)
+    );
+    const originCounts = selectedTrips.reduce((acc, trip) => {
+      acc[trip.originKey] = (acc[trip.originKey] || 0) + 1;
+      return acc;
+    }, {});
+
+    const originSeries = Object.entries(originCounts).map(([name, value]) => ({
+      name,
+      value,
+    }));
+    setDisplayOriginHeatData(originSeries);
+    setOriginHighlightKeys(originSeries.map((item) => item.name));
+  }, [selectedDestinationKeys, destinationHeatData, filteredTrips]);
+
+  useEffect(() => {
     const tripsShare = baseKpis.totalTrips
       ? (totalTrips / baseKpis.totalTrips) * 100
       : 0;
@@ -803,13 +844,15 @@ const DashboardSection = () => {
       tripsLine: `${tripsShare.toFixed(1)}% del total`,
       timeLine: `${Math.abs(timeDelta).toFixed(1)} ${
         timeDelta >= 0 ? "más" : "menos"
-      } que el promedio total`,
+      } que el Valle de Aburrá`,
     });
   }, [avgTime, baseKpis, totalTrips]);
 
   useEffect(() => {
-    setDestinationTableData(buildHeatDistribution(displayDestinationHeatData));
-  }, [displayDestinationHeatData]);
+    setDestinationTableData(
+      buildHeatDistribution(displayDestinationHeatData, filters.destinationMunicipio)
+    );
+  }, [displayDestinationHeatData, filters.destinationMunicipio]);
 
 
   const buildComparisonSeries = (tripsSource, categoryKey, categories = []) => {
@@ -871,14 +914,19 @@ const DashboardSection = () => {
     return { data, series };
   };
 
-  function buildHeatDistribution(sourceData = []) {
+  function buildHeatDistribution(sourceData = [], municipioFilter) {
     if (!sourceData?.length) return [];
 
     return sourceData
+      .filter(({ name }) =>
+        municipioFilter && municipioFilter !== "AMVA General"
+          ? name.startsWith(`${municipioFilter} - `)
+          : true
+      )
       .map(({ name, value }) => {
         const label =
-          filters.municipio !== "AMVA General" && name.startsWith(`${filters.municipio} - `)
-            ? name.replace(`${filters.municipio} - `, "")
+          municipioFilter && municipioFilter !== "AMVA General" && name.startsWith(`${municipioFilter} - `)
+            ? name.replace(`${municipioFilter} - `, "")
             : name;
 
         return {
@@ -901,6 +949,53 @@ const DashboardSection = () => {
     ? buildComparisonSeries(filteredTrips, "stageBucket", stageData)
     : null;
   const hourlyComparison = hasComparison ? buildHourlySeries(filteredTrips) : null;
+  const socioEstratoComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "estrato", socioEstratoData)
+    : null;
+  const socioGeneroComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "gender", socioGeneroData)
+    : null;
+  const socioOcupacionComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "occupation", socioOcupacionData)
+    : null;
+  const socioEscolaridadComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "edu", socioEscolaridadData)
+    : null;
+  const socioEdadComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "ageRange", socioEdadData)
+    : null;
+  const vehiculoTenenciaComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "vehicleBucket", vehicleTenureData)
+    : null;
+  const vehiculoTipoComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "vehicleType", vehicleTypeData)
+    : null;
+  const vehiculoModeloComparison = hasComparison
+    ? buildComparisonSeries(filteredTrips, "vehicleModel", vehicleModelData)
+    : null;
+
+  const socioEstratoData = estratoData.map((item) => ({
+    label: `Estrato ${item.label}`,
+    value: item.value,
+  }));
+  const socioEdadData = edadData.map((item) => ({
+    label: item.label,
+    value: item.value,
+  }));
+  const socioGeneroData = generoData.map((item) => ({
+    label: item.name,
+    value: item.value,
+  }));
+  const socioEscolaridadData = escolaridadData.map((item) => ({
+    label: item.label,
+    value: item.value,
+  }));
+  const socioOcupacionData = occupationData.map((item) => ({
+    label: item.label,
+    value: item.value,
+  }));
+  const vehicleTenurePerThousand = vehicleTenureData;
+  const vehicleTypePerThousand = vehicleTypeData;
 
   const dashboardRef = useRef(null);
 
@@ -933,13 +1028,13 @@ const DashboardSection = () => {
       setIsPdfExporting(true);
     }
 
-    const geoSelectionLabel = `Municipio seleccionado: ${filters.municipio}`;
+    const geoSelectionLabel = `Municipio origen: ${filters.municipio} | Municipio destino: ${filters.destinationMunicipio}`;
 
     const summaryText = `${geoSelectionLabel}\nViajes totales (global): ${
       baseKpis.totalTrips
-    }\nTiempo promedio global: ${baseKpis.avgTime.toFixed(1)} min\nViajes filtrados actuales: ${totalTrips}\nTiempo promedio filtrado: ${avgTime.toFixed(
+    }\nTiempo Valle de Aburrá: ${baseKpis.avgTime.toFixed(1)} min\nViajes filtrados actuales: ${totalTrips}\nTiempo Valle de Aburrá (filtro): ${avgTime.toFixed(
       1
-    )} min\nViajes por hogar (filtrado): ${tripsPerHousehold}\nVehículos por hogar (filtrado): ${vehiclesPerHousehold}\nParticipación mujeres: ${pctWomen}%\nParticipación hombres: ${pctMen}%`;
+    )} min\nViajes por hogar Valle de Aburrá: ${tripsPerHousehold}\nVehículos por hogar Valle de Aburrá: ${vehiclesPerHousehold}\nParticipación mujeres: ${pctWomen}%\nParticipación hombres: ${pctMen}%`;
 
     const buildExcel = async () => {
       const XLSX = await loadExternalLib(
@@ -953,13 +1048,13 @@ const DashboardSection = () => {
         {
           "Filtro geográfico": geoSelectionLabel,
           "Viajes totales (global)": baseKpis.totalTrips,
-          "Tiempo promedio global (min)": Number(baseKpis.avgTime.toFixed(1)),
+          "Tiempo Valle de Aburrá (min)": Number(baseKpis.avgTime.toFixed(1)),
           "Viajes filtrados": totalTrips,
-          "Tiempo promedio filtrado (min)": Number(avgTime.toFixed(1)),
-          "Viajes por hogar": tripsPerHousehold,
-          "Promedio viajes por estrato": avgTripsByEstrato,
-          "Vehículos por hogar": vehiclesPerHousehold,
-          "Vehículos por estrato": vehiclesByEstrato,
+          "Tiempo Valle de Aburrá (filtro)": Number(avgTime.toFixed(1)),
+          "Viajes por hogar Valle de Aburrá": tripsPerHousehold,
+          "Viajes por estrato Valle de Aburrá": avgTripsByEstrato,
+          "Vehículos por hogar Valle de Aburrá": vehiclesPerHousehold,
+          "Vehículos por estrato Valle de Aburrá": vehiclesByEstrato,
           "% Mujeres": pctWomen,
           "% Hombres": pctMen,
         },
@@ -978,11 +1073,21 @@ const DashboardSection = () => {
       );
 
       const vehicleSheet = XLSX.utils.json_to_sheet(
-        vehicleTenureData.map((item) => ({ "Tenencia vehicular por cada mil habitantes": item.label, "% del total": item.value }))
+        vehicleTenureData.map((item) => ({
+          "Tenencia vehicular": item.label,
+          "% del total": item.value,
+        }))
       );
 
       const vehicleTypeSheet = XLSX.utils.json_to_sheet(
-        vehicleTypeData.map((item) => ({ "Tipo de vehículo": item.label, "% de hogares": item.value }))
+        vehicleTypeData.map((item) => ({ "Tipo de vehículo": item.label, "% del total": item.value }))
+      );
+
+      const vehicleModelSheet = XLSX.utils.json_to_sheet(
+        vehicleModelData.map((item) => ({
+          "Modelo de vehículo": item.label,
+          "% del total": item.value,
+        }))
       );
 
       const estratoSheet = XLSX.utils.json_to_sheet(
@@ -1007,6 +1112,7 @@ const DashboardSection = () => {
         XLSX.utils.book_append_sheet(workbook, occupationSheet, "Ocupación");
         XLSX.utils.book_append_sheet(workbook, vehicleSheet, "Tenencia vehicular");
         XLSX.utils.book_append_sheet(workbook, vehicleTypeSheet, "Tipo de vehículo");
+        XLSX.utils.book_append_sheet(workbook, vehicleModelSheet, "Modelo de vehículo");
         XLSX.utils.book_append_sheet(workbook, estratoSheet, "Estrato");
         XLSX.utils.book_append_sheet(workbook, edadSheet, "Edad");
         XLSX.utils.book_append_sheet(workbook, generoSheet, "Género");
@@ -1148,7 +1254,7 @@ const DashboardSection = () => {
       pdf.setTextColor("#0f172a");
       [
         `Viajes totales: ${totalTrips.toLocaleString("es-CO")}`,
-        `Tiempo promedio: ${avgTime.toFixed(1)} min`,
+        `Tiempo Valle de Aburrá: ${avgTime.toFixed(1)} min`,
         `Viajes por hogar: ${tripsPerHousehold}`,
         `Vehículos por hogar: ${vehiclesPerHousehold}`,
       ].forEach((line) => {
@@ -1382,6 +1488,28 @@ const DashboardSection = () => {
                     ))}
                   </select>
                 </label>
+                <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginTop: 12 }}>
+                  Municipio destino
+                  <select
+                    value={filters.destinationMunicipio}
+                    onChange={(e) => setDestinationMunicipio(e.target.value)}
+                    style={{
+                      marginTop: 6,
+                      width: "100%",
+                      borderRadius: 10,
+                      border: "1px solid #cbd5e1",
+                      padding: "8px 10px",
+                      background: "#fff",
+                      fontSize: 12,
+                    }}
+                  >
+                    {municipios.map((muni) => (
+                      <option key={muni} value={muni}>
+                        {muni}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
 
               <div>
@@ -1430,8 +1558,9 @@ const DashboardSection = () => {
                       <button
                         type="button"
                         onClick={() => {
-                          setIsCompareMode(false);
                           const nextValues = activeThematic?.options || [];
+                          const allowCompareWithAll = activeThematicKey === "estrato";
+                          setIsCompareMode(allowCompareWithAll);
                           setLocalSelectedValues(nextValues);
                           startTransition(() => {
                             setThematicValues(activeThematicKey, nextValues);
@@ -1439,8 +1568,8 @@ const DashboardSection = () => {
                         }}
                         style={{
                           border: "1px solid #d1d5db",
-                          background: !isCompareMode ? SECONDARY_GREEN : "#ffffff",
-                          color: !isCompareMode ? "#ffffff" : "#0f172a",
+                          background: isAllSelected ? SECONDARY_GREEN : "#ffffff",
+                          color: isAllSelected ? "#ffffff" : "#0f172a",
                           borderRadius: 999,
                           padding: "4px 8px",
                           fontSize: 10,
@@ -1470,7 +1599,7 @@ const DashboardSection = () => {
                           cursor: "pointer",
                         }}
                       >
-                        Elegir para comparar
+                        Realizar comparación
                       </button>
                       <button
                         type="button"
@@ -1548,6 +1677,38 @@ const DashboardSection = () => {
                 </div>
               </div>
 
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>
+                  Vista de análisis
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {[
+                    { key: "viajes", label: "Análisis de viajes" },
+                    { key: "socio", label: "Análisis socioeconómico" },
+                    { key: "vehicular", label: "Análisis vehicular" },
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => setAnalysisView(item.key)}
+                      style={{
+                        border: "1px solid #d1d5db",
+                        background: analysisView === item.key ? SECONDARY_GREEN : "#ffffff",
+                        color: analysisView === item.key ? "#ffffff" : "#0f172a",
+                        borderRadius: 10,
+                        padding: "6px 10px",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div style={{ display: "grid", gap: 8 }}>
                 <button
                   onClick={() => exportReport("pdf")}
@@ -1612,12 +1773,13 @@ const DashboardSection = () => {
                     contextLines={[kpiContext.tripsLine]}
                     accentColor={TERTIARY_PINK}
                     headerColor={TERTIARY_PINK}
+                    headerTextColor="#0f172a"
                     bannerImageUrl={BANNER_IMAGE_URL}
                   />
                   <KpiCard
-                    label="Tiempo promedio"
+                    label="Tiempo Valle de Aburrá"
                     value={`${avgTime.toFixed(1)} min`}
-                    subLabel={`Promedio global: ${baseKpis.avgTime.toFixed(1)} min`}
+                    subLabel={`Valle de Aburrá: ${baseKpis.avgTime.toFixed(1)} min`}
                     contextLines={[kpiContext.timeLine]}
                     accentColor={TERTIARY_BLUE}
                     headerColor={TERTIARY_BLUE}
@@ -1626,7 +1788,7 @@ const DashboardSection = () => {
                   <KpiCard
                     label="Viajes por hogar"
                     value={tripsPerHousehold}
-                    subLabel="Promedio filtrado"
+                    subLabel="Viajes Valle de Aburrá"
                     accentColor={SECONDARY_GREEN}
                     headerColor={SECONDARY_GREEN}
                     bannerImageUrl={BANNER_IMAGE_URL}
@@ -1634,7 +1796,7 @@ const DashboardSection = () => {
                   <KpiCard
                     label="Vehículos por hogar"
                     value={vehiclesPerHousehold}
-                    subLabel="Promedio filtrado"
+                    subLabel="Vehículos por hogar Valle de Aburrá"
                     accentColor={TERTIARY_ORANGE}
                     headerColor={TERTIARY_ORANGE}
                     bannerImageUrl={BANNER_IMAGE_URL}
@@ -1761,7 +1923,7 @@ const DashboardSection = () => {
                             </colgroup>
                             <tbody>
                               {macroHeatBarData.origin.map((row) => {
-                                const isSelected = selectedOriginKeys.includes(row.fullName);
+                                const isSelected = originHighlightKeys.includes(row.fullName);
                                 return (
                                   <tr
                                     key={row.fullName}
@@ -1770,6 +1932,7 @@ const DashboardSection = () => {
                                       cursor: "pointer",
                                     }}
                                     onClick={() => {
+                                      setSelectedDestinationKeys([]);
                                       const exists = selectedOriginKeys.includes(row.fullName);
                                       const next = exists
                                         ? selectedOriginKeys.filter((item) => item !== row.fullName)
@@ -1879,6 +2042,15 @@ const DashboardSection = () => {
                                     key={row.fullName}
                                     style={{
                                       borderTop: "1px solid #e5e7eb",
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() => {
+                                      setSelectedOriginKeys([]);
+                                      const exists = selectedDestinationKeys.includes(row.fullName);
+                                      const next = exists
+                                        ? selectedDestinationKeys.filter((item) => item !== row.fullName)
+                                        : [...selectedDestinationKeys, row.fullName];
+                                      setSelectedDestinationKeys(next);
                                     }}
                                   >
                                     <td
@@ -1925,11 +2097,17 @@ const DashboardSection = () => {
                 }}
               >
                 <h3 style={{ margin: "0 0 16px", fontSize: 18, color: "#0f172a" }}>
-                  Análisis de viajes
+                  {analysisView === "viajes"
+                    ? "Análisis de viajes"
+                    : analysisView === "socio"
+                    ? "Análisis socioeconómico"
+                    : "Análisis vehicular"}
                 </h3>
                 <p style={{ margin: "0 0 16px", fontSize: 12, color: "#475569" }}>
                   Filtros activos:{" "}
-                  <strong>Municipio</strong> {filters.municipio}
+                  <strong>Municipio origen</strong> {filters.municipio}
+                  {filters.destinationMunicipio &&
+                    ` | Municipio destino: ${filters.destinationMunicipio}`}
                   {isCompareMode &&
                     selectedCompareValues.length > 0 &&
                     selectedCompareValues.length < (activeThematic?.options?.length || 0) &&
@@ -1968,56 +2146,144 @@ const DashboardSection = () => {
                     ))}
                   </div>
                 )}
-                <div
-                  className="analysis-grid"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                    gridTemplateRows: "1fr 1fr",
-                    gridTemplateAreas: `"modo motivo etapas" "modo horas horas"`,
-                    gap: 20,
-                    alignItems: "stretch",
-                  }}
-                >
-                  <div style={{ gridArea: "modo", height: "100%" }}>
-                  <BarChartCard
-                    title="Modo principal"
-                    data={hasComparison ? modeComparison?.data : modeData}
-                    series={hasComparison ? modeComparison?.series : undefined}
-                    xKey="label"
-                    yKey="value"
-                    color={SECONDARY_GREEN}
-                    chartHeight="100%"
-                  />
+                {analysisView === "viajes" && (
+                  <div
+                    className="analysis-grid"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                      gridTemplateRows: "1fr 1fr",
+                      gridTemplateAreas: `"modo motivo etapas" "modo horas horas"`,
+                      gap: 20,
+                      alignItems: "stretch",
+                    }}
+                  >
+                    <div style={{ gridArea: "modo", height: "100%" }}>
+                      <BarChartCard
+                        title="Modo principal"
+                        data={hasComparison ? modeComparison?.data : modeData}
+                        series={hasComparison ? modeComparison?.series : undefined}
+                        xKey="label"
+                        yKey="value"
+                        color={SECONDARY_GREEN}
+                        chartHeight="100%"
+                      />
+                    </div>
+                    <div style={{ gridArea: "motivo" }}>
+                      <BarChartCard
+                        title="Motivo"
+                        data={hasComparison ? purposeComparison?.data : purposeData}
+                        series={hasComparison ? purposeComparison?.series : undefined}
+                        xKey="label"
+                        yKey="value"
+                        color={SECONDARY_GREEN}
+                      />
+                    </div>
+                    <div style={{ gridArea: "etapas" }}>
+                      <BarChartCard
+                        title="Cantidad de etapas"
+                        data={hasComparison ? stageComparison?.data : stageData}
+                        series={hasComparison ? stageComparison?.series : undefined}
+                        xKey="label"
+                        yKey="value"
+                        color={SECONDARY_GREEN}
+                      />
+                    </div>
+                    <div style={{ gridArea: "horas" }}>
+                      <HourlyModeChartCard
+                        title="Distribución horaria"
+                        data={hasComparison ? hourlyComparison?.data : hourlyTripShareData}
+                        series={hasComparison ? hourlyComparison?.series : undefined}
+                      />
+                    </div>
                   </div>
-                  <div style={{ gridArea: "motivo" }}>
+                )}
+                {analysisView === "socio" && (
+                  <div
+                    className="analysis-grid"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                      gap: 20,
+                    }}
+                  >
                     <BarChartCard
-                      title="Motivo"
-                      data={hasComparison ? purposeComparison?.data : purposeData}
-                      series={hasComparison ? purposeComparison?.series : undefined}
+                      title="Estrato"
+                      data={hasComparison ? socioEstratoComparison?.data : socioEstratoData}
+                      series={hasComparison ? socioEstratoComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={SECONDARY_GREEN}
+                    />
+                    <BarChartCard
+                      title="Género"
+                      data={hasComparison ? socioGeneroComparison?.data : socioGeneroData}
+                      series={hasComparison ? socioGeneroComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={TERTIARY_PINK}
+                    />
+                    <BarChartCard
+                      title="Ocupación"
+                      data={hasComparison ? socioOcupacionComparison?.data : socioOcupacionData}
+                      series={hasComparison ? socioOcupacionComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={TERTIARY_BLUE}
+                    />
+                    <BarChartCard
+                      title="Escolaridad"
+                      data={hasComparison ? socioEscolaridadComparison?.data : socioEscolaridadData}
+                      series={hasComparison ? socioEscolaridadComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={TERTIARY_ORANGE}
+                    />
+                    <BarChartCard
+                      title="Edad"
+                      data={hasComparison ? socioEdadComparison?.data : socioEdadData}
+                      series={hasComparison ? socioEdadComparison?.series : undefined}
                       xKey="label"
                       yKey="value"
                       color={SECONDARY_GREEN}
                     />
                   </div>
-                  <div style={{ gridArea: "etapas" }}>
+                )}
+                {analysisView === "vehicular" && (
+                  <div
+                    className="analysis-grid"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                      gap: 20,
+                    }}
+                  >
                     <BarChartCard
-                      title="Cantidad de etapas"
-                      data={hasComparison ? stageComparison?.data : stageData}
-                      series={hasComparison ? stageComparison?.series : undefined}
+                      title="Tenencia vehicular"
+                      data={hasComparison ? vehiculoTenenciaComparison?.data : vehicleTenureData}
+                      series={hasComparison ? vehiculoTenenciaComparison?.series : undefined}
                       xKey="label"
                       yKey="value"
                       color={SECONDARY_GREEN}
                     />
-                  </div>
-                  <div style={{ gridArea: "horas" }}>
-                    <HourlyModeChartCard
-                      title="Distribución horaria"
-                      data={hasComparison ? hourlyComparison?.data : hourlyTripShareData}
-                      series={hasComparison ? hourlyComparison?.series : undefined}
+                    <BarChartCard
+                      title="Tipo de vehículo"
+                      data={hasComparison ? vehiculoTipoComparison?.data : vehicleTypeData}
+                      series={hasComparison ? vehiculoTipoComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={TERTIARY_BLUE}
+                    />
+                    <BarChartCard
+                      title="Modelo de vehículo"
+                      data={hasComparison ? vehiculoModeloComparison?.data : vehicleModelData}
+                      series={hasComparison ? vehiculoModeloComparison?.series : undefined}
+                      xKey="label"
+                      yKey="value"
+                      color={TERTIARY_PINK}
                     />
                   </div>
-                </div>
+                )}
               </section>
             </div>
           </div>
