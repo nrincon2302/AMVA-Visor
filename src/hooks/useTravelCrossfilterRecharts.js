@@ -1,7 +1,7 @@
 // src/hooks/useTravelCrossfilterRecharts.js
 import { useEffect, useState } from "react";
 import baseDataset from "../data/travelData.json";
-import { metadataConstants } from "../data/syntheticDataBuilder";
+import { metadataConstants } from "../utils/syntheticDataBuilder";
 
 const MACROZONAS_POR_MUNICIPIO = baseDataset.metadata?.macrozonasPorMunicipio || {};
 const MUNICIPIOS = baseDataset.metadata?.municipios || [];

@@ -99,6 +99,7 @@ const PURPOSES = [
   { value: "Trabajo", weight: 38 },
   { value: "Regreso al hogar", weight: 30 },
 ];
+
 const STAGE_BUCKETS = [
   { value: "1 etapa", weight: 64 },
   { value: "2 etapas", weight: 22 },
@@ -106,17 +107,34 @@ const STAGE_BUCKETS = [
   { value: "4 o más etapas", weight: 5 },
 ];
 
-const randomFactory = (seedStart = 17737) => {
-  let seed = seedStart;
+// Generador de números aleatorios mejorado con múltiples seeds
+const randomFactory = (seedStart = null) => {
+  // Si no hay seed, usar timestamp + random para máxima aleatoriedad
+  let seed = seedStart ?? (Date.now() * Math.random() * 1000000) % 4294967296;
+  let counter = 0;
+  
   return () => {
-    seed = (seed * 1664525 + 1013904223) % 4294967296;
-    return seed / 4294967296;
+    counter++;
+    // Combinar múltiples fuentes de aleatoriedad
+    seed = (seed * 1664525 + 1013904223 + counter) % 4294967296;
+    const random1 = seed / 4294967296;
+    
+    // Segunda capa de aleatoriedad
+    seed = (seed * 22695477 + 1) % 4294967296;
+    const random2 = seed / 4294967296;
+    
+    // Combinar ambas para mayor variación
+    return (random1 + random2) / 2;
   };
 };
 
+// Función mejorada para selección ponderada con más variación
 const pickWeighted = (rand, items) => {
   const total = items.reduce((acc, item) => acc + item.weight, 0);
-  let value = rand() * total;
+  // Agregar pequeña variación aleatoria a los pesos
+  const variance = 0.15; // 15% de variación
+  let value = rand() * total * (1 + (rand() - 0.5) * variance);
+  
   for (const item of items) {
     value -= item.weight;
     if (value <= 0) return item.value;
@@ -124,9 +142,19 @@ const pickWeighted = (rand, items) => {
   return items[items.length - 1].value;
 };
 
-const pickRandom = (rand, arr) => arr[Math.floor(rand() * arr.length) % arr.length];
+const pickRandom = (rand, arr) => {
+  const index = Math.floor(rand() * arr.length);
+  return arr[index % arr.length];
+};
+
+// Función para agregar variación a números
+const addVariation = (rand, base, variationPercent = 0.2) => {
+  const variation = (rand() - 0.5) * 2 * variationPercent;
+  return base * (1 + variation);
+};
 
 export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) {
+  // Usar seed aleatoria para cada generación
   const rand = randomFactory();
 
   const municipalities = (baseDataset.metadata?.municipios || []).filter(
@@ -140,9 +168,11 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
     )
   );
 
-  const averageTripsPerPerson = 5.2;
+  // Variar los promedios
+  const averageTripsPerPerson = addVariation(rand, 5.2, 0.3);
   const personsTarget = Math.ceil(targetTrips / averageTripsPerPerson);
-  const householdsTarget = Math.ceil(personsTarget / 3.1);
+  const averagePersonsPerHousehold = addVariation(rand, 3.1, 0.25);
+  const householdsTarget = Math.ceil(personsTarget / averagePersonsPerHousehold);
 
   const households = Array.from({ length: householdsTarget }, (_, idx) => {
     const municipio = pickRandom(rand, internalMunicipalities);
@@ -152,11 +182,15 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
     const vehicleType = pickWeighted(rand, VEHICLE_TYPES);
     const vehicleModel = pickWeighted(rand, VEHICLE_MODELS);
 
+    // Variar el tamaño del hogar con más distribución
+    const baseSize = rand() * 6;
+    const size = Math.max(1, Math.min(8, Math.round(baseSize + (rand() - 0.5) * 2)));
+
     return {
       id: `H${idx + 1}`,
       municipio,
       macrozona,
-      size: Math.max(1, Math.round(rand() * 5) + 1),
+      size,
       estrato,
       vehicleBucket,
       vehicleType,
@@ -166,7 +200,10 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
 
   const persons = [];
   households.forEach((household) => {
-    const members = Math.max(1, Math.round(rand() * 3) + 1);
+    // Variar el número de miembros
+    const baseMembers = rand() * 4;
+    const members = Math.max(1, Math.min(6, Math.round(baseMembers + (rand() - 0.5))));
+    
     for (let i = 0; i < members; i += 1) {
       persons.push({
         id: `P${persons.length + 1}`,
@@ -183,19 +220,35 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
 
   const trips = [];
   let personIdx = 0;
+  
   while (trips.length < targetTrips) {
     const person = persons[personIdx % persons.length];
     personIdx += 1;
 
-    const plannedTrips = Math.max(2, Math.round(rand() * 5) + 1);
+    // Variar el número de viajes por persona
+    const baseTrips = rand() * 6;
+    const plannedTrips = Math.max(1, Math.round(baseTrips + (rand() - 0.5) * 3));
+    
     for (let i = 0; i < plannedTrips && trips.length < targetTrips; i += 1) {
       const originMunicipio = person.municipio;
-      const destinationMunicipio = pickRandom(rand, internalMunicipalities);
+      
+      // 80% de probabilidad de quedarse en el mismo municipio
+      const destinationMunicipio = rand() < 0.8 
+        ? originMunicipio 
+        : pickRandom(rand, internalMunicipalities);
+        
       const originMacro = pickRandom(rand, macroByMunicipio[originMunicipio] || ["Urbana"]);
       const destinationMacro = pickRandom(
         rand,
         macroByMunicipio[destinationMunicipio] || ["Urbana"]
       );
+
+      // Variar distancia y duración con distribución más realista
+      const baseDistance = rand() * 30;
+      const distanceKm = Number((baseDistance * (0.5 + rand() * 0.8)).toFixed(1));
+      
+      const baseDuration = distanceKm * 3 + 10; // ~3 min por km + base
+      const durationMin = Math.max(5, Math.round(baseDuration * (0.7 + rand() * 0.6)));
 
       trips.push({
         id: `T${trips.length + 1}`,
@@ -204,14 +257,16 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
         destinationMunicipio,
         originMacro,
         destinationMacro,
-        distanceKm: Number((rand() * 25 + 0.5).toFixed(1)),
-        durationMin: Math.max(6, Math.round(rand() * 80) + 8),
+        distanceKm,
+        durationMin,
         mode: pickWeighted(rand, MODE_OPTIONS),
         tripPurpose: pickWeighted(rand, PURPOSES),
         stageBucket: pickWeighted(rand, STAGE_BUCKETS),
       });
     }
   }
+
+  console.log(`Generated: ${households.length} households, ${persons.length} persons, ${trips.length} trips`);
 
   return {
     metadata: {
@@ -229,4 +284,6 @@ export const metadataConstants = {
   VEHICLE_MODELS,
   VEHICLE_BUCKETS: VEHICLE_BUCKETS.map((item) => item.value),
   MODES,
+  OCCUPATIONS,
+  AGE_BUCKETS,
 };
