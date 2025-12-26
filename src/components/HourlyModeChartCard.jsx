@@ -13,10 +13,10 @@ import ChartCard from "./ChartCard";
 
 const GRID_COLOR = "#BFBFBF";
 const AXIS_COLOR = "#A6A6A6";
-const LINE_COLOR = "#00A7F4";
+const DEFAULT_LINE_COLOR = "#00A7F4";
 const DOT_STROKE = "#339933";
 
-const HourlyModeChartCard = ({ title, data = [], series }) => {
+const HourlyModeChartCard = ({ title, data = [], series, lineColor }) => {
   const formatNumber = (value) => Number(value || 0).toLocaleString("es-CO");
 
   return (
@@ -44,6 +44,7 @@ const HourlyModeChartCard = ({ title, data = [], series }) => {
             formatter={(value) => [formatNumber(value), "Viajes"]}
           />
           <ReferenceLine y={0} stroke={AXIS_COLOR} />
+
           {series?.length ? (
             series.map((entry) => (
               <Line
@@ -51,9 +52,9 @@ const HourlyModeChartCard = ({ title, data = [], series }) => {
                 type="monotone"
                 dataKey={entry.key}
                 name={entry.label}
-                stroke={entry.color}
+                stroke={entry.color || lineColor || DEFAULT_LINE_COLOR}
                 strokeWidth={2.6}
-                dot={{ r: 3.2, strokeWidth: 1.4, stroke: entry.color, fill: "#ffffff" }}
+                dot={{ r: 3.2, strokeWidth: 1.4, stroke: entry.color || lineColor || DEFAULT_LINE_COLOR, fill: "#ffffff" }}
                 activeDot={{ r: 5 }}
               />
             ))
@@ -62,7 +63,7 @@ const HourlyModeChartCard = ({ title, data = [], series }) => {
               type="monotone"
               dataKey="value"
               name="Viajes"
-              stroke={LINE_COLOR}
+              stroke={lineColor || DEFAULT_LINE_COLOR}
               strokeWidth={2.6}
               dot={{ r: 3.6, strokeWidth: 1.4, stroke: DOT_STROKE, fill: "#ffffff" }}
               activeDot={{ r: 5 }}

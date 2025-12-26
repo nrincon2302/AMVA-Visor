@@ -5,6 +5,7 @@ import LoadingOverlay from "../components/LoadingOverlay";
 import KpisPanel from "./KpisPanel";
 import MapsPanel from "./MapsPanel";
 import { COMPARE_COLORS, PRIMARY_GREEN } from "../config/constants";
+import AnalysisViewsPanel from "./AnalysisViewsPanel";
 
 export default function DashboardSection() {
   const {
@@ -17,10 +18,23 @@ export default function DashboardSection() {
     filteredPersons,
     filteredHouseholds,
     estratoData,
+    edadData,
+    generoData,
+    escolaridadData,
+    modeData,
+    stageData,
+    purposeData,
+    occupationData,
+    vehicleTenureData,
+    vehicleTypeData,
+    vehicleModelData,
+    hourlyTripShareData,
     macroHeatData,
     isLoading,
     thematicOptions,
     trips,
+    households,
+    derivedHouseholds,
   } = useTravelCrossfilterRecharts();
 
   const [activeThematicKey, setActiveThematicKey] = useState("estrato");
@@ -115,17 +129,40 @@ export default function DashboardSection() {
             visible={isPending} 
             label={isPending ? "Actualizando visualizaciones..." : ""} 
           />
-          <KpisPanel 
-            filteredTrips={filteredTrips} 
-            filteredPersons={filteredPersons} 
+          {/* compute global baselines and pass to KPIs */}
+          <KpisPanel
+            filteredTrips={filteredTrips}
+            filteredPersons={filteredPersons}
             filteredHouseholds={filteredHouseholds}
             totalTrips={trips?.length || 0}
-            totalPersons={(trips && trips.length) ? undefined : undefined}
+            allTrips={trips}
+            allHouseholds={households}
+            derivedHouseholds={derivedHouseholds}
           />
-          <MapsPanel 
-            macroHeatData={macroHeatData} 
+          <MapsPanel
+            macroHeatData={macroHeatData}
             filteredTrips={filteredTrips}
             filters={filters} // IMPORTANTE: Pasar filters para filtrado por municipio
+          />
+          <AnalysisViewsPanel
+            analysisView={analysisView}
+            isCompareMode={isCompareMode}
+            localSelectedValues={localSelectedValues}
+            selectedColorMap={selectedColorMap}
+            activeThematicKey={activeThematicKey}
+            modeData={modeData}
+            purposeData={purposeData}
+            stageData={stageData}
+            hourlyTripShareData={hourlyTripShareData}
+            estratoData={estratoData}
+            edadData={edadData}
+            generoData={generoData}
+            escolaridadData={escolaridadData}
+            occupationData={occupationData}
+            vehicleTypeData={vehicleTypeData}
+            vehicleModelData={vehicleModelData}
+            vehicleTenureData={vehicleTenureData}
+            filteredTrips={filteredTrips}
           />
         </div>
       </div>

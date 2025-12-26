@@ -646,6 +646,7 @@ export function useTravelCrossfilterRecharts() {
     households,
     persons: personsNormalized,
     trips,
+    derivedHouseholds,
     filters,
     municipios: MUNICIPIOS,
     filteredTrips,

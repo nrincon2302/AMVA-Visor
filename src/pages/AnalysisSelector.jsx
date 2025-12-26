@@ -186,7 +186,7 @@ const AnalysisSelector = ({
           {[
             { key: "viajes", label: "Análisis de viajes" },
             { key: "socio", label: "Análisis socioeconómico" },
-            { key: "vehicular", label: "Análisis vehicular" },
+            { key: "vehicular", label: "Vehículos por Hogar" },
           ].map((item) => (
             <button
               key={item.key}

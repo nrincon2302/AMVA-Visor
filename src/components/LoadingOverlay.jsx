@@ -1,34 +1,26 @@
 import React from "react";
+import { PRIMARY_GREEN } from "../config/constants";
+import logoAmva from "../assets/logo-area.png";
 
 const overlayStyle = {
   position: "absolute",
   inset: 0,
-  background: "rgba(255,255,255,0.7)",
+  background: PRIMARY_GREEN,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   zIndex: 50,
   borderRadius: 12,
+  color: "#ffffff",
 };
 
 export default function LoadingOverlay({ visible, label = "Actualizando..." }) {
   if (!visible) return null;
   return (
     <div style={overlayStyle} aria-hidden={!visible}>
-      <div style={{ textAlign: "center" }}>
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            border: "6px solid rgba(0,0,0,0.08)",
-            borderTopColor: "#1f6feb",
-            animation: "spin 1s linear infinite",
-            margin: "0 auto 8px",
-          }}
-        />
-        <div style={{ fontWeight: 600 }}>{label}</div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+        <img src={logoAmva} alt="Cargando" style={{ width: 96, height: 96, objectFit: "contain" }} />
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{label}</div>
       </div>
     </div>
   );
