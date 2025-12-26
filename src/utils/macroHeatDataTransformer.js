@@ -47,9 +47,23 @@ export function transformToMacroHeatData(filteredTrips = []) {
     destinationCounts[key].trips++;
   });
 
-  // Convertir a arrays
-  const origin = Object.values(originCounts);
-  const destination = Object.values(destinationCounts);
+  // Convertir a arrays y normalizar formato para Highcharts (name/value)
+  const origin = Object.values(originCounts).map(item => ({
+    municipio: item.municipio,
+    macrozona: item.macrozona,
+    // nombre exactamente igual al usado en el GeoJSON: "Municipio - Macrozona"
+    name: `${item.municipio} - ${item.macrozona}`,
+    value: item.trips,
+    trips: item.trips,
+  }));
+
+  const destination = Object.values(destinationCounts).map(item => ({
+    municipio: item.municipio,
+    macrozona: item.macrozona,
+    name: `${item.municipio} - ${item.macrozona}`,
+    value: item.trips,
+    trips: item.trips,
+  }));
 
   return {
     origin,
@@ -75,10 +89,14 @@ export function filterByMunicipio(data, municipio) {
 export function getRelatedZones(selectedZone, isOrigin, filteredTrips = []) {
   if (!selectedZone || !Array.isArray(filteredTrips)) return [];
 
-  // Extraer solo la macrozona si viene en formato "Municipio-Macrozona"
-  const zoneName = selectedZone.includes('-') 
-    ? selectedZone.split('-')[1] 
-    : selectedZone;
+  // Extraer solo la macrozona si viene en formato "Municipio - Macrozona" o "Municipio-Macrozona"
+  let zoneName = selectedZone;
+  if (selectedZone.includes(' - ')) {
+    zoneName = selectedZone.split(' - ')[1];
+  } else if (selectedZone.includes('-')) {
+    const parts = selectedZone.split('-');
+    zoneName = parts.slice(1).join('-').trim();
+  }
 
   const relatedZones = new Set();
 

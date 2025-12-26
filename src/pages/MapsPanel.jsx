@@ -18,19 +18,78 @@ export default function MapsPanel({
 
   // Transformar datos si vienen en formato diferente
   const transformedData = useMemo(() => {
-    if (macroHeatData?.origin && Array.isArray(macroHeatData.origin) && 
-        macroHeatData.origin.length > 0 && 
-        macroHeatData.origin[0]?.zone && 
-        typeof macroHeatData.origin[0]?.trips === 'number') {
-      return macroHeatData;
+    // Accept either shape:
+    // - { origin: [{ name, value, municipio, macrozona }, ...], destination: [...] }
+    // - { origin: [{ zone, trips, municipio }, ...], ... }
+    // - or fallback: derive from filteredTrips
+    if (macroHeatData?.origin && Array.isArray(macroHeatData.origin) && macroHeatData.origin.length > 0) {
+      const first = macroHeatData.origin[0];
+      if ((first.name && (typeof first.value === 'number' || typeof first.trips === 'number')) || (first.zone && typeof first.trips === 'number')) {
+        return macroHeatData;
+      }
     }
-    
+
     return transformToMacroHeatData(filteredTrips);
   }, [macroHeatData, filteredTrips]);
 
   // Datos completos (para mapas)
-  const originData = useMemo(() => transformedData?.origin || [], [transformedData]);
-  const destinationData = useMemo(() => transformedData?.destination || [], [transformedData]);
+  const originData = useMemo(() => {
+    const arr = transformedData?.origin || [];
+    return arr.map((item) => {
+      // If item already has municipio/macrozona/trips, keep it
+      if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
+      // If item has name/value, parse name "Municipio - Macrozona"
+      const name = item.name || item.zone || "";
+      let municipio = "";
+      let macrozona = "";
+      if (name.includes(" - ")) {
+        const parts = name.split(" - ");
+        municipio = parts[0].trim();
+        macrozona = parts.slice(1).join(" - ").trim();
+      } else if (name.includes("-")) {
+        const parts = name.split("-");
+        municipio = parts[0].trim();
+        macrozona = parts.slice(1).join("-").trim();
+      } else {
+        macrozona = name;
+      }
+      return {
+        municipio,
+        macrozona,
+        name: `${municipio} - ${macrozona}`,
+        value: typeof item.value === "number" ? item.value : item.trips || 0,
+        trips: typeof item.trips === "number" ? item.trips : item.value || 0,
+      };
+    });
+  }, [transformedData]);
+
+  const destinationData = useMemo(() => {
+    const arr = transformedData?.destination || [];
+    return arr.map((item) => {
+      if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
+      const name = item.name || item.zone || "";
+      let municipio = "";
+      let macrozona = "";
+      if (name.includes(" - ")) {
+        const parts = name.split(" - ");
+        municipio = parts[0].trim();
+        macrozona = parts.slice(1).join(" - ").trim();
+      } else if (name.includes("-")) {
+        const parts = name.split("-");
+        municipio = parts[0].trim();
+        macrozona = parts.slice(1).join("-").trim();
+      } else {
+        macrozona = name;
+      }
+      return {
+        municipio,
+        macrozona,
+        name: `${municipio} - ${macrozona}`,
+        value: typeof item.value === "number" ? item.value : item.trips || 0,
+        trips: typeof item.trips === "number" ? item.trips : item.value || 0,
+      };
+    });
+  }, [transformedData]);
 
   // Datos filtrados por municipio (para tablas)
   const filteredOriginData = useMemo(() => {

@@ -20,6 +20,7 @@ export default function DashboardSection() {
     macroHeatData,
     isLoading,
     thematicOptions,
+    trips,
   } = useTravelCrossfilterRecharts();
 
   const [activeThematicKey, setActiveThematicKey] = useState("estrato");
@@ -117,7 +118,9 @@ export default function DashboardSection() {
           <KpisPanel 
             filteredTrips={filteredTrips} 
             filteredPersons={filteredPersons} 
-            filteredHouseholds={filteredHouseholds} 
+            filteredHouseholds={filteredHouseholds}
+            totalTrips={trips?.length || 0}
+            totalPersons={(trips && trips.length) ? undefined : undefined}
           />
           <MapsPanel 
             macroHeatData={macroHeatData} 

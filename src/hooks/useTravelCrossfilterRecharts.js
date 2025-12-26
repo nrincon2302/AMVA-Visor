@@ -5,7 +5,8 @@ import { metadataConstants } from "../utils/syntheticDataBuilder";
 
 const MACROZONAS_POR_MUNICIPIO = baseDataset.metadata?.macrozonasPorMunicipio || {};
 const MUNICIPIOS = baseDataset.metadata?.municipios || [];
-const TARGET_TRIPS = 1_000_000;
+// Reduce el tamaño por defecto para evitar consumir demasiada memoria en dev
+const TARGET_TRIPS = 50_000;
 const formatMacrozonaLabel = (municipio, macrozona) =>
   `${municipio} - ${macrozona}`;
 
