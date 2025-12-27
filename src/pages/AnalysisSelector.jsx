@@ -88,7 +88,7 @@ const AnalysisSelector = ({
               border: "1px solid #e2e8f0",
               padding: "10px 12px",
               background: "#ffffff",
-              maxHeight: 220,
+              maxHeight: 160,
               overflowY: "auto",
               display: "grid",
               gap: 6,
