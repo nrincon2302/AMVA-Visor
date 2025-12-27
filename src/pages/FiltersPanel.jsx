@@ -42,7 +42,7 @@ const FiltersPanel = ({
           Variables geográficas
         </div>
         <label style={{ fontSize: 12, fontWeight: 600 }}>
-          Municipio
+          Municipio origen
           <select
             value={filters.municipio}
             onChange={(e) => setMunicipio(e.target.value)}
