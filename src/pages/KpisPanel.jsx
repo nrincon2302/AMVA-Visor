@@ -96,8 +96,12 @@ export default function KpisPanel({
     : 0;
 
   // Personas que no viajan
-  const personsWithoutTripsFiltered = Math.max(personsBaseCount - personsCount, 0);
-  const personsWithoutTripsGlobal = Math.max(totalPersonsGlobal - personsWithTripsGlobal, 0);
+  const personsWithoutTripsFiltered = filteredPersonsBase.filter(
+    (person) => person.noTravelReason
+  ).length;
+  const personsWithoutTripsGlobal = allPersons.filter(
+    (person) => person.noTravelReason
+  ).length;
   const personsWithoutTripsDiffPct = personsWithoutTripsGlobal
     ? (((personsWithoutTripsFiltered - personsWithoutTripsGlobal) / personsWithoutTripsGlobal) * 100)
     : 0;

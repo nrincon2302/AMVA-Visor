@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useTransition } from "react";
+import React, { useMemo, useRef, useState, useTransition, useEffect } from "react";
 import { useTravelCrossfilterRecharts } from "../hooks/useTravelCrossfilterRecharts";
 import FiltersPanel from "./FiltersPanel";
 import LoadingOverlay from "../components/LoadingOverlay";
@@ -53,6 +53,12 @@ export default function DashboardSection() {
   );
   const [isPending, startTransition] = useTransition();
   const [analysisView, setAnalysisView] = useState("viajes");
+  const analysisSectionRef = useRef(null);
+
+  useEffect(() => {
+    if (!analysisSectionRef.current) return;
+    analysisSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [analysisView]);
 
   const thematicConfig = useMemo(
     () => [
@@ -163,28 +169,30 @@ export default function DashboardSection() {
             durationHistogramData={geoDurationHistogramData}
             tripsByEstratoData={geoTripsByEstratoData}
           />
-          <AnalysisViewsPanel
-            analysisView={analysisView}
-            isCompareMode={isCompareMode}
-            localSelectedValues={localSelectedValues}
-            selectedColorMap={selectedColorMap}
-            activeThematicKey={activeThematicKey}
-            modeData={modeData}
-            purposeData={purposeData}
-            stageData={stageData}
-            estratoData={estratoData}
-            edadData={edadData}
-            generoData={generoData}
-            escolaridadData={escolaridadData}
-            occupationData={occupationData}
-            noTravelReasonData={noTravelReasonData}
-            populationInterestData={populationInterestData}
-            vehicleTypeData={vehicleTypeData}
-            vehicleModelData={vehicleModelData}
-            vehicleTenureData={vehicleTenureData}
-            filteredTrips={filteredTrips}
-            filteredPersonsBase={filteredPersonsBase}
-          />
+          <div ref={analysisSectionRef}>
+            <AnalysisViewsPanel
+              analysisView={analysisView}
+              isCompareMode={isCompareMode}
+              localSelectedValues={localSelectedValues}
+              selectedColorMap={selectedColorMap}
+              activeThematicKey={activeThematicKey}
+              modeData={modeData}
+              purposeData={purposeData}
+              stageData={stageData}
+              estratoData={estratoData}
+              edadData={edadData}
+              generoData={generoData}
+              escolaridadData={escolaridadData}
+              occupationData={occupationData}
+              noTravelReasonData={noTravelReasonData}
+              populationInterestData={populationInterestData}
+              vehicleTypeData={vehicleTypeData}
+              vehicleModelData={vehicleModelData}
+              vehicleTenureData={vehicleTenureData}
+              filteredTrips={filteredTrips}
+              filteredPersonsBase={filteredPersonsBase}
+            />
+          </div>
         </div>
       </div>
     </main>

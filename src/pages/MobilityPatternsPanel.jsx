@@ -53,6 +53,7 @@ export default function MobilityPatternsPanel({
           yKey="value"
           color={SECONDARY_GREEN}
           showPercent={false}
+          orientation="vertical"
         />
       </div>
     </section>
