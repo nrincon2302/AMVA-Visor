@@ -7,31 +7,13 @@ const AnalysisSelector = ({
   activeThematic,
   isAllSelected,
   isCompareMode,
-  setIsCompareMode,
-  setLocalSelectedValues,
+  onModeChange,
   localSelectedValues,
-  setThematicValues,
-  comparisonDefaults,
   toggleThematicValue,
   selectedColorMap,
   analysisView,
   setAnalysisView,
 }) => {
-  const handleModeChange = (compareMode) => {
-    setIsCompareMode(compareMode);
-    if (compareMode) {
-      // Modo COMPARAR: seleccionar primeros 3
-      const first3 = (activeThematic?.options || []).slice(0, 3);
-      setLocalSelectedValues(first3);
-      setThematicValues(activeThematicKey, first3);
-    } else {
-      // Modo AGRUPAR: seleccionar todos
-      const allValues = activeThematic?.options || [];
-      setLocalSelectedValues(allValues);
-      setThematicValues(activeThematicKey, allValues);
-    }
-  };
-
   return (
     <>
       <div>
@@ -66,7 +48,7 @@ const AnalysisSelector = ({
           <div style={{ display: "flex", gap: 8 }}>
             <button
               type="button"
-              onClick={() => handleModeChange(false)}
+              onClick={() => onModeChange(false)}
               style={{
                 flex: 1,
                 border: "1px solid #d1d5db",
@@ -83,7 +65,7 @@ const AnalysisSelector = ({
             </button>
             <button
               type="button"
-              onClick={() => handleModeChange(true)}
+              onClick={() => onModeChange(true)}
               style={{
                 flex: 1,
                 border: "1px solid #d1d5db",

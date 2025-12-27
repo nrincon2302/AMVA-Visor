@@ -3,10 +3,10 @@ import MapCardWithHeader from "../components/MapCardWithHeader";
 import MacrozoneTable from "../components/MacrozoneTable";
 import { 
   transformToMacroHeatData, 
-  getRelatedZones, 
-  filterByMunicipio 
+  getRelatedZones 
 } from "../utils/macroHeatDataTransformer";
-import { PRIMARY_GREEN, SECONDARY_GREEN, TERTIARY_ORANGE } from "../config/constants";
+import { SECONDARY_GREEN, TERTIARY_ORANGE } from "../config/constants";
+import { MUNICIPIO_MACROZONA_HIERARCHY } from "../config/geoHierarchy";
 
 export default function MapsPanel({ 
   macroHeatData = {}, 
@@ -15,6 +15,9 @@ export default function MapsPanel({
 }) {
   const [selectedOrigin, setSelectedOrigin] = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
+  const macrozonesByMunicipio = useMemo(() => {
+    return MUNICIPIO_MACROZONA_HIERARCHY;
+  }, []);
 
   // Transformar datos si vienen en formato diferente
   const transformedData = useMemo(() => {
@@ -35,9 +38,10 @@ export default function MapsPanel({
   // Datos completos (para mapas)
   const originData = useMemo(() => {
     const arr = transformedData?.origin || [];
-    return arr.map((item) => {
-      // If item already has municipio/macrozona/trips, keep it
-      if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
+    return arr
+      .map((item) => {
+        // If item already has municipio/macrozona/trips, keep it
+        if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
       // If item has name/value, parse name "Municipio - Macrozona"
       const name = item.name || item.zone || "";
       let municipio = "";
@@ -60,12 +64,17 @@ export default function MapsPanel({
         value: typeof item.value === "number" ? item.value : item.trips || 0,
         trips: typeof item.trips === "number" ? item.trips : item.value || 0,
       };
-    });
-  }, [transformedData]);
+      })
+      .filter((item) => {
+        const validMacrozonas = macrozonesByMunicipio[item.municipio];
+        return validMacrozonas?.includes(item.macrozona);
+      });
+  }, [transformedData, macrozonesByMunicipio]);
 
   const destinationData = useMemo(() => {
     const arr = transformedData?.destination || [];
-    return arr.map((item) => {
+    return arr
+      .map((item) => {
       if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
       const name = item.name || item.zone || "";
       let municipio = "";
@@ -88,21 +97,81 @@ export default function MapsPanel({
         value: typeof item.value === "number" ? item.value : item.trips || 0,
         trips: typeof item.trips === "number" ? item.trips : item.value || 0,
       };
-    });
-  }, [transformedData]);
+      })
+      .filter((item) => {
+        const validMacrozonas = macrozonesByMunicipio[item.municipio];
+        return validMacrozonas?.includes(item.macrozona);
+      });
+  }, [transformedData, macrozonesByMunicipio]);
 
   // Datos filtrados por municipio (para tablas)
   const filteredOriginData = useMemo(() => {
     const municipioOrigen = filters?.municipio;
-    if (!municipioOrigen || municipioOrigen === "Todos") return originData;
-    return filterByMunicipio(originData, municipioOrigen);
-  }, [originData, filters?.municipio]);
+    const municipioIsAll = !municipioOrigen || municipioOrigen === "Todos" || municipioOrigen === "AMVA General";
+    const targetMunicipios = municipioIsAll ? Object.keys(macrozonesByMunicipio) : [municipioOrigen];
+    const dataMap = new Map(
+      originData.map((item) => [`${item.municipio}-${item.macrozona}`, { ...item, trips: item.trips ?? item.value ?? 0 }])
+    );
+    const rows = [];
+    const expandedKeys = new Set();
+
+    targetMunicipios.forEach((mun) => {
+      const zones = macrozonesByMunicipio[mun] || [];
+      zones.forEach((zone) => {
+        const key = `${mun}-${zone}`;
+        const existing = dataMap.get(key);
+        rows.push(
+          existing
+            ? { ...existing, municipio: mun, macrozona: zone, name: `${mun} - ${zone}` }
+            : { municipio: mun, macrozona: zone, name: `${mun} - ${zone}`, trips: 0, value: 0 }
+        );
+        expandedKeys.add(key);
+      });
+    });
+
+    originData.forEach((item) => {
+      const key = `${item.municipio}-${item.macrozona}`;
+      if (expandedKeys.has(key)) return;
+      if (!municipioIsAll && item.municipio !== municipioOrigen) return;
+      rows.push({ ...item, trips: item.trips ?? item.value ?? 0 });
+    });
+
+    return rows;
+  }, [originData, filters?.municipio, macrozonesByMunicipio]);
 
   const filteredDestinationData = useMemo(() => {
     const municipioDestino = filters?.destinationMunicipio;
-    if (!municipioDestino || municipioDestino === "Todos") return destinationData;
-    return filterByMunicipio(destinationData, municipioDestino);
-  }, [destinationData, filters?.destinationMunicipio]);
+    const municipioIsAll = !municipioDestino || municipioDestino === "Todos" || municipioDestino === "AMVA General";
+    const targetMunicipios = municipioIsAll ? Object.keys(macrozonesByMunicipio) : [municipioDestino];
+    const dataMap = new Map(
+      destinationData.map((item) => [`${item.municipio}-${item.macrozona}`, { ...item, trips: item.trips ?? item.value ?? 0 }])
+    );
+    const rows = [];
+    const expandedKeys = new Set();
+
+    targetMunicipios.forEach((mun) => {
+      const zones = macrozonesByMunicipio[mun] || [];
+      zones.forEach((zone) => {
+        const key = `${mun}-${zone}`;
+        const existing = dataMap.get(key);
+        rows.push(
+          existing
+            ? { ...existing, municipio: mun, macrozona: zone, name: `${mun} - ${zone}` }
+            : { municipio: mun, macrozona: zone, name: `${mun} - ${zone}`, trips: 0, value: 0 }
+        );
+        expandedKeys.add(key);
+      });
+    });
+
+    destinationData.forEach((item) => {
+      const key = `${item.municipio}-${item.macrozona}`;
+      if (expandedKeys.has(key)) return;
+      if (!municipioIsAll && item.municipio !== municipioDestino) return;
+      rows.push({ ...item, trips: item.trips ?? item.value ?? 0 });
+    });
+
+    return rows;
+  }, [destinationData, filters?.destinationMunicipio, macrozonesByMunicipio]);
 
   const handleOriginSelect = (zoneId) => {
     const newSelection = zoneId === selectedOrigin ? null : zoneId;
@@ -133,6 +202,8 @@ export default function MapsPanel({
       background: "#fff", 
       borderRadius: 12,
       marginBottom: 20,
+      border: "1px solid #e2e8f0",
+      boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
     }}>
       <h3 style={{ marginTop: 0, marginBottom: 16 }}>
         Distribución geográfica

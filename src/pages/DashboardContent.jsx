@@ -6,6 +6,8 @@ import KpisPanel from "./KpisPanel";
 import MapsPanel from "./MapsPanel";
 import { COMPARE_COLORS, PRIMARY_GREEN } from "../config/constants";
 import AnalysisViewsPanel from "./AnalysisViewsPanel";
+import MobilityPatternsPanel from "./MobilityPatternsPanel";
+import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
 
 export default function DashboardSection() {
   const {
@@ -16,6 +18,7 @@ export default function DashboardSection() {
     setThematicValues,
     filteredTrips,
     filteredPersons,
+    filteredPersonsBase,
     filteredHouseholds,
     estratoData,
     edadData,
@@ -24,17 +27,23 @@ export default function DashboardSection() {
     modeData,
     stageData,
     purposeData,
+    noTravelReasonData,
     occupationData,
+    populationInterestData,
     vehicleTenureData,
     vehicleTypeData,
     vehicleModelData,
-    hourlyTripShareData,
+    geoHourlyModeData,
+    geoDurationHistogramData,
+    geoTripsByEstratoData,
+    geoVehicleRates,
     macroHeatData,
     isLoading,
     thematicOptions,
     trips,
     households,
     derivedHouseholds,
+    persons,
   } = useTravelCrossfilterRecharts();
 
   const [activeThematicKey, setActiveThematicKey] = useState("estrato");
@@ -78,6 +87,17 @@ export default function DashboardSection() {
     });
   };
 
+  const handleModeChange = (compareMode) => {
+    const options = compareMode
+      ? (activeThematic?.options || []).slice(0, 3)
+      : activeThematic?.options || [];
+    startTransition(() => {
+      setIsCompareMode(compareMode);
+      setLocalSelectedValues(options);
+      setThematicValues(activeThematicKey, options);
+    });
+  };
+
   const toggleThematicValue = (value) => {
     const current = localSelectedValues || [];
     const exists = current.includes(value);
@@ -93,12 +113,6 @@ export default function DashboardSection() {
 
   return (
     <main style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
-      {isLoading && (
-        <div style={{ padding: 24, background: "#f8fafc", borderRadius: 12, marginBottom: 16 }}>
-          Cargando datos sintéticos... (simulado)
-        </div>
-      )}
-
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
         <FiltersPanel
           municipios={municipios}
@@ -112,11 +126,8 @@ export default function DashboardSection() {
           isAllSelected={isAllSelected}
           SECONDARY_GREEN={PRIMARY_GREEN}
           isCompareMode={isCompareMode}
-          setIsCompareMode={setIsCompareMode}
-          setLocalSelectedValues={setLocalSelectedValues}
+          onModeChange={handleModeChange}
           localSelectedValues={localSelectedValues}
-          setThematicValues={setThematicValues}
-          comparisonDefaults={activeThematic?.options?.slice(0, 3) || []}
           toggleThematicValue={toggleThematicValue}
           selectedColorMap={selectedColorMap}
           analysisView={analysisView}
@@ -126,23 +137,31 @@ export default function DashboardSection() {
 
         <div style={{ position: "relative" }}>
           <LoadingOverlay 
-            visible={isPending} 
-            label={isPending ? "Actualizando visualizaciones..." : ""} 
+            visible={isPending || isLoading} 
+            label={isLoading ? "Cargando datos..." : "Actualizando visualizaciones..."} 
           />
           {/* compute global baselines and pass to KPIs */}
           <KpisPanel
             filteredTrips={filteredTrips}
             filteredPersons={filteredPersons}
+            filteredPersonsBase={filteredPersonsBase}
             filteredHouseholds={filteredHouseholds}
             totalTrips={trips?.length || 0}
             allTrips={trips}
             allHouseholds={households}
             derivedHouseholds={derivedHouseholds}
+            allPersons={persons}
           />
+          <MobilityIndicatorsPanel vehicleRates={geoVehicleRates} />
           <MapsPanel
             macroHeatData={macroHeatData}
             filteredTrips={filteredTrips}
             filters={filters} // IMPORTANTE: Pasar filters para filtrado por municipio
+          />
+          <MobilityPatternsPanel
+            hourlyModeData={geoHourlyModeData}
+            durationHistogramData={geoDurationHistogramData}
+            tripsByEstratoData={geoTripsByEstratoData}
           />
           <AnalysisViewsPanel
             analysisView={analysisView}
@@ -153,16 +172,18 @@ export default function DashboardSection() {
             modeData={modeData}
             purposeData={purposeData}
             stageData={stageData}
-            hourlyTripShareData={hourlyTripShareData}
             estratoData={estratoData}
             edadData={edadData}
             generoData={generoData}
             escolaridadData={escolaridadData}
             occupationData={occupationData}
+            noTravelReasonData={noTravelReasonData}
+            populationInterestData={populationInterestData}
             vehicleTypeData={vehicleTypeData}
             vehicleModelData={vehicleModelData}
             vehicleTenureData={vehicleTenureData}
             filteredTrips={filteredTrips}
+            filteredPersonsBase={filteredPersonsBase}
           />
         </div>
       </div>

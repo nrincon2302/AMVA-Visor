@@ -1,6 +1,5 @@
 import React from "react";
 import BarChartCard from "../components/BarChartCard";
-import HourlyModeChartCard from "../components/HourlyModeChartCard";
 import { PRIMARY_GREEN, COMPARE_COLORS, SECONDARY_GREEN } from "../config/constants";
 
 const toLabelValue = (arr) => (arr || []).map((d) => ({ label: d.label || d.name || d[0], value: d.value || d[1] || 0 }));
@@ -16,18 +15,21 @@ export default function AnalysisViewsPanel({
   modeData,
   purposeData,
   stageData,
-  hourlyTripShareData,
   estratoData,
   edadData,
   generoData,
   escolaridadData,
   occupationData,
+  noTravelReasonData,
+  populationInterestData,
   vehicleTypeData,
   vehicleModelData,
   vehicleTenureData,
   filteredTrips,
+  filteredPersonsBase,
 }) {
   const getCategories = (arr) => (arr || []).map((d) => d.label || d.name || d);
+  const groupedColor = SECONDARY_GREEN;
 
   const buildMultiSeries = (targetField, categoriesSource) => {
     const categories = getCategories(categoriesSource);
@@ -59,8 +61,8 @@ export default function AnalysisViewsPanel({
     return { data, series };
   };
 
-  const buildHourlyMultiSeries = () => {
-    const hours = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`);
+  const buildMultiSeriesFromPersons = (targetField, categoriesSource, persons) => {
+    const categories = getCategories(categoriesSource);
     const selected = (localSelectedValues || []).slice(0, 3);
     const series = selected.map((val, idx) => ({
       key: sanitizeKey(String(val)),
@@ -69,13 +71,19 @@ export default function AnalysisViewsPanel({
       raw: val,
     }));
 
-    const data = hours.map((hour) => {
-      const row = { hour };
+    const totals = series.reduce((acc, s) => {
+      const total = persons.filter((p) => String(p[activeThematicKey]) === String(s.raw)).length;
+      acc[s.key] = total;
+      return acc;
+    }, {});
+
+    const data = categories.map((cat) => {
+      const row = { label: cat };
       series.forEach((s) => {
-        const matches = filteredTrips.filter(
-          (t) => String(t.departureLabel) === hour && String(t[activeThematicKey]) === String(s.raw)
+        const matches = persons.filter(
+          (p) => String(p[targetField]) === String(cat) && String(p[activeThematicKey]) === String(s.raw)
         ).length;
-        row[s.key] = matches;
+        row[s.key] = totals[s.key] ? Number(((matches / totals[s.key]) * 100).toFixed(1)) : 0;
       });
       return row;
     });
@@ -144,8 +152,22 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "2 / 4", gridRow: "2 / 3" }}>
             {(() => {
-              const h = buildHourlyMultiSeries();
-              return <HourlyModeChartCard title="Distribución de viajes en un día (según hora de inicio)" data={h.data} series={h.series} />;
+              const n = buildMultiSeriesFromPersons(
+                "noTravelReason",
+                noTravelReasonData,
+                filteredPersonsBase || []
+              );
+              return (
+                <BarChartCard
+                  title="Motivo de no viaje"
+                  data={n.data}
+                  xKey="label"
+                  series={n.series}
+                  color={PRIMARY_GREEN}
+                  orientation="horizontal"
+                  chartHeight={360}
+                />
+              );
             })()}
           </div>
         </>
@@ -157,7 +179,7 @@ export default function AnalysisViewsPanel({
               data={toLabelValue(modeData)}
               xKey="label"
               yKey="value"
-              color={PRIMARY_GREEN}
+              color={groupedColor}
               orientation="horizontal"
               chartHeight={720}
             />
@@ -169,7 +191,7 @@ export default function AnalysisViewsPanel({
               data={toLabelValue(purposeData)}
               xKey="label"
               yKey="value"
-              color={PRIMARY_GREEN}
+              color={groupedColor}
               orientation="horizontal"
               chartHeight={360}
             />
@@ -181,14 +203,22 @@ export default function AnalysisViewsPanel({
               data={toLabelValue(stageData)}
               xKey="label"
               yKey="value"
-              color={PRIMARY_GREEN}
+              color={groupedColor}
               orientation="horizontal"
               chartHeight={360}
             />
           </div>
 
           <div style={{ gridColumn: "2 / 4", gridRow: "2 / 3" }}>
-            <HourlyModeChartCard title="Distribución de viajes en un día (según hora de inicio)" data={hourlyTripShareData} lineColor={SECONDARY_GREEN} />
+            <BarChartCard
+              title="Motivo de no viaje"
+              data={toLabelValue(noTravelReasonData)}
+              xKey="label"
+              yKey="value"
+              color={groupedColor}
+              orientation="horizontal"
+              chartHeight={360}
+            />
           </div>
         </>
       )}
@@ -219,14 +249,23 @@ export default function AnalysisViewsPanel({
             const es = buildMultiSeries("estrato", estratoData);
             return <BarChartCard title="Estrato" data={es.data} xKey="label" series={es.series} color={PRIMARY_GREEN} />;
           })()}
+          {(() => {
+            const pi = buildMultiSeriesFromPersons(
+              "populationInterest",
+              populationInterestData,
+              filteredPersonsBase || []
+            );
+            return <BarChartCard title="Poblaciones de interés" data={pi.data} xKey="label" series={pi.series} color={PRIMARY_GREEN} />;
+          })()}
         </>
       ) : (
         <>
-          <BarChartCard title="Escolaridad" data={toLabelValue(escolaridadData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
-          <BarChartCard title="Género" data={toLabelValue(generoData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
-          <BarChartCard title="Ocupación" data={toLabelValue(occupationData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
-          <BarChartCard title="Edad" data={toLabelValue(edadData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
-          <BarChartCard title="Estrato" data={toLabelValue(estratoData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
+          <BarChartCard title="Escolaridad" data={toLabelValue(escolaridadData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Género" data={toLabelValue(generoData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Ocupación" data={toLabelValue(occupationData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Edad" data={toLabelValue(edadData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Estrato" data={toLabelValue(estratoData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Poblaciones de interés" data={toLabelValue(populationInterestData)} xKey="label" yKey="value" color={groupedColor} />
         </>
       )}
     </div>
@@ -251,9 +290,9 @@ export default function AnalysisViewsPanel({
         </>
       ) : (
         <>
-          <BarChartCard title="Tipología (% de vehículos)" data={toLabelValue(vehicleTypeData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
-          <BarChartCard title="Cantidad (% de vehículos)" data={toLabelValue(vehicleTenureData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
-          <BarChartCard title="Modelo (% de vehículos)" data={toLabelValue(vehicleModelData)} xKey="label" yKey="value" color={PRIMARY_GREEN} />
+          <BarChartCard title="Tipología (% de vehículos)" data={toLabelValue(vehicleTypeData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Cantidad (% de vehículos)" data={toLabelValue(vehicleTenureData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Modelo (% de vehículos)" data={toLabelValue(vehicleModelData)} xKey="label" yKey="value" color={groupedColor} />
         </>
       )}
     </div>
@@ -266,7 +305,16 @@ export default function AnalysisViewsPanel({
   };
 
   return (
-    <section style={{ marginTop: 18 }}>
+    <section
+      style={{
+        marginTop: 18,
+        padding: 16,
+        background: "#fff",
+        borderRadius: 12,
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <h2 style={{ margin: 0, fontSize: 16 }}>{titleMap[analysisView] || "Análisis"}</h2>
       </div>

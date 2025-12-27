@@ -13,11 +13,8 @@ const FiltersPanel = ({
   isAllSelected,
   SECONDARY_GREEN,
   isCompareMode,
-  setIsCompareMode,
-  setLocalSelectedValues,
+  onModeChange,
   localSelectedValues,
-  setThematicValues,
-  comparisonDefaults,
   toggleThematicValue,
   selectedColorMap,
   analysisView,
@@ -101,11 +98,8 @@ const FiltersPanel = ({
         isAllSelected={isAllSelected}
         SECONDARY_GREEN={SECONDARY_GREEN}
         isCompareMode={isCompareMode}
-        setIsCompareMode={setIsCompareMode}
-        setLocalSelectedValues={setLocalSelectedValues}
+        onModeChange={onModeChange}
         localSelectedValues={localSelectedValues}
-        setThematicValues={setThematicValues}
-        comparisonDefaults={comparisonDefaults}
         toggleThematicValue={toggleThematicValue}
         selectedColorMap={selectedColorMap}
         analysisView={analysisView}

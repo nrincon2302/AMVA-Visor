@@ -1,21 +1,36 @@
 import React from "react";
 import KpiCard from "../components/KpiCard";
-import { PRIMARY_GREEN, SECONDARY_GREEN, BANNER_IMAGE_URL } from "../config/constants";
+import {
+  PRIMARY_GREEN,
+  SECONDARY_GREEN,
+  TERTIARY_BLUE,
+  TERTIARY_ORANGE,
+  TERTIARY_YELLOW,
+  BANNER_IMAGE_URL,
+} from "../config/constants";
 
 export default function KpisPanel({
   filteredTrips = [],
   filteredPersons = [],
+  filteredPersonsBase = [],
   filteredHouseholds = [],
   totalTrips = 0,
   allTrips = [],
   allHouseholds = [],
   derivedHouseholds = {},
+  allPersons = [],
 }) {
   const tripsCount = filteredTrips?.length || 0;
   const personsCount = filteredPersons?.length || 0;
+  const personsBaseCount = filteredPersonsBase?.length || 0;
   const householdsCount = filteredHouseholds?.length || 0;
 
   const tripsShare = totalTrips ? `${((tripsCount / totalTrips) * 100).toFixed(1)}% del total` : null;
+  const formatDelta = (value, unit) => {
+    const pct = Number.isFinite(value) ? value : 0;
+    const direction = pct >= 0 ? "más" : "menos";
+    return `${Math.abs(pct).toFixed(1)}% ${direction} ${unit} que el total`;
+  };
 
   // Tiempo promedio (min)
   const avgDurationFiltered =
@@ -47,10 +62,59 @@ export default function KpisPanel({
 
   const vehiclesDiffPct = avgVehiclesGlobal ? (((avgVehiclesFiltered - avgVehiclesGlobal) / avgVehiclesGlobal) * 100) : 0;
 
+  // Viajes promedio por persona (incluye quienes no viajan)
+  const avgTripsPerPersonFiltered = personsBaseCount ? tripsCount / personsBaseCount : 0;
+  const totalPersonsGlobal = allPersons?.length || 0;
+  const avgTripsPerPersonGlobal = totalPersonsGlobal ? (totalTrips || 0) / totalPersonsGlobal : 0;
+  const tripsPerPersonDiffPct = avgTripsPerPersonGlobal
+    ? (((avgTripsPerPersonFiltered - avgTripsPerPersonGlobal) / avgTripsPerPersonGlobal) * 100)
+    : 0;
+
+  // Viajes promedio por personas que realizan viajes
+  const avgTripsPerTravelerFiltered = personsCount ? tripsCount / personsCount : 0;
+  const personsWithTripsGlobal = allTrips?.length
+    ? new Set(allTrips.map((trip) => trip.personId)).size
+    : 0;
+  const avgTripsPerTravelerGlobal = personsWithTripsGlobal
+    ? (totalTrips || 0) / personsWithTripsGlobal
+    : 0;
+  const tripsPerTravelerDiffPct = avgTripsPerTravelerGlobal
+    ? (((avgTripsPerTravelerFiltered - avgTripsPerTravelerGlobal) / avgTripsPerTravelerGlobal) * 100)
+    : 0;
+
+  // Distancia promedio (km)
+  const avgDistanceFiltered =
+    filteredTrips && filteredTrips.length
+      ? filteredTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0) / filteredTrips.length
+      : 0;
+  const avgDistanceGlobal =
+    allTrips && allTrips.length
+      ? allTrips.reduce((acc, t) => acc + (t.distanceKm || 0), 0) / allTrips.length
+      : 0;
+  const distanceDiffPct = avgDistanceGlobal
+    ? (((avgDistanceFiltered - avgDistanceGlobal) / avgDistanceGlobal) * 100)
+    : 0;
+
+  // Personas que no viajan
+  const personsWithoutTripsFiltered = Math.max(personsBaseCount - personsCount, 0);
+  const personsWithoutTripsGlobal = Math.max(totalPersonsGlobal - personsWithTripsGlobal, 0);
+  const personsWithoutTripsDiffPct = personsWithoutTripsGlobal
+    ? (((personsWithoutTripsFiltered - personsWithoutTripsGlobal) / personsWithoutTripsGlobal) * 100)
+    : 0;
+
   return (
-    <section style={{ marginBottom: 20, padding: 16, background: "#fff", borderRadius: 12 }}>
+    <section
+      style={{
+        marginBottom: 20,
+        padding: 16,
+        background: "#fff",
+        borderRadius: 12,
+        border: "1px solid #e2e8f0",
+        boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
+      }}
+    >
       <h3 style={{ marginTop: 0 }}>Cifras generales</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(180px,1fr))", gap: 12 }}>
         <KpiCard
           label="Viajes totales"
           value={(tripsCount || 0).toLocaleString()}
@@ -66,7 +130,7 @@ export default function KpisPanel({
           subLabel={avgDurationGlobal ? `Base global: ${avgDurationGlobal.toFixed(1)} min` : "Base global: N/A"}
           headerColor={PRIMARY_GREEN}
           bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={[`Cambio: ${durationDiffPct >= 0 ? "+" : ""}${durationDiffPct.toFixed(1)}%`]}
+          contextLines={[formatDelta(durationDiffPct, "min")]}
         />
 
         <KpiCard
@@ -75,7 +139,7 @@ export default function KpisPanel({
           subLabel={tripsPerHouseholdGlobal ? `Base global: ${tripsPerHouseholdGlobal.toFixed(2)}` : "Base global: N/A"}
           headerColor={SECONDARY_GREEN}
           bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={[`Cambio: ${tripsPerHouseholdDiffPct >= 0 ? "+" : ""}${tripsPerHouseholdDiffPct.toFixed(1)}%`]}
+          contextLines={[formatDelta(tripsPerHouseholdDiffPct, "viajes por hogar")]}
         />
 
         <KpiCard
@@ -84,7 +148,43 @@ export default function KpisPanel({
           subLabel={avgVehiclesGlobal ? `Base global: ${avgVehiclesGlobal.toFixed(2)}` : "Base global: N/A"}
           headerColor="#FF9000"
           bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={[`Cambio: ${vehiclesDiffPct >= 0 ? "+" : ""}${vehiclesDiffPct.toFixed(1)}%`]}
+          contextLines={[formatDelta(vehiclesDiffPct, "vehículos por hogar")]}
+        />
+
+        <KpiCard
+          label="Viajes promedio por persona"
+          value={avgTripsPerPersonFiltered ? avgTripsPerPersonFiltered.toFixed(2) : "0.00"}
+          subLabel={avgTripsPerPersonGlobal ? `Base global: ${avgTripsPerPersonGlobal.toFixed(2)}` : "Base global: N/A"}
+          headerColor={TERTIARY_BLUE}
+          bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={[formatDelta(tripsPerPersonDiffPct, "viajes por persona")]}
+        />
+
+        <KpiCard
+          label="Viajes promedio por personas que realizan viajes"
+          value={avgTripsPerTravelerFiltered ? avgTripsPerTravelerFiltered.toFixed(2) : "0.00"}
+          subLabel={avgTripsPerTravelerGlobal ? `Base global: ${avgTripsPerTravelerGlobal.toFixed(2)}` : "Base global: N/A"}
+          headerColor={TERTIARY_YELLOW}
+          bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={[formatDelta(tripsPerTravelerDiffPct, "viajes por viajero")]}
+        />
+
+        <KpiCard
+          label="Distancia promedio"
+          value={`${avgDistanceFiltered ? avgDistanceFiltered.toFixed(1) : "0.0"} km`}
+          subLabel={avgDistanceGlobal ? `Base global: ${avgDistanceGlobal.toFixed(1)} km` : "Base global: N/A"}
+          headerColor={TERTIARY_ORANGE}
+          bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={[formatDelta(distanceDiffPct, "km")]}
+        />
+
+        <KpiCard
+          label="Personas que no viajan"
+          value={personsWithoutTripsFiltered.toLocaleString()}
+          subLabel={`Base global: ${personsWithoutTripsGlobal.toLocaleString()}`}
+          headerColor={PRIMARY_GREEN}
+          bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={[formatDelta(personsWithoutTripsDiffPct, "no viajantes")]}
         />
       </div>
     </section>

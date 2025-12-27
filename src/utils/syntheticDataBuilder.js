@@ -94,10 +94,44 @@ const OCCUPATIONS = [
 ];
 
 const PURPOSES = [
-  { value: "Estudio", weight: 22 },
-  { value: "Visitar a un amigo", weight: 10 },
-  { value: "Trabajo", weight: 38 },
-  { value: "Regreso al hogar", weight: 30 },
+  { value: "Trabajo", weight: 28 },
+  { value: "Estudio", weight: 18 },
+  { value: "Regreso al hogar", weight: 20 },
+  { value: "Almuerzo", weight: 6 },
+  { value: "Compras", weight: 6 },
+  { value: "Salud", weight: 5 },
+  { value: "Recreación", weight: 5 },
+  { value: "Diligencia o trámite", weight: 5 },
+  { value: "Acompañar a alguien", weight: 4 },
+  { value: "Recoger o dejar alguien", weight: 2 },
+  { value: "Otro", weight: 1 },
+];
+const NO_TRAVEL_REASONS = [
+  { value: "Estaba enfermo", weight: 10 },
+  { value: "Debía cuidar a alguien", weight: 10 },
+  { value: "Debía trabajar en casa", weight: 10 },
+  { value: "Debía estudiar en casa", weight: 10 },
+  { value: "No quiso salir", weight: 10 },
+  { value: "No necesitó salir", weight: 10 },
+  { value: "Por el clima", weight: 10 },
+  { value: "No contaba con el dinero para pagar el transporte", weight: 10 },
+  { value: "Por pico y placa", weight: 10 },
+  { value: "Otros", weight: 10 },
+];
+const POPULATION_INTEREST = [
+  { value: "Cuidador", weight: 4 },
+  { value: "Madre cabeza de familia", weight: 4 },
+  { value: "Extranjero (residente permanente)", weight: 3 },
+  { value: "Persona en situación de discapacidad", weight: 4 },
+  { value: "Ninguna", weight: 85 },
+];
+const INCOME_BUCKETS = [
+  { value: "Menos de 1 SMMLV", weight: 18 },
+  { value: "Entre 1 y 2 SMMLV", weight: 28 },
+  { value: "Entre 2 y 3 SMMLV", weight: 24 },
+  { value: "Entre 3 y 4 SMMLV", weight: 14 },
+  { value: "Más de 4 SMMLV", weight: 10 },
+  { value: "No reporta", weight: 6 },
 ];
 
 const STAGE_BUCKETS = [
@@ -181,6 +215,18 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
     const vehicleBucket = pickWeighted(rand, VEHICLE_BUCKETS);
     const vehicleType = pickWeighted(rand, VEHICLE_TYPES);
     const vehicleModel = pickWeighted(rand, VEHICLE_MODELS);
+    const income = pickWeighted(rand, INCOME_BUCKETS);
+    const vehicleCount =
+      vehicleBucket === "Sin vehículo"
+        ? 0
+        : vehicleBucket === "1 vehículo"
+        ? 1
+        : 2;
+    const vehicles = Array.from({ length: vehicleCount }, (_, idx) => ({
+      id: `${household.id}-V${idx + 1}`,
+      type: pickWeighted(rand, VEHICLE_TYPES),
+      model: pickWeighted(rand, VEHICLE_MODELS),
+    }));
 
     // Variar el tamaño del hogar con más distribución
     const baseSize = rand() * 6;
@@ -192,9 +238,11 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
       macrozona,
       size,
       estrato,
+      income,
       vehicleBucket,
       vehicleType,
       vehicleModel,
+      vehicles,
     };
   });
 
@@ -214,6 +262,9 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
         gender: pickWeighted(rand, GENDERS_WEIGHTED),
         estrato: household.estrato,
         edu: pickWeighted(rand, EDUCATION_OPTIONS),
+        occupation: pickRandom(rand, OCCUPATIONS),
+        populationInterest: pickWeighted(rand, POPULATION_INTEREST),
+        noTravelReason: null,
       });
     }
   });
@@ -221,13 +272,22 @@ export function buildSyntheticDataset(baseDataset, targetTrips = DEFAULT_TRIPS) 
   const trips = [];
   let personIdx = 0;
   
+  let noTravelIndex = 0;
+
   while (trips.length < targetTrips) {
     const person = persons[personIdx % persons.length];
     personIdx += 1;
 
     // Variar el número de viajes por persona
     const baseTrips = rand() * 6;
-    const plannedTrips = Math.max(1, Math.round(baseTrips + (rand() - 0.5) * 3));
+    const plannedTrips = Math.max(0, Math.round(baseTrips + (rand() - 0.5) * 3));
+    if (plannedTrips === 0) {
+      const reason =
+        NO_TRAVEL_REASONS[noTravelIndex % NO_TRAVEL_REASONS.length]?.value ||
+        "Otros";
+      noTravelIndex += 1;
+      person.noTravelReason = reason;
+    }
     
     for (let i = 0; i < plannedTrips && trips.length < targetTrips; i += 1) {
       const originMunicipio = person.municipio;

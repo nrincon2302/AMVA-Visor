@@ -75,7 +75,7 @@ export function transformToMacroHeatData(filteredTrips = []) {
  * Filtra datos por municipio
  */
 export function filterByMunicipio(data, municipio) {
-  if (!municipio || municipio === "Todos") return data;
+  if (!municipio || municipio === "Todos" || municipio === "AMVA General") return data;
   return data.filter(item => item.municipio === municipio);
 }
 

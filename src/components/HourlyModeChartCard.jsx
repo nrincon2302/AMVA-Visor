@@ -8,6 +8,7 @@ import {
   LineChart,
   Line,
   ReferenceLine,
+  Legend,
 } from "recharts";
 import ChartCard from "./ChartCard";
 
@@ -16,7 +17,7 @@ const AXIS_COLOR = "#A6A6A6";
 const DEFAULT_LINE_COLOR = "#00A7F4";
 const DOT_STROKE = "#339933";
 
-const HourlyModeChartCard = ({ title, data = [], series, lineColor }) => {
+const HourlyModeChartCard = ({ title, data = [], series, lineColor, showLegend = false }) => {
   const formatNumber = (value) => Number(value || 0).toLocaleString("es-CO");
 
   return (
@@ -44,6 +45,7 @@ const HourlyModeChartCard = ({ title, data = [], series, lineColor }) => {
             formatter={(value) => [formatNumber(value), "Viajes"]}
           />
           <ReferenceLine y={0} stroke={AXIS_COLOR} />
+          {showLegend && <Legend verticalAlign="top" height={24} />}
 
           {series?.length ? (
             series.map((entry) => (
