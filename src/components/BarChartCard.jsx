@@ -49,6 +49,7 @@ const BarChartCard = ({
       <ResponsiveContainer
         width="100%"
         height={chartHeight ?? (isHorizontal ? 360 : 320)}
+        minHeight={320}
       >
         <BarChart
           data={data}
