@@ -15,29 +15,63 @@ export default function MapsPanel({
 }) {
   const [selectedOrigin, setSelectedOrigin] = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
+  const parseZoneId = (zoneId = "") => {
+    if (!zoneId) return { municipio: null, macrozona: null };
+    if (zoneId.includes(" - ")) {
+      const [municipio, ...rest] = zoneId.split(" - ");
+      return { municipio: municipio.trim(), macrozona: rest.join(" - ").trim() };
+    }
+    if (zoneId.includes("-")) {
+      const [municipio, ...rest] = zoneId.split("-");
+      return { municipio: municipio.trim(), macrozona: rest.join("-").trim() };
+    }
+    return { municipio: null, macrozona: zoneId.trim() };
+  };
+
+  const matchesSelection = (trip, selection, type) => {
+    if (!selection) return true;
+    const { municipio, macrozona } = parseZoneId(selection);
+    if (type === "origin") {
+      return (
+        (!municipio || trip.originMunicipio === municipio) &&
+        (!macrozona || trip.originMacro === macrozona)
+      );
+    }
+    return (
+      (!municipio || trip.destinationMunicipio === municipio) &&
+      (!macrozona || trip.destinationMacro === macrozona)
+    );
+  };
   const macrozonesByMunicipio = useMemo(() => {
     return MUNICIPIO_MACROZONA_HIERARCHY;
   }, []);
 
   // Transformar datos si vienen en formato diferente
-  const transformedData = useMemo(() => {
-    // Accept either shape:
-    // - { origin: [{ name, value, municipio, macrozona }, ...], destination: [...] }
-    // - { origin: [{ zone, trips, municipio }, ...], ... }
-    // - or fallback: derive from filteredTrips
-    if (macroHeatData?.origin && Array.isArray(macroHeatData.origin) && macroHeatData.origin.length > 0) {
-      const first = macroHeatData.origin[0];
-      if ((first.name && (typeof first.value === 'number' || typeof first.trips === 'number')) || (first.zone && typeof first.trips === 'number')) {
-        return macroHeatData;
-      }
-    }
+  const originTripsForSelection = useMemo(() => {
+    return selectedDestination
+      ? filteredTrips.filter((trip) => matchesSelection(trip, selectedDestination, "destination"))
+      : filteredTrips;
+  }, [filteredTrips, selectedDestination]);
 
-    return transformToMacroHeatData(filteredTrips);
-  }, [macroHeatData, filteredTrips]);
+  const destinationTripsForSelection = useMemo(() => {
+    return selectedOrigin
+      ? filteredTrips.filter((trip) => matchesSelection(trip, selectedOrigin, "origin"))
+      : filteredTrips;
+  }, [filteredTrips, selectedOrigin]);
+
+  const transformedOriginData = useMemo(
+    () => transformToMacroHeatData(originTripsForSelection),
+    [originTripsForSelection]
+  );
+
+  const transformedDestinationData = useMemo(
+    () => transformToMacroHeatData(destinationTripsForSelection),
+    [destinationTripsForSelection]
+  );
 
   // Datos completos (para mapas)
   const originData = useMemo(() => {
-    const arr = transformedData?.origin || [];
+    const arr = transformedOriginData?.origin || [];
     return arr
       .map((item) => {
         // If item already has municipio/macrozona/trips, keep it
@@ -69,10 +103,10 @@ export default function MapsPanel({
         const validMacrozonas = macrozonesByMunicipio[item.municipio];
         return validMacrozonas?.includes(item.macrozona);
       });
-  }, [transformedData, macrozonesByMunicipio]);
+  }, [transformedOriginData, macrozonesByMunicipio]);
 
   const destinationData = useMemo(() => {
-    const arr = transformedData?.destination || [];
+    const arr = transformedDestinationData?.destination || [];
     return arr
       .map((item) => {
       if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
@@ -102,12 +136,31 @@ export default function MapsPanel({
         const validMacrozonas = macrozonesByMunicipio[item.municipio];
         return validMacrozonas?.includes(item.macrozona);
       });
-  }, [transformedData, macrozonesByMunicipio]);
+  }, [transformedDestinationData, macrozonesByMunicipio]);
+
+  const originMapData = useMemo(() => {
+    if (!selectedOrigin) return originData;
+    const exists = originData.some((item) => item.name === selectedOrigin);
+    if (exists) return originData;
+    return [...originData, { name: selectedOrigin, value: 0, trips: 0 }];
+  }, [originData, selectedOrigin]);
+
+  const destinationMapData = useMemo(() => {
+    if (!selectedDestination) return destinationData;
+    const exists = destinationData.some((item) => item.name === selectedDestination);
+    if (exists) return destinationData;
+    return [...destinationData, { name: selectedDestination, value: 0, trips: 0 }];
+  }, [destinationData, selectedDestination]);
 
   // Datos filtrados por municipio (para tablas)
   const filteredOriginData = useMemo(() => {
     const municipioOrigen = filters?.municipio;
     const municipioIsAll = !municipioOrigen || municipioOrigen === "Todos" || municipioOrigen === "AMVA General";
+    if (selectedDestination) {
+      return municipioIsAll
+        ? originData
+        : originData.filter((item) => item.municipio === municipioOrigen);
+    }
     const targetMunicipios = municipioIsAll ? Object.keys(macrozonesByMunicipio) : [municipioOrigen];
     const dataMap = new Map(
       originData.map((item) => [`${item.municipio}-${item.macrozona}`, { ...item, trips: item.trips ?? item.value ?? 0 }])
@@ -137,11 +190,16 @@ export default function MapsPanel({
     });
 
     return rows;
-  }, [originData, filters?.municipio, macrozonesByMunicipio]);
+  }, [originData, filters?.municipio, macrozonesByMunicipio, selectedDestination]);
 
   const filteredDestinationData = useMemo(() => {
     const municipioDestino = filters?.destinationMunicipio;
     const municipioIsAll = !municipioDestino || municipioDestino === "Todos" || municipioDestino === "AMVA General";
+    if (selectedOrigin) {
+      return municipioIsAll
+        ? destinationData
+        : destinationData.filter((item) => item.municipio === municipioDestino);
+    }
     const targetMunicipios = municipioIsAll ? Object.keys(macrozonesByMunicipio) : [municipioDestino];
     const dataMap = new Map(
       destinationData.map((item) => [`${item.municipio}-${item.macrozona}`, { ...item, trips: item.trips ?? item.value ?? 0 }])
@@ -171,7 +229,7 @@ export default function MapsPanel({
     });
 
     return rows;
-  }, [destinationData, filters?.destinationMunicipio, macrozonesByMunicipio]);
+  }, [destinationData, filters?.destinationMunicipio, macrozonesByMunicipio, selectedOrigin]);
 
   const handleOriginSelect = (zoneId) => {
     const newSelection = zoneId === selectedOrigin ? null : zoneId;
@@ -199,7 +257,7 @@ export default function MapsPanel({
   return (
     <section style={{ 
       padding: 16, 
-      background: "#fff", 
+      background: "#ffffff", 
       borderRadius: 12,
       marginBottom: 20,
       border: "1px solid #e2e8f0",
@@ -218,13 +276,13 @@ export default function MapsPanel({
       }}>
         <MapCardWithHeader 
           title="Orígenes de viajes" 
-          data={originData} 
+          data={originMapData} 
           palette="green"
           selectedMacrozone={selectedOrigin}
         />
         <MapCardWithHeader 
           title="Destinos de viajes" 
-          data={destinationData} 
+          data={destinationMapData} 
           palette="orange"
           selectedMacrozone={selectedDestination}
         />

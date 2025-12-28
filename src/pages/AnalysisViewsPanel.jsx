@@ -15,13 +15,7 @@ export default function AnalysisViewsPanel({
   modeData,
   purposeData,
   stageData,
-  estratoData,
-  edadData,
-  generoData,
-  escolaridadData,
-  occupationData,
   noTravelReasonData,
-  populationInterestData,
   vehicleTypeData,
   vehicleModelData,
   vehicleTenureData,
@@ -225,52 +219,6 @@ export default function AnalysisViewsPanel({
     </div>
   );
 
-  const socioCharts = (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
-      {isCompareMode ? (
-        <>
-          {(() => {
-            const e = buildMultiSeries("edu", escolaridadData);
-            return <BarChartCard title="Escolaridad" data={e.data} xKey="label" series={e.series} color={PRIMARY_GREEN} />;
-          })()}
-          {(() => {
-            const g = buildMultiSeries("gender", generoData);
-            return <BarChartCard title="Género" data={g.data} xKey="label" series={g.series} color={PRIMARY_GREEN} />;
-          })()}
-          {(() => {
-            const o = buildMultiSeries("occupation", occupationData);
-            return <BarChartCard title="Ocupación" data={o.data} xKey="label" series={o.series} color={PRIMARY_GREEN} />;
-          })()}
-          {(() => {
-            const ag = buildMultiSeries("ageRange", edadData);
-            return <BarChartCard title="Edad" data={ag.data} xKey="label" series={ag.series} color={PRIMARY_GREEN} />;
-          })()}
-          {(() => {
-            const es = buildMultiSeries("estrato", estratoData);
-            return <BarChartCard title="Estrato" data={es.data} xKey="label" series={es.series} color={PRIMARY_GREEN} />;
-          })()}
-          {(() => {
-            const pi = buildMultiSeriesFromPersons(
-              "populationInterest",
-              populationInterestData,
-              filteredPersonsBase || []
-            );
-            return <BarChartCard title="Poblaciones de interés" data={pi.data} xKey="label" series={pi.series} color={PRIMARY_GREEN} />;
-          })()}
-        </>
-      ) : (
-        <>
-          <BarChartCard title="Escolaridad" data={toLabelValue(escolaridadData)} xKey="label" yKey="value" color={groupedColor} />
-          <BarChartCard title="Género" data={toLabelValue(generoData)} xKey="label" yKey="value" color={groupedColor} />
-          <BarChartCard title="Ocupación" data={toLabelValue(occupationData)} xKey="label" yKey="value" color={groupedColor} />
-          <BarChartCard title="Edad" data={toLabelValue(edadData)} xKey="label" yKey="value" color={groupedColor} />
-          <BarChartCard title="Estrato" data={toLabelValue(estratoData)} xKey="label" yKey="value" color={groupedColor} />
-          <BarChartCard title="Poblaciones de interés" data={toLabelValue(populationInterestData)} xKey="label" yKey="value" color={groupedColor} />
-        </>
-      )}
-    </div>
-  );
-
   const vehicularCharts = (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
       {isCompareMode ? (
@@ -300,7 +248,6 @@ export default function AnalysisViewsPanel({
 
   const titleMap = {
     viajes: "Análisis de viajes",
-    socio: "Análisis socioeconómico",
     vehicular: "Vehículos por Hogar",
   };
 
@@ -309,7 +256,7 @@ export default function AnalysisViewsPanel({
       style={{
         marginTop: 18,
         padding: 16,
-        background: "#fff",
+        background: "#ffffff",
         borderRadius: 12,
         border: "1px solid #e2e8f0",
         boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
@@ -319,7 +266,6 @@ export default function AnalysisViewsPanel({
         <h2 style={{ margin: 0, fontSize: 16 }}>{titleMap[analysisView] || "Análisis"}</h2>
       </div>
       {analysisView === "viajes" && viajesCharts}
-      {analysisView === "socio" && socioCharts}
       {analysisView === "vehicular" && vehicularCharts}
     </section>
   );

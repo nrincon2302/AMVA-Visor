@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useTransition, useEffect } from "react";
+import React, { useMemo, useRef, useState, useTransition } from "react";
 import { useTravelCrossfilterRecharts } from "../hooks/useTravelCrossfilterRecharts";
 import FiltersPanel from "./FiltersPanel";
 import LoadingOverlay from "../components/LoadingOverlay";
@@ -8,6 +8,8 @@ import { COMPARE_COLORS, PRIMARY_GREEN } from "../config/constants";
 import AnalysisViewsPanel from "./AnalysisViewsPanel";
 import MobilityPatternsPanel from "./MobilityPatternsPanel";
 import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
+import ExportActions from "../components/ExportActions";
+import { exportToExcel, exportToPdf } from "../utils/exportUtils";
 
 export default function DashboardSection() {
   const {
@@ -20,16 +22,10 @@ export default function DashboardSection() {
     filteredPersons,
     filteredPersonsBase,
     filteredHouseholds,
-    estratoData,
-    edadData,
-    generoData,
-    escolaridadData,
     modeData,
     stageData,
     purposeData,
     noTravelReasonData,
-    occupationData,
-    populationInterestData,
     vehicleTenureData,
     vehicleTypeData,
     vehicleModelData,
@@ -52,13 +48,82 @@ export default function DashboardSection() {
     thematicOptions.estrato || []
   );
   const [isPending, startTransition] = useTransition();
-  const [analysisView, setAnalysisView] = useState("viajes");
-  const analysisSectionRef = useRef(null);
+  const [activeSection, setActiveSection] = useState("stats");
+  const dashboardRef = useRef(null);
+  const statsSectionRef = useRef(null);
+  const indicatorsSectionRef = useRef(null);
+  const mapsSectionRef = useRef(null);
+  const mobilitySectionRef = useRef(null);
+  const viajesSectionRef = useRef(null);
+  const vehicularSectionRef = useRef(null);
 
-  useEffect(() => {
-    if (!analysisSectionRef.current) return;
-    analysisSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [analysisView]);
+  const sectionOptions = [
+    { key: "stats", label: "Estadísticas generales" },
+    { key: "indicators", label: "Indicadores de motorización" },
+    { key: "maps", label: "Distribución geográfica" },
+    { key: "mobility", label: "Patrones de movilidad" },
+    { key: "viajes", label: "Análisis de viajes" },
+    { key: "vehicular", label: "Vehículos por hogar" },
+  ];
+
+  const sectionRefs = {
+    stats: statsSectionRef,
+    indicators: indicatorsSectionRef,
+    maps: mapsSectionRef,
+    mobility: mobilitySectionRef,
+    viajes: viajesSectionRef,
+    vehicular: vehicularSectionRef,
+  };
+
+  const handleSectionChange = (key) => {
+    setActiveSection(key);
+    const targetRef = sectionRefs[key];
+    if (targetRef?.current) {
+      targetRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const toLabelRows = (data, labelKey = "label", valueKey = "value") =>
+    (data || []).map((item) => ({
+      etiqueta: item[labelKey] ?? item.name ?? item[0],
+      valor: item[valueKey] ?? item.value ?? item[1],
+    }));
+
+  const buildSheets = () => [
+    { name: "Modo principal", rows: toLabelRows(modeData) },
+    { name: "Motivo de viaje", rows: toLabelRows(purposeData) },
+    { name: "Etapas", rows: toLabelRows(stageData) },
+    { name: "Motivo de no viaje", rows: toLabelRows(noTravelReasonData) },
+    { name: "Tenencia vehicular", rows: toLabelRows(vehicleTenureData) },
+    { name: "Tipo de vehículo", rows: toLabelRows(vehicleTypeData) },
+    { name: "Modelo de vehículo", rows: toLabelRows(vehicleModelData) },
+    { name: "Viajes por estrato", rows: toLabelRows(geoTripsByEstratoData) },
+    { name: "Duración viajes", rows: toLabelRows(geoDurationHistogramData) },
+    { name: "Distribución horaria", rows: geoHourlyModeData || [] },
+    {
+      name: "Origen macrozonas",
+      rows: (macroHeatData?.origin || []).map((item) => ({
+        macrozona: item.name ?? item.zone,
+        viajes: item.value ?? item.trips ?? 0,
+      })),
+    },
+    {
+      name: "Destino macrozonas",
+      rows: (macroHeatData?.destination || []).map((item) => ({
+        macrozona: item.name ?? item.zone,
+        viajes: item.value ?? item.trips ?? 0,
+      })),
+    },
+  ];
+
+  const handleExportExcel = () => {
+    exportToExcel(buildSheets(), "dashboard-amva.xlsx");
+  };
+
+  const handleExportPdf = () => {
+    if (!dashboardRef.current) return;
+    exportToPdf(dashboardRef.current, "Reporte AMVA");
+  };
 
   const thematicConfig = useMemo(
     () => [
@@ -112,11 +177,6 @@ export default function DashboardSection() {
     startTransition(() => setThematicValues(activeThematicKey, next));
   };
 
-  const exportReport = (format) => {
-    console.log("Exporting report:", format, { filters });
-    alert(`Exportar ${format} (simulado)`);
-  };
-
   return (
     <main style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
@@ -136,42 +196,57 @@ export default function DashboardSection() {
           localSelectedValues={localSelectedValues}
           toggleThematicValue={toggleThematicValue}
           selectedColorMap={selectedColorMap}
-          analysisView={analysisView}
-          setAnalysisView={setAnalysisView}
-          exportReport={exportReport}
+          sectionOptions={sectionOptions}
+          activeSection={activeSection}
+          onSectionChange={handleSectionChange}
+          exportActions={
+            <ExportActions
+              onExportPdf={handleExportPdf}
+              onExportExcel={handleExportExcel}
+              isDisabled={isLoading || isPending}
+            />
+          }
         />
 
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative" }} ref={dashboardRef}>
           <LoadingOverlay 
             visible={isPending || isLoading} 
             label={isLoading ? "Cargando datos..." : "Actualizando visualizaciones..."} 
           />
           {/* compute global baselines and pass to KPIs */}
-          <KpisPanel
-            filteredTrips={filteredTrips}
-            filteredPersons={filteredPersons}
-            filteredPersonsBase={filteredPersonsBase}
-            filteredHouseholds={filteredHouseholds}
-            totalTrips={trips?.length || 0}
-            allTrips={trips}
-            allHouseholds={households}
-            derivedHouseholds={derivedHouseholds}
-            allPersons={persons}
-          />
-          <MobilityIndicatorsPanel vehicleRates={geoVehicleRates} />
-          <MapsPanel
-            macroHeatData={macroHeatData}
-            filteredTrips={filteredTrips}
-            filters={filters} // IMPORTANTE: Pasar filters para filtrado por municipio
-          />
-          <MobilityPatternsPanel
-            hourlyModeData={geoHourlyModeData}
-            durationHistogramData={geoDurationHistogramData}
-            tripsByEstratoData={geoTripsByEstratoData}
-          />
-          <div ref={analysisSectionRef}>
+          <div ref={statsSectionRef}>
+            <KpisPanel
+              filteredTrips={filteredTrips}
+              filteredPersons={filteredPersons}
+              filteredPersonsBase={filteredPersonsBase}
+              filteredHouseholds={filteredHouseholds}
+              totalTrips={trips?.length || 0}
+              allTrips={trips}
+              allHouseholds={households}
+              derivedHouseholds={derivedHouseholds}
+              allPersons={persons}
+            />
+          </div>
+          <div ref={indicatorsSectionRef}>
+            <MobilityIndicatorsPanel vehicleRates={geoVehicleRates} />
+          </div>
+          <div ref={mapsSectionRef}>
+            <MapsPanel
+              macroHeatData={macroHeatData}
+              filteredTrips={filteredTrips}
+              filters={filters} // IMPORTANTE: Pasar filters para filtrado por municipio
+            />
+          </div>
+          <div ref={mobilitySectionRef}>
+            <MobilityPatternsPanel
+              hourlyModeData={geoHourlyModeData}
+              durationHistogramData={geoDurationHistogramData}
+              tripsByEstratoData={geoTripsByEstratoData}
+            />
+          </div>
+          <div ref={viajesSectionRef}>
             <AnalysisViewsPanel
-              analysisView={analysisView}
+              analysisView="viajes"
               isCompareMode={isCompareMode}
               localSelectedValues={localSelectedValues}
               selectedColorMap={selectedColorMap}
@@ -179,13 +254,25 @@ export default function DashboardSection() {
               modeData={modeData}
               purposeData={purposeData}
               stageData={stageData}
-              estratoData={estratoData}
-              edadData={edadData}
-              generoData={generoData}
-              escolaridadData={escolaridadData}
-              occupationData={occupationData}
               noTravelReasonData={noTravelReasonData}
-              populationInterestData={populationInterestData}
+              vehicleTypeData={vehicleTypeData}
+              vehicleModelData={vehicleModelData}
+              vehicleTenureData={vehicleTenureData}
+              filteredTrips={filteredTrips}
+              filteredPersonsBase={filteredPersonsBase}
+            />
+          </div>
+          <div ref={vehicularSectionRef}>
+            <AnalysisViewsPanel
+              analysisView="vehicular"
+              isCompareMode={isCompareMode}
+              localSelectedValues={localSelectedValues}
+              selectedColorMap={selectedColorMap}
+              activeThematicKey={activeThematicKey}
+              modeData={modeData}
+              purposeData={purposeData}
+              stageData={stageData}
+              noTravelReasonData={noTravelReasonData}
               vehicleTypeData={vehicleTypeData}
               vehicleModelData={vehicleModelData}
               vehicleTenureData={vehicleTenureData}

@@ -108,7 +108,7 @@ export function getRelatedZones(selectedZone, isOrigin, filteredTrips = []) {
         const destMunicipio = trip.destinationMunicipio || trip.destination_municipio || 'Sin especificar';
         const destination = trip.destinationMacro || trip.destination_macrozone;
         if (destination) {
-          relatedZones.add(`${destMunicipio}-${destination}`);
+          relatedZones.add(`${destMunicipio} - ${destination}`);
         }
       }
     } else {
@@ -118,7 +118,7 @@ export function getRelatedZones(selectedZone, isOrigin, filteredTrips = []) {
         const origMunicipio = trip.originMunicipio || trip.origin_municipio || 'Sin especificar';
         const origin = trip.originMacro || trip.origin_macrozone;
         if (origin) {
-          relatedZones.add(`${origMunicipio}-${origin}`);
+          relatedZones.add(`${origMunicipio} - ${origin}`);
         }
       }
     }

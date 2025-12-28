@@ -1,5 +1,6 @@
 import React from "react";
 import AnalysisSelector from "./AnalysisSelector";
+import SectionIndex from "../components/SectionIndex";
 
 const FiltersPanel = ({
   municipios,
@@ -17,9 +18,10 @@ const FiltersPanel = ({
   localSelectedValues,
   toggleThematicValue,
   selectedColorMap,
-  analysisView,
-  setAnalysisView,
-  exportReport,
+  sectionOptions,
+  activeSection,
+  onSectionChange,
+  exportActions,
 }) => {
   return (
     <aside
@@ -30,19 +32,28 @@ const FiltersPanel = ({
         borderRadius: 16,
         border: "1px solid #e5e7eb",
         background: "#f8fafc",
-        padding: 16,
+        padding: 12,
         boxShadow: "0 12px 24px rgba(15,23,42,0.08)",
         display: "grid",
-        gap: 16,
+        gap: 12,
       }}
     >
+      <SectionIndex
+        sectionOptions={sectionOptions}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+      />
+
+      {/* Línea divisoria */}
+      <div style={{ height: 1, background: "#e2e8f0" }} />
+
       {/* Variables geográficas */}
       <div>
-        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
           Variables geográficas
         </div>
-        <label style={{ fontSize: 12, fontWeight: 600 }}>
-          Municipio origen
+        <label style={{ fontSize: 11, fontWeight: 600 }}>
+          Municipio
           <select
             value={filters.municipio}
             onChange={(e) => setMunicipio(e.target.value)}
@@ -51,9 +62,9 @@ const FiltersPanel = ({
               width: "100%",
               borderRadius: 10,
               border: "1px solid #cbd5e1",
-              padding: "8px 10px",
+              padding: "6px 10px",
               background: "#fff",
-              fontSize: 12,
+              fontSize: 11,
             }}
           >
             {municipios.map((muni) => (
@@ -63,7 +74,7 @@ const FiltersPanel = ({
             ))}
           </select>
         </label>
-        <label style={{ fontSize: 12, fontWeight: 600, display: "block", marginTop: 12 }}>
+        <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginTop: 10 }}>
           Municipio destino
           <select
             value={filters.destinationMunicipio}
@@ -73,9 +84,9 @@ const FiltersPanel = ({
               width: "100%",
               borderRadius: 10,
               border: "1px solid #cbd5e1",
-              padding: "8px 10px",
+              padding: "6px 10px",
               background: "#fff",
-              fontSize: 12,
+              fontSize: 11,
             }}
           >
             {municipios.map((muni) => (
@@ -102,8 +113,6 @@ const FiltersPanel = ({
         localSelectedValues={localSelectedValues}
         toggleThematicValue={toggleThematicValue}
         selectedColorMap={selectedColorMap}
-        analysisView={analysisView}
-        setAnalysisView={setAnalysisView}
       />
 
       {/* Línea divisoria */}
@@ -111,41 +120,10 @@ const FiltersPanel = ({
 
       {/* Exportaciones */}
       <div>
-        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
           Exportaciones
         </div>
-        <div style={{ display: "grid", gap: 8 }}>
-          <button
-            onClick={() => exportReport("pdf")}
-            style={{
-              border: "none",
-              background: SECONDARY_GREEN,
-              borderRadius: 10,
-              padding: "8px 12px",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#ffffff",
-            }}
-          >
-            Exportar PDF
-          </button>
-          <button
-            onClick={() => exportReport("excel")}
-            style={{
-              border: "none",
-              background: "#66CC33",
-              borderRadius: 10,
-              padding: "8px 12px",
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#ffffff",
-            }}
-          >
-            Exportar Excel
-          </button>
-        </div>
+        {exportActions}
       </div>
     </aside>
   );
