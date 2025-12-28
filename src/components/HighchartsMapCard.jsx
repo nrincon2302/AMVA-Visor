@@ -11,7 +11,7 @@ if (typeof TiledWebMap === "function") {
   TiledWebMap(Highcharts);
 }
 
-const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false }) => {
+const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false, selectedMacrozone }) => {
   
   const [mapGeoJSON, setMapGeoJSON] = useState(null);
 
@@ -113,7 +113,10 @@ const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false
       {
         type: "map",
         mapData: mapGeoJSON || mapDataSource,
-        data: data || [],
+        data: (data || []).map((item) => ({
+          ...item,
+          selected: selectedMacrozone ? item.name === selectedMacrozone : false,
+        })),
         
         // Configuraciones para forzar polígonos
         joinBy: ["name", "name"], 
@@ -140,8 +143,14 @@ const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false
               brightness: 0.1,
               borderWidth: 2,
               borderColor: "#808080"
-            }
+            },
+            select: {
+              color: "#1d4ed8",
+              borderColor: "#1d4ed8",
+              borderWidth: 2,
+            },
           },
+        allowPointSelect: true,
         zIndex: 1,
       },
     ],

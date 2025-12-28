@@ -21,7 +21,7 @@ export default function MobilityPatternsPanel({
       style={{
         marginBottom: 20,
         padding: 16,
-        background: "#fff",
+        background: "#ffffff",
         borderRadius: 12,
         border: "1px solid #e2e8f0",
         boxShadow: "0 10px 24px rgba(15,23,42,0.06)",

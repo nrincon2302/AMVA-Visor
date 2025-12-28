@@ -11,8 +11,6 @@ const AnalysisSelector = ({
   localSelectedValues,
   toggleThematicValue,
   selectedColorMap,
-  analysisView,
-  setAnalysisView,
 }) => {
   return (
     <>
@@ -88,7 +86,7 @@ const AnalysisSelector = ({
               border: "1px solid #e2e8f0",
               padding: "10px 12px",
               background: "#ffffff",
-              maxHeight: 160,
+              maxHeight: 140,
               overflowY: "auto",
               display: "grid",
               gap: 6,
@@ -154,41 +152,6 @@ const AnalysisSelector = ({
               );
             })}
           </div>
-        </div>
-      </div>
-
-      {/* Línea divisoria */}
-      <div style={{ height: 1, background: "#e2e8f0" }} />
-
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>
-          Vista de análisis
-        </div>
-        <div style={{ display: "grid", gap: 8 }}>
-          {[
-            { key: "viajes", label: "Análisis de viajes" },
-            { key: "socio", label: "Análisis socioeconómico" },
-            { key: "vehicular", label: "Vehículos por Hogar" },
-          ].map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setAnalysisView(item.key)}
-              style={{
-                border: "1px solid #d1d5db",
-                background: analysisView === item.key ? PRIMARY_GREEN : "#ffffff",
-                color: analysisView === item.key ? "#ffffff" : "#0f172a",
-                borderRadius: 10,
-                padding: "6px 10px",
-                fontSize: 11,
-                fontWeight: 600,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
         </div>
       </div>
     </>

@@ -80,7 +80,7 @@ const MacrozoneTable = ({
         <tbody>
           {sortedData.map((row) => {
             // Crear identificador único con formato "Municipio-Macrozona"
-            const fullZoneId = `${row.municipio}-${row.macrozona}`;
+            const fullZoneId = `${row.municipio} - ${row.macrozona}`;
             const isSelected = selectedMacrozone === fullZoneId;
             const isHighlighted = highlightedZones.includes(fullZoneId);
             
