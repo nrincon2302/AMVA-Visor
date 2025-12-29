@@ -264,7 +264,7 @@ export default function MapsPanel({
       boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
     }}>
       <h3 style={{ marginTop: 0, marginBottom: 16 }}>
-        Distribución geográfica
+        Distribución geográfica de los viajes (Origen – Destino)
       </h3>
       
       {/* Mapas */}

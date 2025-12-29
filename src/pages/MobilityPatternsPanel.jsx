@@ -5,15 +5,15 @@ import { SECONDARY_GREEN, TERTIARY_BLUE, TERTIARY_ORANGE, TERTIARY_YELLOW } from
 
 const HOURLY_SERIES = [
   { key: "total", label: "Total", color: SECONDARY_GREEN },
-  { key: "public", label: "Público", color: TERTIARY_BLUE },
-  { key: "private", label: "Privado", color: TERTIARY_ORANGE },
-  { key: "nonMotorized", label: "No motorizado", color: TERTIARY_YELLOW },
-  { key: "other", label: "Otros", color: "#64748b" },
+  { key: "public", label: "Viajes en transporte público", color: TERTIARY_BLUE },
+  { key: "private", label: "Viajes en transporte privado", color: TERTIARY_ORANGE },
+  { key: "nonMotorized", label: "Viajes en modos no motorizados", color: TERTIARY_YELLOW },
 ];
 
 export default function MobilityPatternsPanel({
   hourlyModeData = [],
   durationHistogramData = [],
+  durationByModeGroupData = [],
   tripsByEstratoData = [],
 }) {
   return (
@@ -27,7 +27,9 @@ export default function MobilityPatternsPanel({
         boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
       }}
     >
-      <h3 style={{ marginTop: 0, marginBottom: 16 }}>Patrones de movilidad</h3>
+      <h3 style={{ marginTop: 0, marginBottom: 16 }}>
+        Características de los viajes y patrones de movilidad
+      </h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ gridColumn: "1 / -1" }}>
           <HourlyModeChartCard
@@ -38,7 +40,7 @@ export default function MobilityPatternsPanel({
           />
         </div>
         <BarChartCard
-          title="Duración de viajes (min)"
+          title="Duración de los viajes (en min)"
           data={durationHistogramData}
           xKey="label"
           yKey="value"
@@ -47,8 +49,17 @@ export default function MobilityPatternsPanel({
           color={SECONDARY_GREEN}
         />
         <BarChartCard
-          title="Viajes por estrato"
+          title="Viajes diarios según estrato (% de viajes)"
           data={tripsByEstratoData}
+          xKey="label"
+          yKey="value"
+          color={SECONDARY_GREEN}
+          showPercent={false}
+          orientation="vertical"
+        />
+        <BarChartCard
+          title="Tiempo promedio de viaje por modo de transporte (min)"
+          data={durationByModeGroupData}
           xKey="label"
           yKey="value"
           color={SECONDARY_GREEN}

@@ -17,11 +17,9 @@ const MacrozoneTable = ({
       .sort((a, b) => b.trips - a.trips);
   }, [data]);
 
-  // Color tenue para el header (30% de opacidad)
-  const headerBgColor = `${headerColor}30`;
-  
-  // Color más oscuro para el texto del header
-  const headerTextColor = type === "origin" ? "#339933" : "#FF6B00";
+  // Color sólido para evitar traslapes al hacer scroll
+  const headerBgColor = headerColor;
+  const headerTextColor = "#ffffff";
 
   if (sortedData.length === 0) {
     return (
@@ -54,7 +52,7 @@ const MacrozoneTable = ({
           position: "sticky", 
           top: 0, 
           background: headerBgColor,
-          zIndex: 1 
+          zIndex: 1,
         }}>
           <tr>
             <th style={{ 
