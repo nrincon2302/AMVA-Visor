@@ -44,6 +44,19 @@ const BarChartCard = ({
     dy: isHorizontal ? 0 : 2,
   };
 
+  const numericDomain = showPercent
+    ? [0, 100]
+    : [
+        (dataMin) => {
+          const pad = Math.abs(dataMin) * 0.05 || 1;
+          return dataMin - pad;
+        },
+        (dataMax) => {
+          const pad = Math.abs(dataMax) * 0.05 || 1;
+          return dataMax + pad;
+        },
+      ];
+
   return (
     <ChartCard title={title} actions={actions}>
       <ResponsiveContainer
@@ -65,6 +78,7 @@ const BarChartCard = ({
           {isHorizontal ? (
             <XAxis
               type="number"
+              domain={numericDomain}
               tickLine={false}
               axisLine={{ stroke: AXIS_COLOR }}
               tickFormatter={formatValue}
@@ -94,7 +108,7 @@ const BarChartCard = ({
               tickLine={false}
               axisLine={{ stroke: AXIS_COLOR }}
               tickFormatter={formatValue}
-              domain={showPercent ? [0, 100] : ["dataMin", "auto"]}
+              domain={numericDomain}
               tick={{ fontSize: "10pt", fill: TEXT_COLOR }}
             />
           )}
