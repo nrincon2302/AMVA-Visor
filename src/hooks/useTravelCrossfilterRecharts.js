@@ -361,7 +361,23 @@ const MODE_CATEGORY_GROUPS = {
   auto: new Set(["Auto particular (conductor)", "Auto particular (acompañante)"]),
 };
 
+const OTHER_MODES = new Set([
+  "Vehículo empresarial",
+  "Motocarro",
+  "Vehículo de pago por plataforma",
+  "Patineta eléctrica",
+  "Transporte informal o particular",
+]);
+
 const groupModeLabel = (mode) => {
+  if (OTHER_MODES.has(mode)) return "Otros Modos";
+  if (mode === "Escolar") return "Transporte Escolar";
+  if (mode === "Bus / Buseta / Microbús intermunicipal (1)") {
+    return "Transporte intermunicipal";
+  }
+  if (mode === "Bus / Buseta / Microbús urbano o metropolitano (1)") {
+    return "Transporte urbano o metropolitano";
+  }
   if (MODE_CATEGORY_GROUPS.bicycle.has(mode)) return "Bicicleta";
   if (MODE_CATEGORY_GROUPS.taxi.has(mode)) return "Taxi";
   if (MODE_CATEGORY_GROUPS.moto.has(mode)) return "Moto";
@@ -415,7 +431,11 @@ const buildDurationHistogram = (trips) => {
     const index = bins.findIndex((bin) => duration >= bin.min && duration < bin.max);
     if (index >= 0) counts[index].value += 1;
   });
-  return counts;
+  const total = trips.length || 1;
+  return counts.map((bin) => ({
+    ...bin,
+    value: Number(((bin.value / total) * 100).toFixed(1)),
+  }));
 };
 
 const buildAverageDurationByModeGroup = (trips) => {
@@ -977,7 +997,7 @@ export function useTravelCrossfilterRecharts() {
     setGeoHourlyModeData(buildHourlyModeGroupSeries(geoFiltered.tripsGeo));
     setGeoDurationHistogramData(buildDurationHistogram(geoFiltered.tripsGeo));
     setGeoDurationByModeGroupData(buildAverageDurationByModeGroup(geoFiltered.tripsGeo));
-    const tripsByEstrato = aggregateCounts(geoFiltered.tripsGeo, "estrato").sort(
+    const tripsByEstrato = aggregatePercentages(geoFiltered.tripsGeo, "estrato").sort(
       (a, b) => Number(a.label) - Number(b.label)
     );
     setGeoTripsByEstratoData(tripsByEstrato);
