@@ -5,6 +5,25 @@ import { PRIMARY_GREEN, COMPARE_COLORS, SECONDARY_GREEN } from "../config/consta
 const toLabelValue = (arr) => (arr || []).map((d) => ({ label: d.label || d.name || d[0], value: d.value || d[1] || 0 }));
 const sanitizeKey = (v) => String(v).replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
 
+const MODE_CATEGORY_GROUPS = {
+  bicycle: new Set(["Bicicleta propia", "Bicicleta pública"]),
+  taxi: new Set([
+    "Taxi individual (amarillo)",
+    "Taxi colectivo (amarillo)",
+    "Taxi intermunicipal o colectivo (blanco)",
+  ]),
+  moto: new Set(["Moto (conductor)", "Moto (acompañante)", "Mototaxi"]),
+  auto: new Set(["Auto particular (conductor)", "Auto particular (acompañante)"]),
+};
+
+const groupModeLabel = (mode) => {
+  if (MODE_CATEGORY_GROUPS.bicycle.has(mode)) return "Bicicleta";
+  if (MODE_CATEGORY_GROUPS.taxi.has(mode)) return "Taxi";
+  if (MODE_CATEGORY_GROUPS.moto.has(mode)) return "Moto";
+  if (MODE_CATEGORY_GROUPS.auto.has(mode)) return "Auto particular";
+  return mode;
+};
+
 export default function AnalysisViewsPanel({
   analysisView,
   isCompareMode,
@@ -16,6 +35,7 @@ export default function AnalysisViewsPanel({
   purposeData,
   stageData,
   noTravelReasonData,
+  populationInterestData,
   vehicleTypeData,
   vehicleModelData,
   vehicleTenureData,
@@ -34,6 +54,7 @@ export default function AnalysisViewsPanel({
       color: selectedColorMap?.get(val) || COMPARE_COLORS[idx] || COMPARE_COLORS[0],
       raw: val,
     }));
+    const mapValue = targetField === "mode" ? groupModeLabel : (value) => value;
 
     const totals = series.reduce((acc, s) => {
       const total = filteredTrips.filter((t) => String(t[activeThematicKey]) === String(s.raw)).length;
@@ -45,7 +66,9 @@ export default function AnalysisViewsPanel({
       const row = { label: cat };
       series.forEach((s) => {
         const matches = filteredTrips.filter(
-          (t) => String(t[targetField]) === String(cat) && String(t[activeThematicKey]) === String(s.raw)
+          (t) =>
+            String(mapValue(t[targetField])) === String(cat) &&
+            String(t[activeThematicKey]) === String(s.raw)
         ).length;
         row[s.key] = totals[s.key] ? Number(((matches / totals[s.key]) * 100).toFixed(1)) : 0;
       });
@@ -115,7 +138,7 @@ export default function AnalysisViewsPanel({
               const p = buildMultiSeries("tripPurpose", purposeData);
               return (
                 <BarChartCard
-                  title="Motivo (% de viajes)"
+                  title="Motivo de viaje (% de viajes)"
                   data={p.data}
                   xKey="label"
                   series={p.series}
@@ -144,7 +167,7 @@ export default function AnalysisViewsPanel({
             })()}
           </div>
 
-          <div style={{ gridColumn: "2 / 4", gridRow: "2 / 3" }}>
+          <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
             {(() => {
               const n = buildMultiSeriesFromPersons(
                 "noTravelReason",
@@ -153,10 +176,26 @@ export default function AnalysisViewsPanel({
               );
               return (
                 <BarChartCard
-                  title="Motivo de no viaje"
+                  title="Motivo de no viaje (% de viajes)"
                   data={n.data}
                   xKey="label"
                   series={n.series}
+                  color={PRIMARY_GREEN}
+                  orientation="horizontal"
+                  chartHeight={360}
+                />
+              );
+            })()}
+          </div>
+          <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
+            {(() => {
+              const pop = buildMultiSeries("populationInterest", populationInterestData);
+              return (
+                <BarChartCard
+                  title="Poblaciones de interés (% de viajes)"
+                  data={pop.data}
+                  xKey="label"
+                  series={pop.series}
                   color={PRIMARY_GREEN}
                   orientation="horizontal"
                   chartHeight={360}
@@ -181,7 +220,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "2 / 3", gridRow: "1 / 2" }}>
             <BarChartCard
-              title="Motivo (% de viajes)"
+              title="Motivo de viaje (% de viajes)"
               data={toLabelValue(purposeData)}
               xKey="label"
               yKey="value"
@@ -203,10 +242,21 @@ export default function AnalysisViewsPanel({
             />
           </div>
 
-          <div style={{ gridColumn: "2 / 4", gridRow: "2 / 3" }}>
+          <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
             <BarChartCard
-              title="Motivo de no viaje"
+              title="Motivo de no viaje (% de viajes)"
               data={toLabelValue(noTravelReasonData)}
+              xKey="label"
+              yKey="value"
+              color={groupedColor}
+              orientation="horizontal"
+              chartHeight={360}
+            />
+          </div>
+          <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
+            <BarChartCard
+              title="Poblaciones de interés (% de viajes)"
+              data={toLabelValue(populationInterestData)}
               xKey="label"
               yKey="value"
               color={groupedColor}

@@ -65,6 +65,14 @@ const MODE_DISTRIBUTION = [
   { value: "A pie", weight: 20 },
 ];
 
+const POPULATION_INTEREST_VALUES = [
+  "Cuidador",
+  "Madre cabeza de familia",
+  "Extranjero (residente permanente)",
+  "Persona en situación de discapacidad",
+  "Ninguna",
+];
+
 const THEMATIC_OPTIONS = {
   gender: ["Hombre", "Mujer"],
   ageRange: [
@@ -102,6 +110,7 @@ const THEMATIC_OPTIONS = {
     "Ama de casa y estudiante",
     "Ninguna",
   ],
+  populationInterest: POPULATION_INTEREST_VALUES,
 };
 
 const hashString = (value) =>
@@ -207,11 +216,11 @@ const NO_TRAVEL_REASONS = [
   { value: "Otros", weight: 10 },
 ];
 const POPULATION_INTEREST = [
-  { value: "Cuidador", weight: 4 },
-  { value: "Madre cabeza de familia", weight: 4 },
-  { value: "Extranjero (residente permanente)", weight: 3 },
-  { value: "Persona en situación de discapacidad", weight: 4 },
-  { value: "Ninguna", weight: 85 },
+  { value: POPULATION_INTEREST_VALUES[0], weight: 4 },
+  { value: POPULATION_INTEREST_VALUES[1], weight: 4 },
+  { value: POPULATION_INTEREST_VALUES[2], weight: 3 },
+  { value: POPULATION_INTEREST_VALUES[3], weight: 4 },
+  { value: POPULATION_INTEREST_VALUES[4], weight: 85 },
 ];
 const INCOME_BUCKETS = [
   { value: "Menos de 1 SMMLV", weight: 18 },
@@ -269,6 +278,7 @@ const DEFAULT_THEMATIC_FILTERS = {
   mode: MODE_OPTIONS,
   edu: THEMATIC_OPTIONS.edu,
   occupation: OCCUPATIONS.map((item) => item.value),
+  populationInterest: THEMATIC_OPTIONS.populationInterest,
   vehicleBucket: VEHICLE_BUCKET_OPTIONS.map((item) => item.value),
   tripPurpose: PURPOSES.map((item) => item.value),
   stageBucket: STAGE_BUCKETS.map((item) => item.value),
@@ -340,6 +350,25 @@ const MODE_GROUPS = {
   ]),
 };
 
+const MODE_CATEGORY_GROUPS = {
+  bicycle: new Set(["Bicicleta propia", "Bicicleta pública"]),
+  taxi: new Set([
+    "Taxi individual (amarillo)",
+    "Taxi colectivo (amarillo)",
+    "Taxi intermunicipal o colectivo (blanco)",
+  ]),
+  moto: new Set(["Moto (conductor)", "Moto (acompañante)", "Mototaxi"]),
+  auto: new Set(["Auto particular (conductor)", "Auto particular (acompañante)"]),
+};
+
+const groupModeLabel = (mode) => {
+  if (MODE_CATEGORY_GROUPS.bicycle.has(mode)) return "Bicicleta";
+  if (MODE_CATEGORY_GROUPS.taxi.has(mode)) return "Taxi";
+  if (MODE_CATEGORY_GROUPS.moto.has(mode)) return "Moto";
+  if (MODE_CATEGORY_GROUPS.auto.has(mode)) return "Auto particular";
+  return mode;
+};
+
 const getModeGroup = (mode) => {
   if (MODE_GROUPS.public.has(mode)) return "public";
   if (MODE_GROUPS.private.has(mode)) return "private";
@@ -389,6 +418,38 @@ const buildDurationHistogram = (trips) => {
   return counts;
 };
 
+const buildAverageDurationByModeGroup = (trips) => {
+  const totals = {
+    public: { sum: 0, count: 0 },
+    private: { sum: 0, count: 0 },
+    nonMotorized: { sum: 0, count: 0 },
+  };
+
+  trips.forEach((trip) => {
+    const group = getModeGroup(trip.mode);
+    if (!totals[group]) return;
+    totals[group].sum += trip.durationMin ?? 0;
+    totals[group].count += 1;
+  });
+
+  return [
+    {
+      label: "Transporte público",
+      value: totals.public.count ? Number((totals.public.sum / totals.public.count).toFixed(1)) : 0,
+    },
+    {
+      label: "Transporte privado",
+      value: totals.private.count ? Number((totals.private.sum / totals.private.count).toFixed(1)) : 0,
+    },
+    {
+      label: "Modos no motorizados",
+      value: totals.nonMotorized.count
+        ? Number((totals.nonMotorized.sum / totals.nonMotorized.count).toFixed(1))
+        : 0,
+    },
+  ];
+};
+
 const computeVehicleRates = (households, persons) => {
   const population = persons.length || 1;
   const vehicles = households.flatMap((household) => household.vehicles || []);
@@ -414,6 +475,23 @@ function aggregatePercentages(data, field) {
   if (!data.length) return [];
   const counts = data.reduce((acc, item) => {
     const key = item[field];
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([label, value]) => ({
+      label,
+      value: Number(((value / data.length) * 100).toFixed(1)),
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+function aggregatePercentagesMapped(data, field, mapValue) {
+  if (!data.length) return [];
+  const counts = data.reduce((acc, item) => {
+    const key = mapValue ? mapValue(item[field]) : item[field];
+    if (!key) return acc;
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -475,6 +553,7 @@ export function useTravelCrossfilterRecharts() {
   const [vehicleModelData, setVehicleModelData] = useState([]);
   const [geoHourlyModeData, setGeoHourlyModeData] = useState([]);
   const [geoDurationHistogramData, setGeoDurationHistogramData] = useState([]);
+  const [geoDurationByModeGroupData, setGeoDurationByModeGroupData] = useState([]);
   const [geoTripsByEstratoData, setGeoTripsByEstratoData] = useState([]);
   const [geoVehicleRates, setGeoVehicleRates] = useState({
     autos: 0,
@@ -667,6 +746,9 @@ export function useTravelCrossfilterRecharts() {
         if (skipThematic !== "occupation" && thematicFilters.occupation.length) {
           if (!thematicFilters.occupation.includes(person.occupation)) return false;
         }
+        if (skipThematic !== "populationInterest" && thematicFilters.populationInterest.length) {
+          if (!thematicFilters.populationInterest.includes(person.populationInterest)) return false;
+        }
         return true;
       };
 
@@ -795,7 +877,13 @@ export function useTravelCrossfilterRecharts() {
     setEscolaridadData(
       aggregatePercentages(buildFilteredData("edu").tripsFiltered, "edu")
     );
-    setModeData(aggregatePercentages(buildFilteredData("mode").tripsFiltered, "mode"));
+    setModeData(
+      aggregatePercentagesMapped(
+        buildFilteredData("mode").tripsFiltered,
+        "mode",
+        groupModeLabel
+      )
+    );
     setStageData(
       aggregatePercentages(buildFilteredData("stageBucket").tripsFiltered, "stageBucket")
     );
@@ -809,7 +897,10 @@ export function useTravelCrossfilterRecharts() {
       aggregatePercentages(buildFilteredData("occupation").tripsFiltered, "occupation")
     );
     setPopulationInterestData(
-      aggregatePercentages(filtered.personsBaseFiltered, "populationInterest")
+      aggregatePercentages(
+        buildFilteredData("populationInterest").tripsFiltered,
+        "populationInterest"
+      )
     );
 
     const vehicleHouseholds = buildFilteredData("vehicleBucket").householdsFiltered;
@@ -885,9 +976,11 @@ export function useTravelCrossfilterRecharts() {
     
     setGeoHourlyModeData(buildHourlyModeGroupSeries(geoFiltered.tripsGeo));
     setGeoDurationHistogramData(buildDurationHistogram(geoFiltered.tripsGeo));
-    setGeoTripsByEstratoData(
-      aggregateCounts(geoFiltered.tripsGeo, "estrato")
+    setGeoDurationByModeGroupData(buildAverageDurationByModeGroup(geoFiltered.tripsGeo));
+    const tripsByEstrato = aggregateCounts(geoFiltered.tripsGeo, "estrato").sort(
+      (a, b) => Number(a.label) - Number(b.label)
     );
+    setGeoTripsByEstratoData(tripsByEstrato);
     setGeoVehicleRates(
       computeVehicleRates(geoFiltered.householdsBase, geoFiltered.personsBaseGeo)
     );
@@ -952,6 +1045,7 @@ export function useTravelCrossfilterRecharts() {
     vehicleModelData,
     geoHourlyModeData,
     geoDurationHistogramData,
+    geoDurationByModeGroupData,
     geoTripsByEstratoData,
     geoVehicleRates,
     macroHeatData,

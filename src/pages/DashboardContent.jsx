@@ -26,11 +26,13 @@ export default function DashboardSection() {
     stageData,
     purposeData,
     noTravelReasonData,
+    populationInterestData,
     vehicleTenureData,
     vehicleTypeData,
     vehicleModelData,
     geoHourlyModeData,
     geoDurationHistogramData,
+    geoDurationByModeGroupData,
     geoTripsByEstratoData,
     geoVehicleRates,
     macroHeatData,
@@ -38,7 +40,6 @@ export default function DashboardSection() {
     thematicOptions,
     trips,
     households,
-    derivedHouseholds,
     persons,
   } = useTravelCrossfilterRecharts();
 
@@ -132,6 +133,11 @@ export default function DashboardSection() {
       { key: "gender", label: "Género", options: thematicOptions.gender },
       { key: "occupation", label: "Ocupación", options: thematicOptions.occupation },
       { key: "edu", label: "Escolaridad", options: thematicOptions.edu },
+      {
+        key: "populationInterest",
+        label: "Poblaciones de interés",
+        options: thematicOptions.populationInterest,
+      },
     ],
     [thematicOptions]
   );
@@ -220,15 +226,17 @@ export default function DashboardSection() {
               filteredPersons={filteredPersons}
               filteredPersonsBase={filteredPersonsBase}
               filteredHouseholds={filteredHouseholds}
-              totalTrips={trips?.length || 0}
+              totalTrips={198_957}
               allTrips={trips}
               allHouseholds={households}
-              derivedHouseholds={derivedHouseholds}
               allPersons={persons}
             />
           </div>
           <div ref={indicatorsSectionRef}>
-            <MobilityIndicatorsPanel vehicleRates={geoVehicleRates} />
+            <MobilityIndicatorsPanel
+              vehicleRates={geoVehicleRates}
+              filteredHouseholds={filteredHouseholds}
+            />
           </div>
           <div ref={mapsSectionRef}>
             <MapsPanel
@@ -241,6 +249,7 @@ export default function DashboardSection() {
             <MobilityPatternsPanel
               hourlyModeData={geoHourlyModeData}
               durationHistogramData={geoDurationHistogramData}
+              durationByModeGroupData={geoDurationByModeGroupData}
               tripsByEstratoData={geoTripsByEstratoData}
             />
           </div>
@@ -255,6 +264,7 @@ export default function DashboardSection() {
               purposeData={purposeData}
               stageData={stageData}
               noTravelReasonData={noTravelReasonData}
+              populationInterestData={populationInterestData}
               vehicleTypeData={vehicleTypeData}
               vehicleModelData={vehicleModelData}
               vehicleTenureData={vehicleTenureData}

@@ -11,7 +11,7 @@ const App = () => (
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "18px 24px", display: "flex", alignItems: "center", gap: 16 }}>
         <img src={logoAmva} alt="Logo Área Metropolitana" style={{ width: 84, height: 84, objectFit: "contain" }} />
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Encuesta de Origen - Destino - Análisis de Viajes (2025)</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>Encuesta de Origen – Destino a Hogares (2025)</h1>
         </div>
       </div>
     </div>
