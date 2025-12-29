@@ -45,7 +45,7 @@ export default function MobilityPatternsPanel({
           xKey="label"
           yKey="value"
           orientation="vertical"
-          showPercent={false}
+          showPercent
           color={SECONDARY_GREEN}
         />
         <BarChartCard
@@ -54,7 +54,7 @@ export default function MobilityPatternsPanel({
           xKey="label"
           yKey="value"
           color={SECONDARY_GREEN}
-          showPercent={false}
+          showPercent
           orientation="vertical"
         />
         <BarChartCard

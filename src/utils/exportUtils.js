@@ -221,6 +221,9 @@ const captureElementToDataUrl = async (element) => {
   const height = Math.ceil(rect.height);
   const cloned = element.cloneNode(true);
   cloned.style.margin = "0";
+  cloned
+    .querySelectorAll(".recharts-tooltip-wrapper, .recharts-tooltip-cursor")
+    .forEach((node) => node.remove());
 
   const serializer = new XMLSerializer();
   const foreignObject = `

@@ -111,7 +111,7 @@ export default function KpisPanel({
       <h3 style={{ marginTop: 0 }}>Estadísticas generales</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(180px,1fr))", gap: 12 }}>
         <KpiCard
-          label="Viajes diarios totales"
+          label="Viajes totales diarios"
           value={(tripsCount || 0).toLocaleString()}
           subLabel={`${globalLabel}: ${(totalTrips || 0).toLocaleString()}`}
           headerColor={PRIMARY_GREEN}
@@ -129,7 +129,7 @@ export default function KpisPanel({
         />
 
         <KpiCard
-          label="Tiempo promedio de viajes"
+          label="Tiempo promedio de viaje (min)"
           value={`${avgDurationFiltered ? avgDurationFiltered.toFixed(1) : 0} min`}
           subLabel={avgDurationGlobal ? `${globalLabel}: ${avgDurationGlobal.toFixed(1)} min` : `${globalLabel}: N/A`}
           headerColor={TERTIARY_BLUE}
@@ -138,7 +138,7 @@ export default function KpisPanel({
         />
 
         <KpiCard
-          label="Tamaño promedio del hogar"
+          label="Tamaño promedio del hogar (personas de más de 5 años)"
           value={avgHouseholdSizeFiltered ? avgHouseholdSizeFiltered.toFixed(2) : "0.00"}
           subLabel={avgHouseholdSizeGlobal ? `${globalLabel}: ${avgHouseholdSizeGlobal.toFixed(2)}` : `${globalLabel}: N/A`}
           headerColor={TERTIARY_ORANGE}

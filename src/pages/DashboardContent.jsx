@@ -118,12 +118,14 @@ export default function DashboardSection() {
   ];
 
   const handleExportExcel = () => {
-    exportToExcel(buildSheets(), "dashboard-amva.xlsx");
+    const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    exportToExcel(buildSheets(), `${dateStamp}_EncuestasHogares_AMVA2025.xlsx`);
   };
 
   const handleExportPdf = () => {
     if (!dashboardRef.current) return;
-    exportToPdf(dashboardRef.current, "Reporte AMVA");
+    const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    exportToPdf(dashboardRef.current, `${dateStamp}_EncuestasHogares_AMVA2025`);
   };
 
   const thematicConfig = useMemo(

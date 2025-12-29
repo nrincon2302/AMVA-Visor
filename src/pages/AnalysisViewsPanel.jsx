@@ -16,7 +16,23 @@ const MODE_CATEGORY_GROUPS = {
   auto: new Set(["Auto particular (conductor)", "Auto particular (acompañante)"]),
 };
 
+const OTHER_MODES = new Set([
+  "Vehículo empresarial",
+  "Motocarro",
+  "Vehículo de pago por plataforma",
+  "Patineta eléctrica",
+  "Transporte informal o particular",
+]);
+
 const groupModeLabel = (mode) => {
+  if (OTHER_MODES.has(mode)) return "Otros Modos";
+  if (mode === "Escolar") return "Transporte Escolar";
+  if (mode === "Bus / Buseta / Microbús intermunicipal (1)") {
+    return "Transporte intermunicipal";
+  }
+  if (mode === "Bus / Buseta / Microbús urbano o metropolitano (1)") {
+    return "Transporte urbano o metropolitano";
+  }
   if (MODE_CATEGORY_GROUPS.bicycle.has(mode)) return "Bicicleta";
   if (MODE_CATEGORY_GROUPS.taxi.has(mode)) return "Taxi";
   if (MODE_CATEGORY_GROUPS.moto.has(mode)) return "Moto";
@@ -78,7 +94,12 @@ export default function AnalysisViewsPanel({
     return { data, series };
   };
 
-  const buildMultiSeriesFromPersons = (targetField, categoriesSource, persons) => {
+  const buildMultiSeriesFromPersons = (
+    targetField,
+    categoriesSource,
+    persons,
+    { filterByValue = false } = {}
+  ) => {
     const categories = getCategories(categoriesSource);
     const selected = (localSelectedValues || []).slice(0, 3);
     const series = selected.map((val, idx) => ({
@@ -88,8 +109,9 @@ export default function AnalysisViewsPanel({
       raw: val,
     }));
 
+    const basePersons = filterByValue ? persons.filter((p) => p[targetField]) : persons;
     const totals = series.reduce((acc, s) => {
-      const total = persons.filter((p) => String(p[activeThematicKey]) === String(s.raw)).length;
+      const total = basePersons.filter((p) => String(p[activeThematicKey]) === String(s.raw)).length;
       acc[s.key] = total;
       return acc;
     }, {});
@@ -97,8 +119,10 @@ export default function AnalysisViewsPanel({
     const data = categories.map((cat) => {
       const row = { label: cat };
       series.forEach((s) => {
-        const matches = persons.filter(
-          (p) => String(p[targetField]) === String(cat) && String(p[activeThematicKey]) === String(s.raw)
+        const matches = basePersons.filter(
+          (p) =>
+            String(p[targetField]) === String(cat) &&
+            String(p[activeThematicKey]) === String(s.raw)
         ).length;
         row[s.key] = totals[s.key] ? Number(((matches / totals[s.key]) * 100).toFixed(1)) : 0;
       });
@@ -172,7 +196,8 @@ export default function AnalysisViewsPanel({
               const n = buildMultiSeriesFromPersons(
                 "noTravelReason",
                 noTravelReasonData,
-                filteredPersonsBase || []
+                filteredPersonsBase || [],
+                { filterByValue: true }
               );
               return (
                 <BarChartCard
