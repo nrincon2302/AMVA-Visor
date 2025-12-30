@@ -34,6 +34,7 @@ export default function DashboardSection() {
     geoDurationHistogramData,
     geoDurationByModeGroupData,
     geoTripsByEstratoData,
+    geoTripFrequencyData,
     geoVehicleRates,
     macroHeatData,
     isLoading,
@@ -62,8 +63,8 @@ export default function DashboardSection() {
     { key: "stats", label: "Estadísticas generales" },
     { key: "indicators", label: "Indicadores de motorización" },
     { key: "maps", label: "Distribución geográfica" },
-    { key: "mobility", label: "Patrones de movilidad" },
-    { key: "viajes", label: "Análisis de viajes" },
+    { key: "mobility", label: "Patrones de Movilidad" },
+    { key: "viajes", label: "Características de los viajes" },
     { key: "vehicular", label: "Vehículos por hogar" },
   ];
 
@@ -248,12 +249,13 @@ export default function DashboardSection() {
             />
           </div>
           <div ref={mobilitySectionRef}>
-            <MobilityPatternsPanel
-              hourlyModeData={geoHourlyModeData}
-              durationHistogramData={geoDurationHistogramData}
-              durationByModeGroupData={geoDurationByModeGroupData}
-              tripsByEstratoData={geoTripsByEstratoData}
-            />
+          <MobilityPatternsPanel
+            hourlyModeData={geoHourlyModeData}
+            durationHistogramData={geoDurationHistogramData}
+            durationByModeGroupData={geoDurationByModeGroupData}
+            tripsByEstratoData={geoTripsByEstratoData}
+            tripFrequencyData={geoTripFrequencyData}
+          />
           </div>
           <div ref={viajesSectionRef}>
             <AnalysisViewsPanel

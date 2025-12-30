@@ -15,6 +15,7 @@ export default function MobilityPatternsPanel({
   durationHistogramData = [],
   durationByModeGroupData = [],
   tripsByEstratoData = [],
+  tripFrequencyData = [],
 }) {
   return (
     <section
@@ -27,9 +28,7 @@ export default function MobilityPatternsPanel({
         boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
       }}
     >
-      <h3 style={{ marginTop: 0, marginBottom: 16 }}>
-        Características de los viajes y patrones de movilidad
-      </h3>
+      <h3 style={{ marginTop: 0, marginBottom: 16 }}>Patrones de Movilidad</h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ gridColumn: "1 / -1" }}>
           <HourlyModeChartCard
@@ -40,8 +39,17 @@ export default function MobilityPatternsPanel({
           />
         </div>
         <BarChartCard
-          title="Duración de los viajes (en min)"
+          title="Distribución de los viajes según su duración (% de viajes)"
           data={durationHistogramData}
+          xKey="label"
+          yKey="value"
+          orientation="vertical"
+          showPercent
+          color={SECONDARY_GREEN}
+        />
+        <BarChartCard
+          title="Frecuencia del viaje (% de viajes)"
+          data={tripFrequencyData}
           xKey="label"
           yKey="value"
           orientation="vertical"
