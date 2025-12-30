@@ -363,17 +363,9 @@ const MODE_GROUPS = {
 const OTHER_MODES = new Set([
   "Vehículo empresarial",
   "Motocarro",
-  "Vehículo de pago por plataforma",
+  "Particular con pago (solicitado con plataforma)",
   "Patineta eléctrica",
-  "Transporte informal o particular",
-]);
-
-const OTHER_MODES = new Set([
-  "Vehículo empresarial",
-  "Motocarro",
-  "Vehículo de pago por plataforma",
-  "Patineta eléctrica",
-  "Transporte informal o particular",
+  "Particular con pago (en calle sin plataforma)",
 ]);
 
 const groupModeLabel = (mode) => {
