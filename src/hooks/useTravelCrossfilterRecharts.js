@@ -368,6 +368,14 @@ const OTHER_MODES = new Set([
   "Transporte informal o particular",
 ]);
 
+const OTHER_MODES = new Set([
+  "Vehículo empresarial",
+  "Motocarro",
+  "Vehículo de pago por plataforma",
+  "Patineta eléctrica",
+  "Transporte informal o particular",
+]);
+
 const groupModeLabel = (mode) => {
   if (mode === "Metro" || mode === "Cable") return "Metro";
   if (mode === "Metroplús" || mode === "Ruta integrada o alimentador C3 y C6") {
