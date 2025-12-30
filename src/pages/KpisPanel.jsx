@@ -28,12 +28,29 @@ export default function KpisPanel({
   const personsBaseCount = filteredPersonsBase?.length || 0;
   const householdsCount = filteredHouseholds?.length || 0;
 
+  const NON_MOTORIZED_MODES = new Set([
+    "Bicicleta propia",
+    "Bicicleta pública",
+    "Patineta eléctrica",
+    "A pie",
+  ]);
+
   const tripsDiffPct = totalTrips ? ((tripsCount / totalTrips) - 1) * 100 : 0;
   const formatDelta = (value, unit) => {
     const pct = Number.isFinite(value) ? value : 0;
     const direction = pct >= 0 ? "más" : "menos";
     return `${Math.abs(pct).toFixed(1)}% ${direction} ${unit} que el Indicador Global`;
   };
+
+  const nonMotorizedTripsFiltered = filteredTrips.filter((trip) =>
+    NON_MOTORIZED_MODES.has(trip.mode)
+  ).length;
+  const nonMotorizedTripsGlobal = allTrips.filter((trip) =>
+    NON_MOTORIZED_MODES.has(trip.mode)
+  ).length;
+  const nonMotorizedTripsDiffPct = nonMotorizedTripsGlobal
+    ? ((nonMotorizedTripsFiltered / nonMotorizedTripsGlobal) - 1) * 100
+    : 0;
 
   // Tiempo promedio (min)
   const avgDurationFiltered =
@@ -147,10 +164,19 @@ export default function KpisPanel({
         />
 
         <KpiCard
+          label="Viajes diarios en modos no motorizados"
+          value={nonMotorizedTripsFiltered.toLocaleString()}
+          subLabel={`${globalLabel}: ${nonMotorizedTripsGlobal.toLocaleString()}`}
+          headerColor={TERTIARY_BLUE}
+          bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={[formatDelta(nonMotorizedTripsDiffPct, "viajes no motorizados")]}
+        />
+
+        <KpiCard
           label="Viajes diarios por hogar"
           value={tripsPerHouseholdFiltered ? tripsPerHouseholdFiltered.toFixed(2) : "0.00"}
           subLabel={`${globalLabel}: ${GLOBAL_TRIPS_PER_HOUSEHOLD.toFixed(2)}`}
-          headerColor={SECONDARY_GREEN}
+          headerColor={TERTIARY_ORANGE}
           bannerImageUrl={BANNER_IMAGE_URL}
           contextLines={[formatDelta(tripsPerHouseholdDiffPct, "viajes por hogar")]}
         />

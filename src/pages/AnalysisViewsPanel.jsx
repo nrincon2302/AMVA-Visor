@@ -5,38 +5,45 @@ import { PRIMARY_GREEN, COMPARE_COLORS, SECONDARY_GREEN } from "../config/consta
 const toLabelValue = (arr) => (arr || []).map((d) => ({ label: d.label || d.name || d[0], value: d.value || d[1] || 0 }));
 const sanitizeKey = (v) => String(v).replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
 
-const MODE_CATEGORY_GROUPS = {
-  bicycle: new Set(["Bicicleta propia", "Bicicleta pública"]),
-  taxi: new Set([
-    "Taxi individual (amarillo)",
-    "Taxi colectivo (amarillo)",
-    "Taxi intermunicipal o colectivo (blanco)",
-  ]),
-  moto: new Set(["Moto (conductor)", "Moto (acompañante)", "Mototaxi"]),
-  auto: new Set(["Auto particular (conductor)", "Auto particular (acompañante)"]),
-};
-
-const OTHER_MODES = new Set([
-  "Vehículo empresarial",
-  "Motocarro",
-  "Vehículo de pago por plataforma",
-  "Patineta eléctrica",
-  "Transporte informal o particular",
-]);
-
 const groupModeLabel = (mode) => {
-  if (OTHER_MODES.has(mode)) return "Otros Modos";
-  if (mode === "Escolar") return "Transporte Escolar";
-  if (mode === "Bus / Buseta / Microbús intermunicipal (1)") {
-    return "Transporte intermunicipal";
+  if (mode === "Metro" || mode === "Cable") return "Metro";
+  if (mode === "Metroplús" || mode === "Ruta integrada o alimentador C3 y C6") {
+    return "Metroplus";
   }
+  if (mode === "Tranvía") return "Tranvía";
   if (mode === "Bus / Buseta / Microbús urbano o metropolitano (1)") {
-    return "Transporte urbano o metropolitano";
+    return "Transporte Público Colectivo";
   }
-  if (MODE_CATEGORY_GROUPS.bicycle.has(mode)) return "Bicicleta";
-  if (MODE_CATEGORY_GROUPS.taxi.has(mode)) return "Taxi";
-  if (MODE_CATEGORY_GROUPS.moto.has(mode)) return "Moto";
-  if (MODE_CATEGORY_GROUPS.auto.has(mode)) return "Auto particular";
+  if (mode === "Bus / Buseta / Microbús intermunicipal (1)") {
+    return "Otros";
+  }
+  if (
+    mode === "Taxi individual (amarillo)" ||
+    mode === "Taxi colectivo (amarillo)" ||
+    mode === "Taxi intermunicipal o colectivo (blanco)"
+  ) {
+    return "Taxi";
+  }
+  if (
+    mode === "Transporte informal o particular" ||
+    mode === "Vehículo de pago por plataforma" ||
+    mode === "Auto particular (conductor)" ||
+    mode === "Auto particular (acompañante)"
+  ) {
+    return "Auto";
+  }
+  if (mode === "Escolar") return "Transporte escolar";
+  if (
+    mode === "Moto (conductor)" ||
+    mode === "Moto (acompañante)" ||
+    mode === "Mototaxi" ||
+    mode === "Motocarro"
+  ) {
+    return "Moto";
+  }
+  if (mode === "Bicicleta propia" || mode === "Bicicleta pública") return "Bicicleta";
+  if (mode === "A pie") return "A Pie";
+  if (mode === "Vehículo empresarial" || mode === "Patineta eléctrica") return "Otros";
   return mode;
 };
 
@@ -201,7 +208,7 @@ export default function AnalysisViewsPanel({
               );
               return (
                 <BarChartCard
-                  title="Motivo de no viaje (% de viajes)"
+                  title="Motivo de no viaje (% de personas que no viajan)"
                   data={n.data}
                   xKey="label"
                   series={n.series}
@@ -217,7 +224,7 @@ export default function AnalysisViewsPanel({
               const pop = buildMultiSeries("populationInterest", populationInterestData);
               return (
                 <BarChartCard
-                  title="Poblaciones de interés (% de viajes)"
+                  title="% de personas que sí viajan en grupos poblacionales de interés"
                   data={pop.data}
                   xKey="label"
                   series={pop.series}
@@ -269,7 +276,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
             <BarChartCard
-              title="Motivo de no viaje (% de viajes)"
+              title="Motivo de no viaje (% de personas que no viajan)"
               data={toLabelValue(noTravelReasonData)}
               xKey="label"
               yKey="value"
@@ -280,7 +287,7 @@ export default function AnalysisViewsPanel({
           </div>
           <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
             <BarChartCard
-              title="Poblaciones de interés (% de viajes)"
+              title="% de personas que sí viajan en grupos poblacionales de interés"
               data={toLabelValue(populationInterestData)}
               xKey="label"
               yKey="value"
@@ -322,7 +329,7 @@ export default function AnalysisViewsPanel({
   );
 
   const titleMap = {
-    viajes: "Análisis de viajes",
+    viajes: "Características de los viajes",
     vehicular: "Vehículos por Hogar",
   };
 

@@ -16,14 +16,14 @@ const MODE_OPTIONS = [
   "Cable",
   "Metroplús",
   "Tranvía",
-  "Bus / Buseta / Microbús urbano o metropolitano (1)",
+  "Bus / Buseta / Microbús urbano o metropolitano",
   "Ruta integrada o alimentador C3 y C6",
-  "Bus / Buseta / Microbús intermunicipal (1)",
+  "Bus / Buseta / Microbús intermunicipal",
   "Taxi individual (amarillo)",
   "Taxi colectivo (amarillo)",
   "Taxi intermunicipal o colectivo (blanco)",
-  "Transporte informal o particular",
-  "Vehículo de pago por plataforma",
+  "Particular con pago (en calle sin plataforma)",
+  "Particular con pago (solicitado con plataforma)",
   "Auto particular (conductor)",
   "Auto particular (acompañante)",
   "Escolar",
@@ -36,6 +36,7 @@ const MODE_OPTIONS = [
   "Bicicleta pública",
   "Patineta eléctrica",
   "A pie",
+  "Avión"
 ];
 
 const MODE_DISTRIBUTION = [
@@ -43,13 +44,14 @@ const MODE_DISTRIBUTION = [
   { value: "Cable", weight: 6 },
   { value: "Metroplús", weight: 7 },
   { value: "Tranvía", weight: 4 },
-  { value: "Bus / Buseta / Microbús urbano o metropolitano (1)", weight: 28 },
+  { value: "Bus / Buseta / Microbús urbano o metropolitano", weight: 28 },
   { value: "Ruta integrada o alimentador C3 y C6", weight: 16 },
-  { value: "Bus / Buseta / Microbús intermunicipal (1)", weight: 8 },
+  { value: "Bus / Buseta / Microbús intermunicipal", weight: 8 },
   { value: "Taxi individual (amarillo)", weight: 6 },
   { value: "Taxi colectivo (amarillo)", weight: 4 },
   { value: "Taxi intermunicipal o colectivo (blanco)", weight: 3 },
-  { value: "Transporte informal o particular", weight: 4 },
+  { value: "Particular con pago (en calle sin plataforma)", weight: 2 },
+  { value: "Particular con pago (solicitado con plataforma)", weight: 2 },
   { value: "Vehículo de pago por plataforma", weight: 5 },
   { value: "Auto particular (conductor)", weight: 18 },
   { value: "Auto particular (acompañante)", weight: 9 },
@@ -62,7 +64,8 @@ const MODE_DISTRIBUTION = [
   { value: "Bicicleta propia", weight: 6 },
   { value: "Bicicleta pública", weight: 2 },
   { value: "Patineta eléctrica", weight: 1 },
-  { value: "A pie", weight: 20 },
+  { value: "A pie", weight: 15 },
+  { value: "Avión", weight: 5 }
 ];
 
 const POPULATION_INTEREST_VALUES = [
@@ -141,9 +144,9 @@ const deriveCategorical = (seedValue, options) => {
 const normalizeMode = (mode, id) => {
   const baseMap = {
     Metro: "Metro",
-    Bus: "Bus / Buseta / Microbús urbano o metropolitano (1)",
-    "Bus urbano/metropolitano": "Bus / Buseta / Microbús urbano o metropolitano (1)",
-    "Bus intermunicipal": "Bus / Buseta / Microbús intermunicipal (1)",
+    Bus: "Bus / Buseta / Microbús urbano o metropolitano",
+    "Bus urbano/metropolitano": "Bus / Buseta / Microbús urbano o metropolitano",
+    "Bus intermunicipal": "Bus / Buseta / Microbús intermunicipal",
     Moto: "Moto (conductor)",
     Carro: "Auto particular (conductor)",
     Bicicleta: "Bicicleta propia",
@@ -156,8 +159,8 @@ const normalizeMode = (mode, id) => {
     "Ruta integrada": "Ruta integrada o alimentador C3 y C6",
     "Ruta integrada/Alimentador C3-C6": "Ruta integrada o alimentador C3 y C6",
     Tranvía: "Tranvía",
-    "Transporte informal en calle": "Transporte informal o particular",
-    "Plataforma (Uber/Cabify/etc.)": "Vehículo de pago por plataforma",
+    "Transporte informal en calle": "Particular con pago (en calle sin plataforma)",
+    "Plataforma (Uber/Cabify/etc.)": "Particular con pago (solicitado con plataforma)",
   };
 
   if (baseMap[mode]) return baseMap[mode];
@@ -214,6 +217,12 @@ const NO_TRAVEL_REASONS = [
   { value: "No contaba con el dinero para pagar el transporte", weight: 10 },
   { value: "Por pico y placa", weight: 10 },
   { value: "Otros", weight: 10 },
+];
+const TRIP_FREQUENCY_OPTIONS = [
+  { value: "Los 7 días de la semana", weight: 30 },
+  { value: "2-6 días a la semana", weight: 40 },
+  { value: "Solo un día a la semana", weight: 20 },
+  { value: "Es un viaje eventual", weight: 10 },
 ];
 const POPULATION_INTEREST = [
   { value: POPULATION_INTEREST_VALUES[0], weight: 4 },
@@ -339,26 +348,16 @@ const MODE_GROUPS = {
     "Moto (conductor)",
     "Moto (acompañante)",
     "Vehículo empresarial",
-    "Vehículo de pago por plataforma",
-    "Transporte informal o particular",
+    "Particular con pago (en calle sin plataforma)",
+    "Particular con pago (solicitado con plataforma)",
+    "Avión"
   ]),
   nonMotorized: new Set([
     "Bicicleta propia",
     "Bicicleta pública",
     "Patineta eléctrica",
-    "A pie",
+    "A pie"
   ]),
-};
-
-const MODE_CATEGORY_GROUPS = {
-  bicycle: new Set(["Bicicleta propia", "Bicicleta pública"]),
-  taxi: new Set([
-    "Taxi individual (amarillo)",
-    "Taxi colectivo (amarillo)",
-    "Taxi intermunicipal o colectivo (blanco)",
-  ]),
-  moto: new Set(["Moto (conductor)", "Moto (acompañante)", "Mototaxi"]),
-  auto: new Set(["Auto particular (conductor)", "Auto particular (acompañante)"]),
 };
 
 const OTHER_MODES = new Set([
@@ -370,18 +369,46 @@ const OTHER_MODES = new Set([
 ]);
 
 const groupModeLabel = (mode) => {
-  if (OTHER_MODES.has(mode)) return "Otros Modos";
-  if (mode === "Escolar") return "Transporte Escolar";
-  if (mode === "Bus / Buseta / Microbús intermunicipal (1)") {
-    return "Transporte intermunicipal";
+  if (mode === "Metro" || mode === "Cable") return "Metro";
+  if (mode === "Metroplús" || mode === "Ruta integrada o alimentador C3 y C6") {
+    return "Metroplus";
   }
-  if (mode === "Bus / Buseta / Microbús urbano o metropolitano (1)") {
-    return "Transporte urbano o metropolitano";
+  if (mode === "Tranvía") return "Tranvía";
+  if (mode === "Bus / Buseta / Microbús urbano o metropolitano") {
+    return "Transporte Público Colectivo";
   }
-  if (MODE_CATEGORY_GROUPS.bicycle.has(mode)) return "Bicicleta";
-  if (MODE_CATEGORY_GROUPS.taxi.has(mode)) return "Taxi";
-  if (MODE_CATEGORY_GROUPS.moto.has(mode)) return "Moto";
-  if (MODE_CATEGORY_GROUPS.auto.has(mode)) return "Auto particular";
+  if (
+    mode === "Taxi individual (amarillo)" ||
+    mode === "Taxi colectivo (amarillo)" ||
+    mode === "Taxi intermunicipal o colectivo (blanco)"
+  ) {
+    return "Taxi";
+  }
+  if (
+    mode === "Particular con pago (solicitado con plataforma)" ||
+    mode === "Particular con pago (en calle sin plataforma)" ||
+    mode === "Auto particular (conductor)" ||
+    mode === "Auto particular (acompañante)"
+  ) {
+    return "Auto";
+  }
+  if (mode === "Escolar") return "Transporte escolar";
+  if (
+    mode === "Moto (conductor)" ||
+    mode === "Moto (acompañante)" ||
+    mode === "Mototaxi" ||
+    mode === "Motocarro"
+  ) {
+    return "Moto";
+  }
+  if (mode === "Bicicleta propia" || mode === "Bicicleta pública") return "Bicicleta";
+  if (mode === "A pie") return "A Pie";
+  if (
+    mode === "Vehículo empresarial" || 
+    mode === "Patineta eléctrica" ||
+    mode === "Avión" ||
+    mode === "Bus / Buseta / Microbús intermunicipal"
+  ) return "Otros";
   return mode;
 };
 
@@ -575,6 +602,7 @@ export function useTravelCrossfilterRecharts() {
   const [geoDurationHistogramData, setGeoDurationHistogramData] = useState([]);
   const [geoDurationByModeGroupData, setGeoDurationByModeGroupData] = useState([]);
   const [geoTripsByEstratoData, setGeoTripsByEstratoData] = useState([]);
+  const [geoTripFrequencyData, setGeoTripFrequencyData] = useState([]);
   const [geoVehicleRates, setGeoVehicleRates] = useState({
     autos: 0,
     motos: 0,
@@ -617,6 +645,7 @@ export function useTravelCrossfilterRecharts() {
             id: `T${idCounter}`,
             mode: pickWeighted(MODE_DISTRIBUTION),
             tripPurpose: pickWeighted(PURPOSES),
+            tripFrequency: pickWeighted(TRIP_FREQUENCY_OPTIONS),
             stageBucket: pickWeighted(STAGE_BUCKETS),
             distanceKm: Number((Math.random() ** 0.8 * 32 + 0.3).toFixed(1)),
             durationMin: Math.max(5, Math.round(Math.random() ** 0.7 * 120) + 6),
@@ -711,6 +740,8 @@ export function useTravelCrossfilterRecharts() {
       const departureHour = hashString(trip.id) % 24;
       const normalizedMode = normalizeMode(trip.mode, trip.id);
       const purpose = trip.tripPurpose || deriveCategorical(trip.id, PURPOSES);
+      const tripFrequency =
+        trip.tripFrequency || deriveCategorical(`${trip.id}-frequency`, TRIP_FREQUENCY_OPTIONS);
       const stageBucket = trip.stageBucket || deriveCategorical(`${trip.id}-stage`, STAGE_BUCKETS);
       const originMacro = normalizeMacrozonaForMunicipio(originMunicipio, trip.originMacro);
       const destinationMacro = normalizeMacrozonaForMunicipio(
@@ -724,6 +755,7 @@ export function useTravelCrossfilterRecharts() {
         ...person,
         mode: normalizedMode,
         tripPurpose: purpose,
+        tripFrequency,
         stageBucket,
         originMunicipio,
         originMacro,
@@ -997,6 +1029,9 @@ export function useTravelCrossfilterRecharts() {
     setGeoHourlyModeData(buildHourlyModeGroupSeries(geoFiltered.tripsGeo));
     setGeoDurationHistogramData(buildDurationHistogram(geoFiltered.tripsGeo));
     setGeoDurationByModeGroupData(buildAverageDurationByModeGroup(geoFiltered.tripsGeo));
+    setGeoTripFrequencyData(
+      aggregatePercentages(geoFiltered.tripsGeo, "tripFrequency")
+    );
     const tripsByEstrato = aggregatePercentages(geoFiltered.tripsGeo, "estrato").sort(
       (a, b) => Number(a.label) - Number(b.label)
     );
@@ -1067,6 +1102,7 @@ export function useTravelCrossfilterRecharts() {
     geoDurationHistogramData,
     geoDurationByModeGroupData,
     geoTripsByEstratoData,
+    geoTripFrequencyData,
     geoVehicleRates,
     macroHeatData,
     isLoading,
