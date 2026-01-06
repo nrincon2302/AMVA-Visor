@@ -1,4 +1,4 @@
-export const PRIMARY_GREEN = "#66CC33";
+export const PRIMARY_GREEN = "rgba(124, 185, 40, 1)";
 export const SECONDARY_GREEN = "#339933";
 export const TERTIARY_YELLOW = "#FDEB00";
 export const TERTIARY_PINK = "#E770D3";

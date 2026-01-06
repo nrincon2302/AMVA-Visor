@@ -24,8 +24,8 @@ const Footer = () => {
           <div>
             <div
               style={{
-                width: 150,
-                height: 60,
+                width: 100,
+                height: 100,
                 background: "#ffffff",
                 borderRadius: 6,
                 marginBottom: 10,
@@ -39,7 +39,7 @@ const Footer = () => {
               <img
                 src={logoFoot}
                 alt="Logo Área Metropolitana"
-                style={{ width: "100%", height: "100%", objectFit: "stretch" }}
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
             </div>
             <p style={{ margin: "4px 0" }}>

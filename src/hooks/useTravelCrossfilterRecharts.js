@@ -220,9 +220,9 @@ const NO_TRAVEL_REASONS = [
 ];
 const TRIP_FREQUENCY_OPTIONS = [
   { value: "Los 7 días de la semana", weight: 30 },
-  { value: "2-6 días a la semana", weight: 40 },
-  { value: "Solo un día a la semana", weight: 20 },
-  { value: "Es un viaje eventual", weight: 10 },
+  { value: "Entre 2-6 días a la semana", weight: 20 },
+  { value: "Solo un día a la semana", weight: 10 },
+  { value: "Es un viaje eventual", weight: 40 },
 ];
 const POPULATION_INTEREST = [
   { value: POPULATION_INTEREST_VALUES[0], weight: 4 },

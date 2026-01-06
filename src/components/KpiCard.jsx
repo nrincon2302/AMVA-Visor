@@ -38,6 +38,9 @@ const KpiCard = ({
           fontWeight: 700,
           fontSize: 14,
           letterSpacing: 0.2,
+          height: 48,
+          display: "flex",
+          alignItems: "center",
         }}
       >
         {label}
