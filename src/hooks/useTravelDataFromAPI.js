@@ -94,7 +94,7 @@ export function useTravelDataFromAPI() {
         await Promise.all(
           tNorm.map(async ({ id }) => {
             try {
-              const detalle = await fetchJSON(urls.temaDetalles(id));
+              const detalle = await fetchJSON(urls.detalles(id));
               console.log(`[useTravelDataFromAPI] detalle tema "${id}":`, detalle);
               
               // El backend puede retornar el array envuelto en diferentes formas

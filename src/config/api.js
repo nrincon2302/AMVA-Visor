@@ -10,7 +10,7 @@ export const urls = {
   municipios:   () => `${API}/metadata/municipios`,
   macrozonas:   (municipio) => `${API}/metadata/municipios/${encodeURIComponent(municipio)}/macrozonas`,
   temas:        () => `${API}/metadata/temas`,
-  temaDetalles: (tema) => `${API}/metadata/temas/${encodeURIComponent(tema)}/detalles`,
+  detalles:     (tema) => `${API}/metadata/temas/${encodeURIComponent(tema)}/detalles`,
   indicadores:  () => `${API}/metadata/indicadores`,
 
   /* URI de Indicadores */
