@@ -45,7 +45,7 @@ export function buildQueryParams({
 
   if (detalles) {
     if (Array.isArray(detalles) && detalles.length > 0) {
-      detalles.forEach((d) => p.append("detalle", String(d)));
+      detalles.forEach((d) => p.append("detalles", String(d)));
     }
   }
 

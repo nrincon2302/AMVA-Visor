@@ -20,8 +20,6 @@ export default function AnalysisViewsPanel({
   vehicleTypeData,
   vehicleModelData,
   vehicleTenureData,
-  filteredTrips,
-  filteredPersonsBase,
   // datos detallados del backend (para modo COMPARAR)
   detailedData,
 }) {

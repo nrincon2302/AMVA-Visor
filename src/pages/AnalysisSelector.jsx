@@ -5,7 +5,6 @@ const AnalysisSelector = ({
   activeThematicKey,
   handleThematicKeyChange,
   activeThematic,
-  isAllSelected,
   isCompareMode,
   onModeChange,
   localSelectedValues,

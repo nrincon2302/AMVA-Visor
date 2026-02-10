@@ -8,8 +8,7 @@ import {
 import { SECONDARY_GREEN, TERTIARY_ORANGE } from "../config/constants";
 import { MUNICIPIO_MACROZONA_HIERARCHY } from "../config/geoHierarchy";
 
-export default function MapsPanel({ 
-  macroHeatData = {}, 
+export default function MapsPanel({
   filteredTrips = [],
   filters = {} // Para obtener el municipio actual
 }) {
@@ -28,32 +27,46 @@ export default function MapsPanel({
     return { municipio: null, macrozona: zoneId.trim() };
   };
 
-  const matchesSelection = (trip, selection, type) => {
-    if (!selection) return true;
-    const { municipio, macrozona } = parseZoneId(selection);
-    if (type === "origin") {
-      return (
-        (!municipio || trip.originMunicipio === municipio) &&
-        (!macrozona || trip.originMacro === macrozona)
-      );
-    }
-    return (
-      (!municipio || trip.destinationMunicipio === municipio) &&
-      (!macrozona || trip.destinationMacro === macrozona)
-    );
-  };
   const macrozonesByMunicipio = useMemo(() => {
     return MUNICIPIO_MACROZONA_HIERARCHY;
   }, []);
 
   // Transformar datos si vienen en formato diferente
   const originTripsForSelection = useMemo(() => {
+    const matchesSelection = (trip, selection, type) => {
+      if (!selection) return true;
+      const { municipio, macrozona } = parseZoneId(selection);
+      if (type === "origin") {
+        return (
+          (!municipio || trip.originMunicipio === municipio) &&
+          (!macrozona || trip.originMacro === macrozona)
+        );
+      }
+      return (
+        (!municipio || trip.destinationMunicipio === municipio) &&
+        (!macrozona || trip.destinationMacro === macrozona)
+      );
+    };
     return selectedDestination
       ? filteredTrips.filter((trip) => matchesSelection(trip, selectedDestination, "destination"))
       : filteredTrips;
   }, [filteredTrips, selectedDestination]);
 
   const destinationTripsForSelection = useMemo(() => {
+    const matchesSelection = (trip, selection, type) => {
+      if (!selection) return true;
+      const { municipio, macrozona } = parseZoneId(selection);
+      if (type === "origin") {
+        return (
+          (!municipio || trip.originMunicipio === municipio) &&
+          (!macrozona || trip.originMacro === macrozona)
+        );
+      }
+      return (
+        (!municipio || trip.destinationMunicipio === municipio) &&
+        (!macrozona || trip.destinationMacro === macrozona)
+      );
+    };
     return selectedOrigin
       ? filteredTrips.filter((trip) => matchesSelection(trip, selectedOrigin, "origin"))
       : filteredTrips;

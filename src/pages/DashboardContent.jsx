@@ -4,7 +4,7 @@ import FiltersPanel           from "./FiltersPanel";
 import LoadingOverlay         from "../components/LoadingOverlay";
 import KpisPanel              from "./KpisPanel";
 import MapsPanel              from "./MapsPanel";
-import { COMPARE_COLORS, PRIMARY_GREEN } from "../config/constants";
+import { COMPARE_COLORS } from "../config/constants";
 import AnalysisViewsPanel     from "./AnalysisViewsPanel";
 import MobilityPatternsPanel  from "./MobilityPatternsPanel";
 import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
@@ -101,24 +101,15 @@ export default function DashboardSection() {
         label:   nombre,
         options: thematicOptions[id] || [],
       }));
-      console.log('[DashboardContent] thematicConfig construido:', config);
-      console.log('[DashboardContent] thematicOptions:', thematicOptions);
-      return config;
+      return config; 
     },
     [temas, thematicOptions]
   );
 
   // Inicializar activeThematicKey cuando temas llega del backend
   useEffect(() => {
-    console.log('[DashboardContent] useEffect inicialización:', {
-      thematicConfigLength: thematicConfig.length,
-      activeThematicKey,
-      firstThematic: thematicConfig[0]
-    });
-    
     if (thematicConfig.length && !activeThematicKey) {
       const first = thematicConfig[0];
-      console.log('[DashboardContent] Inicializando con primer tema:', first);
       setActiveThematicKey(first.key);
       setLocalSelectedValues(first.options);  // UI muestra todos seleccionados
       // IMPORTANTE: también actualizar el tema activo en el hook
@@ -131,17 +122,10 @@ export default function DashboardSection() {
   // Sincronizar opciones cuando cambie el tema activo (ej: metadata se actualiza)
   const activeThematic = thematicConfig.find((t) => t.key === activeThematicKey);
   useEffect(() => {
-    console.log('[DashboardContent] useEffect sync opciones:', {
-      activeThematic,
-      compareMode,
-      options: activeThematic?.options
-    });
-    
     if (activeThematic?.options?.length && !compareMode) {
-      console.log('[DashboardContent] Sincronizando localSelectedValues con:', activeThematic.options);
       setLocalSelectedValues(activeThematic.options);
     }
-  });
+  }, [activeThematic, compareMode]);
 
   /* ── extraer datos de indicadores ─────────────
        ind("nombre") retorna la respuesta del backend
@@ -298,7 +282,6 @@ export default function DashboardSection() {
           handleThematicKeyChange={handleThematicKeyChange}
           activeThematic={activeThematic}
           isAllSelected={isAllSelected}
-          SECONDARY_GREEN={PRIMARY_GREEN}
           isCompareMode={compareMode}
           onModeChange={handleModeChange}
           localSelectedValues={localSelectedValues}
