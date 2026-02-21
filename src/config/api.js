@@ -15,34 +15,23 @@ export const urls = {
 
   /* URI de Indicadores */
   agregado:     (nombre) => `${API}/indicadores/${encodeURIComponent(nombre)}/agregado`,
-  porDetalle:   (nombre) => `${API}/indicadores/${encodeURIComponent(nombre)}/por-detalle`,
-  filtrados:    (nombre) => `${API}/indicadores/${encodeURIComponent(nombre)}/filtrados`,
+  porDetalle:   (nombre) => `${API}/indicadores/${encodeURIComponent(nombre)}/por-detalle`
 };
 
 // ============================================
 // Construcción de los Queries según filtros aplicados
 // ============================================
-export function buildQueryParams({
-  municipio,
-  macrozonas,
-  tema,
-  detalles,
-} = {}) {
+export function buildQueryParams({municipio, origen, destino, tema, zona, detalles} = {}) {
   const p = new URLSearchParams();
 
-  // Adjuntar el municipio y las macrozonas
-  if (municipio && municipio !== "AMVA General")
-    p.append("municipio", municipio);
-
-  if (macrozonas) {
-    if (Array.isArray(macrozonas) && macrozonas.length > 0) {
-      macrozonas.forEach((m) => p.append("macrozona", String(m)));
-    }
-  }
+  // Adjuntar el municipio, la zona y las macrozonas
+  if (municipio && municipio !== "AMVA General") p.append("municipio", municipio);
+  if (origen) p.append("macrozona_origen", origen);
+  if (destino) p.append("macrozona_destino", destino);
+  if (zona) p.append("zona", zona);
 
   // Adjuntar el tema y los detalles
-  p.append("tema", tema);
-
+  if (tema) p.append("tema", tema);
   if (detalles) {
     if (Array.isArray(detalles) && detalles.length > 0) {
       detalles.forEach((d) => p.append("detalles", String(d)));

@@ -27,6 +27,12 @@ export default function AnalysisViewsPanel({
 
   /**
    * Construir series para modo comparar usando datos detallados del backend
+   * 
+   * Estructura de comparisonData esperada:
+   * comparisonData[indicador]["Campo de Gráfica"]["detailValue"].valor
+   * 
+   * Ejemplo:
+   * comparisonData["modo_principal"]["Moto"]["12-17"].valor = 100
    */
   const buildComparisonSeries = (categoriesSource, detailedField) => {
     if (!detailedData || !detailedData.comparaciones) {
@@ -43,25 +49,28 @@ export default function AnalysisViewsPanel({
       raw: val,
     }));
 
-    // Obtener los datos de comparación del backend
+    // Obtener los datos de comparación del backend para el tema activo
     const comparisonData = detailedData.comparaciones[activeThematicKey];
     
     if (!comparisonData) {
       return { data: [], series: [] };
     }
 
+    // Obtener el objeto de datos para el indicador específico
+    const indicatorData = comparisonData[detailedField];
+    if (!indicatorData) {
+      return { data: [], series: [] };
+    }
+
     // Construir los datos para el gráfico
+    // Estructura: cada categoría es una fila, cada detalle seleccionado es una columna
     const data = categories.map((cat) => {
       const row = { label: cat };
       
       series.forEach((s) => {
-        // Buscar el valor correspondiente en los datos del backend
-        const categoryData = comparisonData[detailedField];
-        if (categoryData && categoryData[s.raw] && categoryData[s.raw][cat] !== undefined) {
-          row[s.key] = categoryData[s.raw][cat];
-        } else {
-          row[s.key] = 0;
-        }
+        // Acceder a: indicatorData[graphField][detailValue].valor
+        const value = indicatorData[cat]?.[s.raw]?.valor ?? 0;
+        row[s.key] = value;
       });
       
       return row;

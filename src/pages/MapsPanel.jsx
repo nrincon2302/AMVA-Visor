@@ -1,155 +1,111 @@
 import React, { useState, useMemo } from "react";
 import MapCardWithHeader from "../components/MapCardWithHeader";
 import MacrozoneTable from "../components/MacrozoneTable";
-import { 
-  transformToMacroHeatData, 
-  getRelatedZones 
-} from "../utils/macroHeatDataTransformer";
 import { SECONDARY_GREEN, TERTIARY_ORANGE } from "../config/constants";
 import { MUNICIPIO_MACROZONA_HIERARCHY } from "../config/geoHierarchy";
 
 export default function MapsPanel({
-  filteredTrips = [],
+  macroHeatData = [],
   filters = {} // Para obtener el municipio actual
 }) {
   const [selectedOrigin, setSelectedOrigin] = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
-  const parseZoneId = (zoneId = "") => {
-    if (!zoneId) return { municipio: null, macrozona: null };
-    if (zoneId.includes(" - ")) {
-      const [municipio, ...rest] = zoneId.split(" - ");
-      return { municipio: municipio.trim(), macrozona: rest.join(" - ").trim() };
+
+  // Si macroHeatData viene como array de { label, value }, transformarlo al formato esperado
+  // Si ya tiene la estructura correcta (origin/destination fields), usarlo directamente
+  const processedData = useMemo(() => {
+    if (!Array.isArray(macroHeatData) || macroHeatData.length === 0) {
+      return { origin: [], destination: [] };
     }
-    if (zoneId.includes("-")) {
-      const [municipio, ...rest] = zoneId.split("-");
-      return { municipio: municipio.trim(), macrozona: rest.join("-").trim() };
+
+    // Si tienen estructura simple { label, value }, retornar como origin data
+    if (macroHeatData[0]?.label && typeof macroHeatData[0]?.value === 'number') {
+      return {
+        origin: macroHeatData.map(item => ({
+          name: item.label,
+          value: item.value,
+          trips: item.value,
+        })),
+        destination: [],
+      };
     }
-    return { municipio: null, macrozona: zoneId.trim() };
-  };
+
+    // Si ya está transformado (tiene origin/destination), retornar tal cual
+    return macroHeatData;
+  }, [macroHeatData]);
 
   const macrozonesByMunicipio = useMemo(() => {
     return MUNICIPIO_MACROZONA_HIERARCHY;
   }, []);
 
-  // Transformar datos si vienen en formato diferente
-  const originTripsForSelection = useMemo(() => {
-    const matchesSelection = (trip, selection, type) => {
-      if (!selection) return true;
-      const { municipio, macrozona } = parseZoneId(selection);
-      if (type === "origin") {
-        return (
-          (!municipio || trip.originMunicipio === municipio) &&
-          (!macrozona || trip.originMacro === macrozona)
-        );
-      }
-      return (
-        (!municipio || trip.destinationMunicipio === municipio) &&
-        (!macrozona || trip.destinationMacro === macrozona)
-      );
-    };
-    return selectedDestination
-      ? filteredTrips.filter((trip) => matchesSelection(trip, selectedDestination, "destination"))
-      : filteredTrips;
-  }, [filteredTrips, selectedDestination]);
-
-  const destinationTripsForSelection = useMemo(() => {
-    const matchesSelection = (trip, selection, type) => {
-      if (!selection) return true;
-      const { municipio, macrozona } = parseZoneId(selection);
-      if (type === "origin") {
-        return (
-          (!municipio || trip.originMunicipio === municipio) &&
-          (!macrozona || trip.originMacro === macrozona)
-        );
-      }
-      return (
-        (!municipio || trip.destinationMunicipio === municipio) &&
-        (!macrozona || trip.destinationMacro === macrozona)
-      );
-    };
-    return selectedOrigin
-      ? filteredTrips.filter((trip) => matchesSelection(trip, selectedOrigin, "origin"))
-      : filteredTrips;
-  }, [filteredTrips, selectedOrigin]);
-
-  const transformedOriginData = useMemo(
-    () => transformToMacroHeatData(originTripsForSelection),
-    [originTripsForSelection]
-  );
-
-  const transformedDestinationData = useMemo(
-    () => transformToMacroHeatData(destinationTripsForSelection),
-    [destinationTripsForSelection]
-  );
-
   // Datos completos (para mapas)
   const originData = useMemo(() => {
-    const arr = transformedOriginData?.origin || [];
+    const arr = processedData?.origin || [];
     return arr
       .map((item) => {
         // If item already has municipio/macrozona/trips, keep it
         if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
-      // If item has name/value, parse name "Municipio - Macrozona"
-      const name = item.name || item.zone || "";
-      let municipio = "";
-      let macrozona = "";
-      if (name.includes(" - ")) {
-        const parts = name.split(" - ");
-        municipio = parts[0].trim();
-        macrozona = parts.slice(1).join(" - ").trim();
-      } else if (name.includes("-")) {
-        const parts = name.split("-");
-        municipio = parts[0].trim();
-        macrozona = parts.slice(1).join("-").trim();
-      } else {
-        macrozona = name;
-      }
-      return {
-        municipio,
-        macrozona,
-        name: `${municipio} - ${macrozona}`,
-        value: typeof item.value === "number" ? item.value : item.trips || 0,
-        trips: typeof item.trips === "number" ? item.trips : item.value || 0,
-      };
+        // If item has name/value, parse name "Municipio - Macrozona"
+        const name = item.name || item.zone || "";
+        let municipio = "";
+        let macrozona = "";
+        if (name.includes(" - ")) {
+          const parts = name.split(" - ");
+          municipio = parts[0].trim();
+          macrozona = parts.slice(1).join(" - ").trim();
+        } else if (name.includes("-")) {
+          const parts = name.split("-");
+          municipio = parts[0].trim();
+          macrozona = parts.slice(1).join("-").trim();
+        } else {
+          macrozona = name;
+        }
+        return {
+          municipio,
+          macrozona,
+          name: `${municipio} - ${macrozona}`,
+          value: typeof item.value === "number" ? item.value : item.trips || 0,
+          trips: typeof item.trips === "number" ? item.trips : item.value || 0,
+        };
       })
       .filter((item) => {
         const validMacrozonas = macrozonesByMunicipio[item.municipio];
         return validMacrozonas?.includes(item.macrozona);
       });
-  }, [transformedOriginData, macrozonesByMunicipio]);
+  }, [processedData, macrozonesByMunicipio]);
 
   const destinationData = useMemo(() => {
-    const arr = transformedDestinationData?.destination || [];
+    const arr = processedData?.destination || [];
     return arr
       .map((item) => {
-      if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
-      const name = item.name || item.zone || "";
-      let municipio = "";
-      let macrozona = "";
-      if (name.includes(" - ")) {
-        const parts = name.split(" - ");
-        municipio = parts[0].trim();
-        macrozona = parts.slice(1).join(" - ").trim();
-      } else if (name.includes("-")) {
-        const parts = name.split("-");
-        municipio = parts[0].trim();
-        macrozona = parts.slice(1).join("-").trim();
-      } else {
-        macrozona = name;
-      }
-      return {
-        municipio,
-        macrozona,
-        name: `${municipio} - ${macrozona}`,
-        value: typeof item.value === "number" ? item.value : item.trips || 0,
-        trips: typeof item.trips === "number" ? item.trips : item.value || 0,
-      };
+        if (item.municipio && item.macrozona && typeof item.trips === "number") return item;
+        const name = item.name || item.zone || "";
+        let municipio = "";
+        let macrozona = "";
+        if (name.includes(" - ")) {
+          const parts = name.split(" - ");
+          municipio = parts[0].trim();
+          macrozona = parts.slice(1).join(" - ").trim();
+        } else if (name.includes("-")) {
+          const parts = name.split("-");
+          municipio = parts[0].trim();
+          macrozona = parts.slice(1).join("-").trim();
+        } else {
+          macrozona = name;
+        }
+        return {
+          municipio,
+          macrozona,
+          name: `${municipio} - ${macrozona}`,
+          value: typeof item.value === "number" ? item.value : item.trips || 0,
+          trips: typeof item.trips === "number" ? item.trips : item.value || 0,
+        };
       })
       .filter((item) => {
         const validMacrozonas = macrozonesByMunicipio[item.municipio];
         return validMacrozonas?.includes(item.macrozona);
       });
-  }, [transformedDestinationData, macrozonesByMunicipio]);
+  }, [processedData, macrozonesByMunicipio]);
 
   const originMapData = useMemo(() => {
     if (!selectedOrigin) return originData;
@@ -257,14 +213,16 @@ export default function MapsPanel({
   };
 
   // Calcular zonas resaltadas basadas en la selección
+  // Nota: Estas características requieren datos de viajes individuales que no están disponibles
+  // con datos agregados del API. Se retornan arrays vacíos por ahora.
   const highlightedDestinations = useMemo(() => 
-    selectedOrigin ? getRelatedZones(selectedOrigin, true, filteredTrips) : [],
-    [selectedOrigin, filteredTrips]
+    selectedOrigin ? [] : [],
+    [selectedOrigin]
   );
     
   const highlightedOrigins = useMemo(() =>
-    selectedDestination ? getRelatedZones(selectedDestination, false, filteredTrips) : [],
-    [selectedDestination, filteredTrips]
+    selectedDestination ? [] : [],
+    [selectedDestination]
   );
 
   return (

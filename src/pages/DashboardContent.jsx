@@ -1,25 +1,19 @@
-import React, { useMemo, useRef, useState, useTransition, useEffect } from "react";
-import { useTravelDataFromAPI } from "../hooks/useTravelDataFromAPI";
-import FiltersPanel           from "./FiltersPanel";
-import LoadingOverlay         from "../components/LoadingOverlay";
-import KpisPanel              from "./KpisPanel";
-import MapsPanel              from "./MapsPanel";
-import { COMPARE_COLORS } from "../config/constants";
-import AnalysisViewsPanel     from "./AnalysisViewsPanel";
-import MobilityPatternsPanel  from "./MobilityPatternsPanel";
-import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
-import ExportActions          from "../components/ExportActions";
-import { exportToExcel, exportToPdf } from "../utils/exportUtils";
+import { useMemo, useRef, useState, useTransition, useEffect } from "react";
 
-// ═══════════════════════════════════════════════════════════
-// MAPEO indicador → dato que consume cada componente hijo
-// ─────────────────────────────────────────────────────────
-// Ajustar los VALUES (strings derecha) al nombre real que
-// retorna  GET /api/metadata/indicadores
-//
-// Los keys de CHARTS_VIAJES y CHARTS_VEHICULAR coinciden con
-// el "targetField" que usa buildComparisonSeries en AnalysisViewsPanel.
-// ═══════════════════════════════════════════════════════════
+import LoadingOverlay from "../components/LoadingOverlay";
+import ExportActions from "../components/ExportActions";
+import { exportToExcel, exportToPdf } from "../utils/exportUtils";
+import { COMPARE_COLORS } from "../config/constants";
+import { useTravelDataFromAPI } from "../hooks/useTravelDataFromAPI";
+
+import FiltersPanel from "./FiltersPanel";
+import KpisPanel from "./KpisPanel";
+import MapsPanel from "./MapsPanel";
+import AnalysisViewsPanel from "./AnalysisViewsPanel";
+import MobilityPatternsPanel from "./MobilityPatternsPanel";
+import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
+
+
 const IND = {
   /* análisis – viajes */
   modo:            "modo_principal",
@@ -37,10 +31,7 @@ const IND = {
   duracionModo:    "duracion_por_modo",
   frecuencia:      "frecuencia_viaje",
   /* mapas */
-  origenDestino:   "origen_destino",
-  /* KPIs */
-  kpiGeneral:      "kpi_general",
-  kpiMotorizacion: "kpi_motorizacion",
+  origenDestino:   "origen_destino"
 };
 
 export default function DashboardSection() {
@@ -54,13 +45,17 @@ export default function DashboardSection() {
     setTemaValues,
     setActiveTema,
     indicadoresData,
+    indicadoresGlobales,
     detailedData,
     compareMode,
     setCompareMode,
     isLoading,
   } = useTravelDataFromAPI();
 
-  /* ── UI local ──────────────────────────────── */
+
+  /* ========================================================
+   CONSTRUCCIÓN DE LA INTERFAZ Y SU COMPORTAMIENTO
+   ======================================================== */
   const [activeThematicKey,  setActiveThematicKey]  = useState(null);
   const [localSelectedValues, setLocalSelectedValues] = useState([]);
   const [isPending, startTransition] = useTransition();
@@ -74,6 +69,7 @@ export default function DashboardSection() {
   const viajesSectionRef     = useRef(null);
   const vehicularSectionRef  = useRef(null);
 
+  // Mapeo para desplazamiento sobre la página con los botones del índice
   const sectionOptions = [
     { key: "stats",      label: "Estadísticas generales" },
     { key: "indicators", label: "Indicadores de motorización" },
@@ -93,7 +89,7 @@ export default function DashboardSection() {
     sectionRefs[key]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // ── thematicConfig construido desde temas del API ─
+  // thematicConfig construido desde temas del API
   const thematicConfig = useMemo(
     () => {
       const config = temas.map(({ id, nombre }) => ({
@@ -114,12 +110,11 @@ export default function DashboardSection() {
       setLocalSelectedValues(first.options);  // UI muestra todos seleccionados
       // IMPORTANTE: también actualizar el tema activo en el hook
       setActiveTema(first.key);
-      // NO enviar detalles inicialmente ([] = todos)
       setTemaValues(first.key, []);
     }
   }, [thematicConfig, activeThematicKey, setActiveTema, setTemaValues]);
 
-  // Sincronizar opciones cuando cambie el tema activo (ej: metadata se actualiza)
+  // Sincronizar opciones cuando cambie el tema activo -> Actualiza Metadata
   const activeThematic = thematicConfig.find((t) => t.key === activeThematicKey);
   useEffect(() => {
     if (activeThematic?.options?.length && !compareMode) {
@@ -127,11 +122,11 @@ export default function DashboardSection() {
     }
   }, [activeThematic, compareMode]);
 
-  /* ── extraer datos de indicadores ─────────────
-       ind("nombre") retorna la respuesta del backend
-       para ese indicador, o un array vacío.        */
+
+  /* =====================================================
+   EXTRACCIÓN DE LOS DATOS DE INDICADORES
+   =================================================== */
   const ind  = (nombre) => indicadoresData[nombre] ?? [];
-  const indN = (nombre) => indicadoresData[nombre] ?? null;  // para KPIs (objetos)
 
   const modeData               = ind(IND.modo);
   const purposeData            = ind(IND.motivo);
@@ -146,10 +141,33 @@ export default function DashboardSection() {
   const durationByModeData     = ind(IND.duracionModo);
   const tripFrequencyData      = ind(IND.frecuencia);
   const origenDestinoData      = ind(IND.origenDestino);
-  const kpisData               = indN(IND.kpiGeneral);
-  const kpisMotorizacion       = indN(IND.kpiMotorizacion);
 
-  /* ── helpers derivados ────────────────────────  */
+  const pickRange = (source, from, to) =>
+    Object.fromEntries(
+      Object.entries(source || {})
+        .filter(([key]) => {
+          const n = Number(key);
+          return n >= from && n <= to;
+        })
+    );
+
+  const kpisGenerales = useMemo(() => {
+    return pickRange(indicadoresData, 1, 8);
+  }, [indicadoresData]);
+  const kpisGlobales = useMemo(() => {
+    return pickRange(indicadoresGlobales, 1, 8);
+  }, [indicadoresGlobales]);
+
+  const kpisMotorizacion = useMemo(() => {
+    return pickRange(indicadoresData, 9, 14);
+  }, [indicadoresData]);
+  const kpisMotorizacionGlobales = useMemo(() => {
+    return pickRange(indicadoresGlobales, 9, 14);
+  }, [indicadoresGlobales]);
+
+  /* ========================================================
+   FUNCIONES DE APOYO
+   ======================================================= */
   const isAllSelected =
     (activeThematic?.options || []).length === (localSelectedValues || []).length;
 
@@ -161,10 +179,7 @@ export default function DashboardSection() {
     [localSelectedValues]
   );
 
-  // vehicleRates derivado de kpisMotorizacion (mismo que antes)
-  const vehicleRates = kpisMotorizacion || { autos: 0, motos: 0, bicicletas: 0 };
-
-  /* ── cambio de tema temático ──────────────────  */
+  // Cambio de tema temático
   const handleThematicKeyChange = (newKey) => {
     const t = thematicConfig.find((c) => c.key === newKey);
     const allOptions = t?.options || [];
@@ -173,11 +188,9 @@ export default function DashboardSection() {
     setLocalSelectedValues(allOptions);  // UI muestra todos seleccionados
 
     startTransition(() => {
-      // IMPORTANTE: actualizar el tema activo en el backend
-      // Esto afecta el parámetro "tema" en la query
+      // Actualizar el tema activo en el backend y en la query
       setActiveTema(newKey);
-      
-      // NO enviar detalles al cambiar tema ([] = todos)
+
       // Solo se enviarán detalles cuando el usuario haga toggle de valores
       setTemaValues(newKey, []);
       
@@ -186,7 +199,7 @@ export default function DashboardSection() {
     });
   };
 
-  /* ── conmutador AGRUPAR ↔ COMPARAR ──────────── */
+  // Conmutador entre modos AGRUPAR y COMPARAR
   const handleModeChange = (enterCompare) => {
     if (enterCompare) {
       // Entrar a modo COMPARAR
@@ -204,22 +217,20 @@ export default function DashboardSection() {
       setLocalSelectedValues(opciones);
       
       startTransition(() => {
-        // Cambiar el modo (afecta el endpoint usado)
+        // Cambiar el modo -> Altera el endpoint de consulta
         setCompareMode(true);
         // Actualizar los filtros con los valores seleccionados
-        // (esto es necesario porque en AGRUPAR podría estar vacío = todos)
         setTemaValues(activeThematicKey, opciones);
       });
     } else {
-      // Salir a modo AGRUPAR
-      // Mantener los valores seleccionados como están
+      // Salir a modo AGRUPAR y mantener los valores seleccionados como están
       startTransition(() => {
         setCompareMode(false);
       });
     }
   };
 
-  /* ── toggle individual de valor temático ─────── */
+  // Toggle individual de valor temático
   const toggleThematicValue = (value) => {
     const current = localSelectedValues || [];
     const next    = current.includes(value)
@@ -228,15 +239,16 @@ export default function DashboardSection() {
 
     setLocalSelectedValues(next);
     
-    // SIEMPRE actualizar los filtros del backend
-    // Los detalles seleccionados afectan el query en ambos modos (AGRUPAR y COMPARAR)
-    // La diferencia es solo el endpoint que se usa, no los parámetros
+    // Actualizar los filtros del backend para el endpoint en uso
     startTransition(() => {
       setTemaValues(activeThematicKey, next);
     });
   };
 
-  /* ── export ───────────────────────────────────── */
+
+  /* =================================================== 
+   CONFIGURACIÓN DE EXPORTABLES
+   =================================================== */
   const toLabelRows = (data, lk = "label", vk = "value") =>
     (data || []).map((item) => ({
       etiqueta: item[lk] ?? item.name ?? "",
@@ -266,12 +278,15 @@ export default function DashboardSection() {
     exportToPdf(dashboardRef.current, `${d}_EncuestasHogares_AMVA2025`);
   };
 
-  /* ── render ───────────────────────────────────── */
+
+  /* =======================================================
+   RETORNO - RENDERIZACIÓN DEL COMPONENTE
+   ======================================================= */
   return (
     <main style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
 
-        {/* ── panel de filtros ── */}
+        {/* Panel de filtros */}
         <FiltersPanel
           municipios={municipios}
           filters={filters}
@@ -299,7 +314,7 @@ export default function DashboardSection() {
           }
         />
 
-        {/* ── contenido principal ── */}
+        {/* Contenido principal */}
         <div style={{ position: "relative" }} ref={dashboardRef}>
           <LoadingOverlay
             visible={isPending || isLoading}
@@ -308,14 +323,17 @@ export default function DashboardSection() {
 
           {/* KPIs generales */}
           <div ref={statsSectionRef}>
-            <KpisPanel kpisData={kpisData} />
+            <KpisPanel 
+              kpisData={kpisGenerales} 
+              kpisGlobales={kpisGlobales}
+            />
           </div>
 
           {/* Indicadores de motorización */}
           <div ref={indicatorsSectionRef}>
             <MobilityIndicatorsPanel
-              vehicleRates={vehicleRates}
-              kpisMotorizacion={kpisMotorizacion}
+              kpisData={kpisMotorizacion}
+              kpisGlobales={kpisMotorizacionGlobales}
             />
           </div>
 

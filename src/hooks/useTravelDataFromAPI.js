@@ -2,27 +2,31 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { urls, buildQueryParams, fetchJSON } from "../config/api";
 
 export function useTravelDataFromAPI() {
-  /* ═══ metadata ═══════════════════════════════ */
-  const [municipios,        setMunicipios]        = useState([]);
-  const [temas,             setTemas]             = useState([]); 
-  const [temasDetalles,     setTemasDetalles]     = useState({});
-  const [indicadorNombres,  setIndicadorNombres]  = useState([]);
-  const [metadataLoaded,    setMetadataLoaded]    = useState(false);
+  // Hooks de estado para Metadata
+  const [municipios, setMunicipios] = useState([]);
+  const [temas, setTemas] = useState([]); 
+  const [temasDetalles, setTemasDetalles] = useState({});
+  const [indicadorNombres, setIndicadorNombres] = useState([]);
+  const [metadataLoaded, setMetadataLoaded] = useState(false);
 
-  /* ═══ filtros ════════════════════════════════ */
-  const [municipio,          setMunicipio]          = useState("AMVA General");
-  const [municipio_destino,  setMunicipioDestino]   = useState("AMVA General");
-  const [temasFiltros,       _setTemasFiltros]      = useState({});
+  // Hooks de estado para Filtros
+  const [municipio, setMunicipio] = useState("AMVA General");
+  const [municipio_destino, setMunicipioDestino] = useState("AMVA General");
+  const [macrozona_origen, setMacrozonaOrigen] = useState("");
+  const [macrozona_destino, setMacrozonaDestino] = useState("");
+  const [zona, setZona] = useState("");
+  const [temasFiltros, _setTemasFiltros] = useState({});
 
-  /* ═══ datos de indicadores ═══════════════════ */
-  const [indicadoresData,  setIndicadoresData]  = useState({});
-  const [detailedData,     setDetailedData]     = useState(null);
+  // Hooks de estado para Indicadores
+  const [indicadoresData, setIndicadoresData] = useState({});
+  const [indicadoresGlobales, setIndicadoresGlobales] = useState(null);
+  const [detailedData, setDetailedData] = useState(null);
 
-  /* ═══ estado de carga ════════════════════════ */
-  const [isLoading,  setIsLoading]  = useState(true);
-  const [error,      setError]      = useState(null);
+  // Hooks de estado para control de la carga
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  /* ═══ modo comparar ══════════════════════════ */
+  // Hooks de estado para control de Modo de Comparación
   const [compareMode,   setCompareMode]   = useState(false);
   const [compareTema,   setCompareTema]   = useState(null);
 
@@ -34,7 +38,10 @@ export function useTravelDataFromAPI() {
     }
   }, [temas, compareTema]);
 
-  // ── 1. Cargar metadata al montar (municipios, temas, indicadores) ──────────────
+
+  /* ========================================================
+   Carga de la metadata al montar la aplicación
+   ======================================================== */
   useEffect(() => {
     (async () => {
       try {
@@ -47,15 +54,14 @@ export function useTravelDataFromAPI() {
           fetchJSON(urls.indicadores()),
         ]);
 
-        // Extraer arrays de las respuestas (pueden venir envueltos en objetos)
+        // Extraer arrays de las respuestas
         const mArray = municipiosRaw?.municipios ?? municipiosRaw ?? [];
         const tArray = temasRaw?.temas ?? temasRaw ?? [];
         const iArray = indicadoresRaw?.ids_indicadores ?? indicadoresRaw?.indicadores ?? indicadoresRaw ?? []; 
 
         // normalizar municipios → string[]
         const mList = (Array.isArray(mArray) ? mArray : []).map((m) =>
-          typeof m === "string" ? m : (m.nombre ?? m.name ?? m.id)
-        );
+          typeof m === "string" ? m : (m.nombre ?? m.name ?? m.id));
         // Solo agregar "AMVA General" si no viene ya del backend
         const finalMunicipios = mList.includes("AMVA General") 
           ? mList 
@@ -90,7 +96,9 @@ export function useTravelDataFromAPI() {
     })();
   }, []);
 
-  // ── 1b. Cargar detalles de temas SOLO cuando `temas` ya esté disponible ─────────
+  /* =====================================================
+   Cargar los detalles de un tema una vez este ya haya cargado
+   ===================================================== */
   useEffect(() => {
     if (!temas || temas.length === 0) return;
     let mounted = true;
@@ -148,45 +156,54 @@ export function useTravelDataFromAPI() {
     return () => { mounted = false; };
   }, [temas]);
 
-  // ── query-string derivado ─────────────────────
-  // SIEMPRE envía: municipio + tema (el activo en el UI)
-  // SIEMPRE envía detalles si el usuario tiene valores seleccionados (independiente del modo)
-  const qs = useMemo(
-    () => {
-      // Validar que tenemos lo mínimo necesario
-      if (!municipio || !compareTema) {
-        return '';
-      }
+  /* =============================================================
+   Generación del Query String
+   ============================================================== */ 
+  const qs = useMemo(() => {
+    if (!municipio || !compareTema) return "";
 
-      const params = {
-        municipio,
-        tema: compareTema,
-      };
+    const params = {};
 
-      // Agregar detalles si hay valores seleccionados para el tema activo
-      // (independiente de si estamos en modo AGRUPAR o COMPARAR)
-      const valoresSeleccionados = temasFiltros[compareTema];
-      if (Array.isArray(valoresSeleccionados) && valoresSeleccionados.length > 0) {
-        params.detalles = valoresSeleccionados;
-      } else {
-        // sin detalles = todos
-      }
+    if (municipio) params.municipio = municipio;
+    if (compareTema) params.tema = compareTema;
 
-      return buildQueryParams(params);
-    },
-    [municipio, compareTema, temasFiltros]
-  );
+    const valoresSeleccionados = temasFiltros[compareTema];
 
-  // ── 2. Cargar todos los indicadores cuando cambie qs o el modo ─
+    if (Array.isArray(valoresSeleccionados) && valoresSeleccionados.length > 0) {
+      params.detalles = valoresSeleccionados.filter(Boolean);
+    }
+
+    return buildQueryParams(params);
+  }, [municipio, compareTema, temasFiltros]);
+
+  /* =============================================================
+   Carga de los datos desde el Backend mediante hook de efecto
+   ============================================================== */
   useEffect(() => {
-    if (!metadataLoaded || !indicadorNombres.length) {
-      return;
+    async function fetchGlobalKpis() {
+      const ids = [1,2,3,4,5,6,7,8,9,10,11,12,13,14];
+
+      const entries = await Promise.all(
+        ids.map(async (id) => {
+          const url = urls.agregado(id);
+          const res = await fetchJSON(url);
+
+          const transformed = transformAgregado(res, id);
+
+          return [id, transformed];
+        })
+      );
+
+      setIndicadoresGlobales(Object.fromEntries(entries));
     }
 
+    fetchGlobalKpis();
+  }, []);
+
+  useEffect(() => {
+    if (!metadataLoaded || !indicadorNombres.length) return;
     // No cargar si no tenemos query string válido (falta municipio o tema)
-    if (!qs) {
-      return;
-    }
+    if (!qs) return;
 
     // El modo determina el endpoint para usar
     const urlFn = compareMode ? urls.porDetalle : urls.agregado;
@@ -197,10 +214,27 @@ export function useTravelDataFromAPI() {
         const entries = await Promise.all(
           indicadorNombres.map(async (nombre) => {
             try {
-              const url = urlFn(nombre) + (qs ? `?${qs}` : "");
-              const data = await fetchJSON(url);
-              console.log(`Indicador cargado:`, data.datos);
-              return [nombre, data];
+              let finalQs = qs;
+
+              // CASO ESPECIAL: Indicador 15 susceptible a macrozona_origen y macrozona_destino
+              if (nombre === 15 || nombre === "15") {
+                const extraParams = {};
+
+                if (macrozona_origen) extraParams.origen = macrozona_origen;
+                if (macrozona_destino) extraParams.destino = macrozona_destino;
+
+                const extraQs = buildQueryParams(extraParams);
+                if (extraQs) finalQs = finalQs ? `${finalQs}&${extraQs}` : extraQs;
+              }
+
+              const url = urlFn(nombre) + (finalQs ? `?${finalQs}` : "");
+              const response = await fetchJSON(url);
+
+              const transformedData = compareMode
+                ? transformPerDetalle(response, nombre)
+                : transformAgregado(response, nombre);
+
+              return [nombre, transformedData];
             } catch (e) {
               console.error(`fetch indicador "${nombre}" (${compareMode ? "por-detalle" : "agregado"}) fallido:`, e);
               return [nombre, null];
@@ -225,7 +259,7 @@ export function useTravelDataFromAPI() {
         setIsLoading(false);
       }
     })();
-  }, [metadataLoaded, indicadorNombres, qs, compareMode, compareTema]);
+  }, [metadataLoaded, indicadorNombres, qs, compareMode, compareTema, macrozona_origen, macrozona_destino]);
 
   // Setters de filtro
   const setDestinationMunicipio = useCallback(
@@ -286,6 +320,7 @@ export function useTravelDataFromAPI() {
 
     /* datos */
     indicadoresData,
+    indicadoresGlobales,
     detailedData,
 
     /* estado */
@@ -298,38 +333,90 @@ function buildDetailedData(tema, indicadoresMap) {
   const comparaciones = {};
   comparaciones[tema] = {};
 
-  Object.entries(indicadoresMap).forEach(([nombre, raw]) => {
-    if (raw == null) return;
-    comparaciones[tema][nombre] = normalizeDetalle(raw);
+  Object.entries(indicadoresMap).forEach(([nombre, transformedData]) => {
+    if (transformedData == null) return;
+    // transformedData ya viene transformado por transformPerDetalle
+    // estructura: { "Campo de Gráfica": { "12-17": { valor, count, suma_bases }, ... } }
+    comparaciones[tema][nombre] = transformedData;
   });
 
   return { comparaciones };
 }
 
-function normalizeDetalle(raw) {
-  // Formato A: objeto plano { grupo: { categoría: valor } }
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    return raw;                       // ya en formato correcto
+function transformAgregado(response) {
+  if (!response || typeof response !== "object") return null;
+
+  // 🔹 Caso 1: indicador simple → { valor: number }
+  if (typeof response.valor === "number") {
+    return {
+      tipo: "simple",
+      value: response.valor,
+      nombre: response.nombre,
+    };
   }
 
-  // Formato B: array de registros
-  if (Array.isArray(raw)) {
-    const nested = {};
-    raw.forEach((item) => {
-      const grupo = String(
-        item.grupo ?? item.group ?? item.valor_tema ?? item.thematic_value ?? ""
-      );
-      const cat = String(
-        item.categoria ?? item.category ?? item.label ?? ""
-      );
-      const val = Number(
-        item.valor ?? item.value ?? item.porcentaje ?? 0
-      );
-      if (!nested[grupo]) nested[grupo] = {};
-      nested[grupo][cat] = val;
-    });
-    return nested;
+  // 🔹 Caso 2: indicador agrupado → { grupos: [{ criterio, valor }] }
+  if (Array.isArray(response.grupos)) {
+    return {
+      tipo: "agrupado",
+      nombre: response.nombre,
+      data: response.grupos.map(g => ({
+        label: g.criterio,
+        value: g.valor,
+      })),
+    };
   }
 
-  return {};
+  // 🔹 Caso 3: indicador 15 (matriz OD)
+  if (Array.isArray(response.matriz)) {
+    return {
+      tipo: "matriz",
+      nombre: response.nombre,
+      data: response.matriz,
+    };
+  }
+
+  return null;
+}
+
+function transformPerDetalle(response) {
+  if (!response || typeof response !== "object") return null;
+
+  // 🔹 Caso simple → { comparativo: [{ detalle, valor }] }
+  if (Array.isArray(response.comparativo)) {
+    return {
+      tipo: "comparativo_simple",
+      nombre: response.nombre,
+      data: response.comparativo.map(d => ({
+        label: d.detalle,
+        value: d.valor,
+      })),
+    };
+  }
+
+  // 🔹 Caso agrupado → { grupos: [{ grupo, comparativo: [...] }] }
+  if (Array.isArray(response.grupos)) {
+    return {
+      tipo: "comparativo_agrupado",
+      nombre: response.nombre,
+      data: response.grupos.map(g => ({
+        grupo: g.grupo,
+        data: g.comparativo.map(d => ({
+          label: d.detalle,
+          value: d.valor,
+        })),
+      })),
+    };
+  }
+
+  // 🔹 Caso especial indicador 15 → devuelve matriz igual que /agregado
+  if (Array.isArray(response.matriz)) {
+    return {
+      tipo: "matriz",
+      nombre: response.nombre,
+      data: response.matriz,
+    };
+  }
+
+  return null;
 }

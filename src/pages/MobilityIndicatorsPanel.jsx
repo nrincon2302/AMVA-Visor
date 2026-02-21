@@ -1,4 +1,3 @@
-import React from "react";
 import KpiCard from "../components/KpiCard";
 import {
   PRIMARY_GREEN,
@@ -9,22 +8,31 @@ import {
   BANNER_IMAGE_URL,
 } from "../config/constants";
 
-export default function MobilityIndicatorsPanel({ vehicleRates, filteredHouseholds = [] }) {
-  const autos = vehicleRates?.autos ?? 0;
-  const motos = vehicleRates?.motos ?? 0;
-  const bicicletas = vehicleRates?.bicicletas ?? 0;
-  const totalVehicles = filteredHouseholds.reduce(
-    (acc, household) => acc + (household.vehicleCount || 0),
-    0
-  );
-  const avgVehiclesPerHousehold = filteredHouseholds.length
-    ? totalVehicles / filteredHouseholds.length
-    : 0;
-  const vehicleList = filteredHouseholds.flatMap((household) => household.vehicles || []);
-  const cleanVehiclesCount = vehicleList.filter((vehicle) => vehicle.type === "Bicicleta").length;
-  const cleanVehiclesPct = vehicleList.length
-    ? (cleanVehiclesCount / vehicleList.length) * 100
-    : 0;
+export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales }) {
+  // Obtener los valores
+  const totalVehicles = Math.round(kpisData[9]?.value);
+  const avgVehiclesPerHousehold = kpisData[10]?.value;
+  const cleanVehiclesPct = 100*kpisData[11]?.value;
+  const autos = kpisData[12]?.value.toFixed(2);
+  const motos = kpisData[13]?.value.toFixed(2);
+  const bicicletas = kpisData[14]?.value.toFixed(2);
+
+  // Si se proporcionan valores globales para comparación, usarlos
+  const totalVehiclesGlobal = Math.round(kpisGlobales[9]?.value);
+  const avgVehiclesPerHouseholdGlobal = kpisGlobales[10]?.value;
+  const cleanVehiclesPctGlobal = 100*kpisGlobales[11]?.value;
+  const autosGlobal = kpisGlobales[12]?.value.toFixed(2);
+  const motosGlobal = kpisGlobales[13]?.value.toFixed(2);  
+  const bicicletasGlobal = kpisGlobales[14]?.value.toFixed(2);
+
+  const globalLabel = "Estadística global para Valle de Aburrá";
+
+  const formatDelta = (filtrado, global, unit) => {
+    if (!global || global === 0) return "N/A";
+    const pct = ((filtrado - global) / global) * 100;
+    const direction = pct >= 0 ? "más" : "menos";
+    return `${Math.abs(pct).toFixed(1)}% ${direction} ${unit}`;
+  };
 
   return (
     <section
@@ -40,40 +48,52 @@ export default function MobilityIndicatorsPanel({ vehicleRates, filteredHousehol
       <h3 style={{ marginTop: 0 }}>Indicadores de motorización</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12 }}>
         <KpiCard
-          label="Número total de vehículos propios (toda tipología)"
+          label={kpisData[9]?.nombre ?? "Número total de vehículos propios (toda tipología)"}
           value={totalVehicles.toLocaleString()}
+          subLabel={totalVehicles ? `${globalLabel}: ${(totalVehiclesGlobal || 0).toLocaleString()}` : undefined}
           headerColor={PRIMARY_GREEN}
           bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={totalVehicles ? [formatDelta(totalVehicles, totalVehiclesGlobal, "vehículos")] : []}
         />
         <KpiCard
-          label="Número promedio de vehículos por hogar"
-          value={avgVehiclesPerHousehold ? avgVehiclesPerHousehold.toFixed(2) : "0.00"}
+          label={kpisData[10]?.nombre ?? "Número promedio de vehículos por hogar"}
+          value={avgVehiclesPerHousehold.toFixed(3)}
+          subLabel={avgVehiclesPerHousehold ? `${globalLabel}: ${(avgVehiclesPerHouseholdGlobal || 0).toLocaleString()}` : undefined}
           headerColor={TERTIARY_PINK}
           bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={avgVehiclesPerHousehold ? [formatDelta(avgVehiclesPerHousehold, avgVehiclesPerHouseholdGlobal, "vehículos")] : []}
         />
         <KpiCard
-          label="% de vehículos que operan con tecnologías limpias"
-          value={`${cleanVehiclesPct.toFixed(1)}%`}
+          label={kpisData[11]?.nombre ?? "% de vehículos que operan con tecnologías limpias"}
+          value={`${cleanVehiclesPct.toFixed(2)}%`}
+          subLabel={cleanVehiclesPct ? `${globalLabel}: ${(cleanVehiclesPctGlobal || 0).toLocaleString()}` : undefined}
           headerColor={TERTIARY_BLUE}
           bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={cleanVehiclesPct ? [formatDelta(cleanVehiclesPct, cleanVehiclesPctGlobal, "vehículos")] : []}
         />
         <KpiCard
-          label="Autos por 1000 habitantes"
-          value={autos.toFixed(1)}
+          label={kpisData[12]?.nombre ?? "Autos por 1000 habitantes"}
+          value={autos}
+          subLabel={autos ? `${globalLabel}: ${(autosGlobal || 0).toLocaleString()}` : undefined}
           headerColor={TERTIARY_ORANGE}
           bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={autos ? [formatDelta(autos, autosGlobal, "automóviles")] : []}
         />
         <KpiCard
-          label="Motocicletas por 1000 habitantes"
-          value={motos.toFixed(1)}
+          label={kpisData[13]?.nombre ?? "Motocicletas por 1000 habitantes"}
+          value={motos}
+          subLabel={motos ? `${globalLabel}: ${(motosGlobal || 0).toLocaleString()}` : undefined}
           headerColor={SECONDARY_GREEN}
           bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={motos ? [formatDelta(motos, motosGlobal, "motocicletas")] : []}
         />
         <KpiCard
-          label="Bicicletas por 1000 habitantes"
-          value={bicicletas.toFixed(1)}
+          label={kpisData[14]?.nombre ?? "Bicicletas por 1000 habitantes"}
+          value={bicicletas}
+          subLabel={bicicletas ? `${globalLabel}: ${(bicicletasGlobal || 0).toLocaleString()}` : undefined}
           headerColor={PRIMARY_GREEN}
           bannerImageUrl={BANNER_IMAGE_URL}
+          contextLines={bicicletas ? [formatDelta(bicicletas, bicicletasGlobal, "bicicletas")] : []}
         />
       </div>
     </section>
