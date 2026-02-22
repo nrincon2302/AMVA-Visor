@@ -293,6 +293,10 @@ export function useTravelDataFromAPI() {
     temasFiltros,
   }), [municipio, municipio_destino, temasFiltros]);
 
+  const mobilityPatternsData = useMemo(() => {
+    return buildMobilityPatternsData(indicadoresData);
+  }, [indicadoresData]);
+
 
   return {
     /* metadata */
@@ -321,6 +325,7 @@ export function useTravelDataFromAPI() {
     /* datos */
     indicadoresData,
     indicadoresGlobales,
+    mobilityPatternsData,
     detailedData,
 
     /* estado */
@@ -419,4 +424,104 @@ function transformPerDetalle(response) {
   }
 
   return null;
+}
+
+/* ============================================================
+   BUILD MOBILITY PATTERNS DATA (Indicadores 16–26)
+============================================================ */
+
+function buildMobilityPatternsData(indicadoresData) {
+  if (!indicadoresData) return null;
+
+  /* =============================
+    HOURLY SERIES (16–19)
+  ============================= */
+  const ind16 = indicadoresData[16];
+  const ind17 = indicadoresData[17];
+  const ind18 = indicadoresData[18];
+  const ind19 = indicadoresData[19];
+
+  let hourlyModeData = [];
+
+  if (
+    ind16?.tipo === "agrupado" &&
+    ind17?.tipo === "agrupado" &&
+    ind18?.tipo === "agrupado" &&
+    ind19?.tipo === "agrupado"
+  ) {
+    const baseLabels = ind16.data.map(d => d.label);
+
+    hourlyModeData = baseLabels.map(label => {
+      const informalV = Math.round(ind16.data.find(d => d.label === label)?.value) ?? 0;
+      const publicV = Math.round(ind17.data.find(d => d.label === label)?.value) ?? 0;
+      const privateV = Math.round(ind18.data.find(d => d.label === label)?.value) ?? 0;
+      const nonMotorizedV = Math.round(ind19.data.find(d => d.label === label)?.value) ?? 0;
+
+      return {
+        hour: label,
+        informal: informalV,
+        public: publicV,
+        private: privateV,
+        nonMotorized: nonMotorizedV,
+      };
+    });
+  }
+
+  /* =============================
+    Indicador 20 (%)
+  ============================= */
+  const durationHistogramData =
+    indicadoresData[20]?.tipo === "agrupado"
+      ? indicadoresData[20].data.map(d => ({
+          label: d.label,
+          value: d.value * 100,
+        }))
+      : [];
+
+  /* =============================
+    Indicador 21 (%)
+  ============================= */
+  const tripFrequencyData =
+    indicadoresData[21]?.tipo === "agrupado"
+      ? indicadoresData[21].data.map(d => ({
+          label: d.label,
+          value: d.value * 100,
+        }))
+      : [];
+
+  /* =============================
+    Indicador 22 (%)
+  ============================= */
+  const tripsByEstratoData =
+    indicadoresData[22]?.tipo === "agrupado"
+      ? indicadoresData[22].data.map(d => ({
+          label: "Estrato " + d.label,
+          value: d.value * 100,
+        }))
+      : [];
+
+  /* =============================
+    Indicadores 23–26 (simples)
+  ============================= */
+  const labelsDuracionModo = [
+    "Transporte público",
+    "Transporte privado",
+    "Transporte Informal",
+    "Modo no motorizado"
+  ];
+
+  const idsDuracionModo = [23, 24, 25, 26];
+
+  const durationByModeGroupData = idsDuracionModo.map((id, index) => ({
+    label: labelsDuracionModo[index],
+    value: indicadoresData[id]?.value ?? 0,
+  }));
+
+  return {
+    hourlyModeData,
+    durationHistogramData,
+    tripFrequencyData,
+    tripsByEstratoData,
+    durationByModeGroupData,
+  };
 }

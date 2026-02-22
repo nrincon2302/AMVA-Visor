@@ -1,13 +1,13 @@
 import React from "react";
 import BarChartCard from "../components/BarChartCard";
 import HourlyModeChartCard from "../components/HourlyModeChartCard";
-import { SECONDARY_GREEN, TERTIARY_BLUE, TERTIARY_ORANGE, TERTIARY_YELLOW } from "../config/constants";
+import { SECONDARY_GREEN, TERTIARY_BLUE, TERTIARY_ORANGE, TERTIARY_PINK } from "../config/constants";
 
 const HOURLY_SERIES = [
-  { key: "total", label: "Total", color: SECONDARY_GREEN },
+  { key: "informal", label: "Viajes en transporte informal", color: SECONDARY_GREEN },
   { key: "public", label: "Viajes en transporte público", color: TERTIARY_BLUE },
   { key: "private", label: "Viajes en transporte privado", color: TERTIARY_ORANGE },
-  { key: "nonMotorized", label: "Viajes en modos no motorizados", color: TERTIARY_YELLOW },
+  { key: "nonMotorized", label: "Viajes en modos no motorizados", color: TERTIARY_PINK },
 ];
 
 export default function MobilityPatternsPanel({

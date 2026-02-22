@@ -46,6 +46,7 @@ export default function DashboardSection() {
     setActiveTema,
     indicadoresData,
     indicadoresGlobales,
+    mobilityPatternsData,
     detailedData,
     compareMode,
     setCompareMode,
@@ -138,8 +139,6 @@ export default function DashboardSection() {
   const vehicleModelData       = ind(IND.modeloVehiculo);
   const hourlyModeData         = ind(IND.horaria);
   const durationHistogramData  = ind(IND.duracion);
-  const durationByModeData     = ind(IND.duracionModo);
-  const tripFrequencyData      = ind(IND.frecuencia);
   const origenDestinoData      = ind(IND.origenDestino);
 
   const pickRange = (source, from, to) =>
@@ -348,10 +347,11 @@ export default function DashboardSection() {
           {/* Patrones de movilidad */}
           <div ref={mobilitySectionRef}>
             <MobilityPatternsPanel
-              hourlyModeData={hourlyModeData}
-              durationHistogramData={durationHistogramData}
-              durationByModeGroupData={durationByModeData}
-              tripFrequencyData={tripFrequencyData}
+              hourlyModeData={mobilityPatternsData?.hourlyModeData}
+              durationHistogramData={mobilityPatternsData?.durationHistogramData}
+              tripFrequencyData={mobilityPatternsData?.tripFrequencyData}
+              tripsByEstratoData={mobilityPatternsData?.tripsByEstratoData}
+              durationByModeGroupData={mobilityPatternsData?.durationByModeGroupData}
             />
           </div>
 
