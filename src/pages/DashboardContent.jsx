@@ -1,194 +1,290 @@
-import React, { useMemo, useRef, useState, useTransition } from "react";
-import { useTravelCrossfilterRecharts } from "../hooks/useTravelCrossfilterRecharts";
-import FiltersPanel from "./FiltersPanel";
+import { useMemo, useRef, useState, useTransition, useEffect } from "react";
+
 import LoadingOverlay from "../components/LoadingOverlay";
+import ExportActions from "../components/ExportActions";
+import { exportToExcel, exportToPdf } from "../utils/exportUtils";
+import { COMPARE_COLORS } from "../config/constants";
+import { useTravelDataFromAPI } from "../hooks/useTravelDataFromAPI";
+
+import FiltersPanel from "./FiltersPanel";
 import KpisPanel from "./KpisPanel";
 import MapsPanel from "./MapsPanel";
-import { COMPARE_COLORS, PRIMARY_GREEN } from "../config/constants";
 import AnalysisViewsPanel from "./AnalysisViewsPanel";
 import MobilityPatternsPanel from "./MobilityPatternsPanel";
 import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
-import ExportActions from "../components/ExportActions";
-import { exportToExcel, exportToPdf } from "../utils/exportUtils";
+
+
+const IND = {
+  /* análisis – viajes */
+  modo:            "modo_principal",
+  motivo:          "motivo_viaje",
+  etapas:          "etapas",
+  motivoNoViaje:   "motivo_no_viaje",
+  /* análisis – vehicular */
+  tenencia:        "tenencia_vehicular",
+  tipoVehiculo:    "tipo_vehiculo",
+  modeloVehiculo:  "modelo_vehiculo",
+  /* patrones de movilidad */
+  horaria:         "distribucion_horaria",
+  duracion:        "duracion_viaje",
+  duracionModo:    "duracion_por_modo",
+  frecuencia:      "frecuencia_viaje",
+  /* mapas */
+  origenDestino:   "origen_destino"
+};
 
 export default function DashboardSection() {
   const {
-    filters,
     municipios,
+    temas,
+    thematicOptions,
+    filters,
     setMunicipio,
     setDestinationMunicipio,
-    setThematicValues,
-    filteredTrips,
-    filteredPersons,
-    filteredPersonsBase,
-    filteredHouseholds,
-    modeData,
-    stageData,
-    purposeData,
-    noTravelReasonData,
-    populationInterestData,
-    vehicleTenureData,
-    vehicleTypeData,
-    vehicleModelData,
-    geoHourlyModeData,
-    geoDurationHistogramData,
-    geoDurationByModeGroupData,
-    geoTripsByEstratoData,
-    geoTripFrequencyData,
-    geoVehicleRates,
-    macroHeatData,
+    setTemaValues,
+    setActiveTema,
+    indicadoresData,
+    indicadoresGlobales,
+    mobilityPatternsData,
+    analysisViewsData,
+    detailedData,
+    compareMode,
+    setCompareMode,
     isLoading,
-    thematicOptions,
-    trips,
-    households,
-    persons,
-  } = useTravelCrossfilterRecharts();
+  } = useTravelDataFromAPI();
 
-  const [activeThematicKey, setActiveThematicKey] = useState("estrato");
-  const [isCompareMode, setIsCompareMode] = useState(false);
-  const [localSelectedValues, setLocalSelectedValues] = useState(
-    thematicOptions.estrato || []
-  );
+
+  /* ========================================================
+   CONSTRUCCIÓN DE LA INTERFAZ Y SU COMPORTAMIENTO
+   ======================================================== */
+  const [activeThematicKey,  setActiveThematicKey]  = useState(null);
+  const [localSelectedValues, setLocalSelectedValues] = useState([]);
   const [isPending, startTransition] = useTransition();
   const [activeSection, setActiveSection] = useState("stats");
-  const dashboardRef = useRef(null);
-  const statsSectionRef = useRef(null);
+
+  const dashboardRef         = useRef(null);
+  const statsSectionRef      = useRef(null);
   const indicatorsSectionRef = useRef(null);
-  const mapsSectionRef = useRef(null);
-  const mobilitySectionRef = useRef(null);
-  const viajesSectionRef = useRef(null);
-  const vehicularSectionRef = useRef(null);
+  const mapsSectionRef       = useRef(null);
+  const mobilitySectionRef   = useRef(null);
+  const viajesSectionRef     = useRef(null);
+  const vehicularSectionRef  = useRef(null);
 
+  // Mapeo para desplazamiento sobre la página con los botones del índice
   const sectionOptions = [
-    { key: "stats", label: "Estadísticas generales" },
+    { key: "stats",      label: "Estadísticas generales" },
     { key: "indicators", label: "Indicadores de motorización" },
-    { key: "maps", label: "Distribución geográfica" },
-    { key: "mobility", label: "Patrones de Movilidad" },
-    { key: "viajes", label: "Características de los viajes" },
-    { key: "vehicular", label: "Vehículos por hogar" },
+    { key: "maps",       label: "Distribución geográfica" },
+    { key: "mobility",   label: "Patrones de Movilidad" },
+    { key: "viajes",     label: "Características de los viajes" },
+    { key: "vehicular",  label: "Vehículos por hogar" },
   ];
-
   const sectionRefs = {
-    stats: statsSectionRef,
-    indicators: indicatorsSectionRef,
-    maps: mapsSectionRef,
-    mobility: mobilitySectionRef,
-    viajes: viajesSectionRef,
-    vehicular: vehicularSectionRef,
+    stats: statsSectionRef, indicators: indicatorsSectionRef,
+    maps: mapsSectionRef,   mobility: mobilitySectionRef,
+    viajes: viajesSectionRef, vehicular: vehicularSectionRef,
   };
 
   const handleSectionChange = (key) => {
     setActiveSection(key);
-    const targetRef = sectionRefs[key];
-    if (targetRef?.current) {
-      targetRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    sectionRefs[key]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // thematicConfig construido desde temas del API
+  const thematicConfig = useMemo(
+    () => {
+      const config = temas.map(({ id, nombre }) => ({
+        key:     id,
+        label:   nombre,
+        options: thematicOptions[id] || [],
+      }));
+      return config; 
+    },
+    [temas, thematicOptions]
+  );
+
+  // Inicializar activeThematicKey cuando temas llega del backend
+  useEffect(() => {
+    if (thematicConfig.length && !activeThematicKey) {
+      const first = thematicConfig[0];
+      setActiveThematicKey(first.key);
+      setLocalSelectedValues(first.options);  // UI muestra todos seleccionados
+      // IMPORTANTE: también actualizar el tema activo en el hook
+      setActiveTema(first.key);
+      setTemaValues(first.key, []);
+    }
+  }, [thematicConfig, activeThematicKey, setActiveTema, setTemaValues]);
+
+  // Sincronizar opciones cuando cambie el tema activo -> Actualiza Metadata
+  const activeThematic = thematicConfig.find((t) => t.key === activeThematicKey);
+  useEffect(() => {
+    if (activeThematic?.options?.length && !compareMode) {
+      setLocalSelectedValues(activeThematic.options);
+    }
+  }, [activeThematic, compareMode]);
+
+
+  /* =====================================================
+   EXTRACCIÓN DE LOS DATOS DE INDICADORES
+   =================================================== */
+  const ind  = (nombre) => indicadoresData[nombre] ?? [];
+
+  const modeData               = ind(IND.modo);
+  const purposeData            = ind(IND.motivo);
+  const stageData              = ind(IND.etapas);
+  const noTravelReasonData     = ind(IND.motivoNoViaje);
+  const vehicleTenureData      = ind(IND.tenencia);
+  const vehicleTypeData        = ind(IND.tipoVehiculo);
+  const vehicleModelData       = ind(IND.modeloVehiculo);
+  const hourlyModeData         = ind(IND.horaria);
+  const durationHistogramData  = ind(IND.duracion);
+  const origenDestinoData      = ind(IND.origenDestino);
+
+  const pickRange = (source, from, to) =>
+    Object.fromEntries(
+      Object.entries(source || {})
+        .filter(([key]) => {
+          const n = Number(key);
+          return n >= from && n <= to;
+        })
+    );
+
+  const kpisGenerales = useMemo(() => {
+    return pickRange(indicadoresData, 1, 8);
+  }, [indicadoresData]);
+  const kpisGlobales = useMemo(() => {
+    return pickRange(indicadoresGlobales, 1, 8);
+  }, [indicadoresGlobales]);
+
+  const kpisMotorizacion = useMemo(() => {
+    return pickRange(indicadoresData, 9, 14);
+  }, [indicadoresData]);
+  const kpisMotorizacionGlobales = useMemo(() => {
+    return pickRange(indicadoresGlobales, 9, 14);
+  }, [indicadoresGlobales]);
+
+  /* ========================================================
+   FUNCIONES DE APOYO
+   ======================================================= */
+  const isAllSelected =
+    (activeThematic?.options || []).length === (localSelectedValues || []).length;
+
+  const selectedColorMap = useMemo(
+    () =>
+      new Map(
+        (localSelectedValues || []).slice(0, 3).map((v, i) => [v, COMPARE_COLORS[i]])
+      ),
+    [localSelectedValues]
+  );
+
+  // Cambio de tema temático
+  const handleThematicKeyChange = (newKey) => {
+    const t = thematicConfig.find((c) => c.key === newKey);
+    const allOptions = t?.options || [];
+
+    setActiveThematicKey(newKey);
+    setLocalSelectedValues(allOptions);  // UI muestra todos seleccionados
+
+    startTransition(() => {
+      // Actualizar el tema activo en el backend y en la query
+      setActiveTema(newKey);
+
+      // Solo se enviarán detalles cuando el usuario haga toggle de valores
+      setTemaValues(newKey, []);
+      
+      // Si estábamos en modo comparar, salir (volver a modo AGRUPAR)
+      if (compareMode) setCompareMode(false);
+    });
+  };
+
+  // Conmutador entre modos AGRUPAR y COMPARAR
+  const handleModeChange = (enterCompare) => {
+    if (enterCompare) {
+      // Entrar a modo COMPARAR
+      const current = localSelectedValues || [];
+      
+      // Si no hay valores seleccionados (todos), tomar los primeros 3 de las opciones
+      let opciones;
+      if (current.length === 0) {
+        opciones = (activeThematic?.options || []).slice(0, 3);
+      } else {
+        // Limitar a máximo 3 valores si hay más
+        opciones = current.length > 3 ? current.slice(0, 3) : current;
+      }
+      
+      setLocalSelectedValues(opciones);
+      
+      startTransition(() => {
+        // Cambiar el modo -> Altera el endpoint de consulta
+        setCompareMode(true);
+        // Actualizar los filtros con los valores seleccionados
+        setTemaValues(activeThematicKey, opciones);
+      });
+    } else {
+      // Salir a modo AGRUPAR y mantener los valores seleccionados como están
+      startTransition(() => {
+        setCompareMode(false);
+      });
     }
   };
 
-  const toLabelRows = (data, labelKey = "label", valueKey = "value") =>
+  // Toggle individual de valor temático
+  const toggleThematicValue = (value) => {
+    const current = localSelectedValues || [];
+    const next    = current.includes(value)
+      ? current.filter((x) => x !== value)
+      : [...current, value];
+
+    setLocalSelectedValues(next);
+    
+    // Actualizar los filtros del backend para el endpoint en uso
+    startTransition(() => {
+      setTemaValues(activeThematicKey, next);
+    });
+  };
+
+
+  /* =================================================== 
+   CONFIGURACIÓN DE EXPORTABLES
+   =================================================== */
+  const toLabelRows = (data, lk = "label", vk = "value") =>
     (data || []).map((item) => ({
-      etiqueta: item[labelKey] ?? item.name ?? item[0],
-      valor: item[valueKey] ?? item.value ?? item[1],
+      etiqueta: item[lk] ?? item.name ?? "",
+      valor:    item[vk] ?? item.value ?? 0,
     }));
 
   const buildSheets = () => [
-    { name: "Modo principal", rows: toLabelRows(modeData) },
-    { name: "Motivo de viaje", rows: toLabelRows(purposeData) },
-    { name: "Etapas", rows: toLabelRows(stageData) },
-    { name: "Motivo de no viaje", rows: toLabelRows(noTravelReasonData) },
-    { name: "Tenencia vehicular", rows: toLabelRows(vehicleTenureData) },
-    { name: "Tipo de vehículo", rows: toLabelRows(vehicleTypeData) },
-    { name: "Modelo de vehículo", rows: toLabelRows(vehicleModelData) },
-    { name: "Viajes por estrato", rows: toLabelRows(geoTripsByEstratoData) },
-    { name: "Duración viajes", rows: toLabelRows(geoDurationHistogramData) },
-    { name: "Distribución horaria", rows: geoHourlyModeData || [] },
-    {
-      name: "Origen macrozonas",
-      rows: (macroHeatData?.origin || []).map((item) => ({
-        macrozona: item.name ?? item.zone,
-        viajes: item.value ?? item.trips ?? 0,
-      })),
-    },
-    {
-      name: "Destino macrozonas",
-      rows: (macroHeatData?.destination || []).map((item) => ({
-        macrozona: item.name ?? item.zone,
-        viajes: item.value ?? item.trips ?? 0,
-      })),
-    },
+    { name: "Modo principal",          rows: toLabelRows(modeData) },
+    { name: "Motivo de viaje",         rows: toLabelRows(purposeData) },
+    { name: "Etapas",                  rows: toLabelRows(stageData) },
+    { name: "Motivo de no viaje",      rows: toLabelRows(noTravelReasonData) },
+    { name: "Tenencia vehicular",      rows: toLabelRows(vehicleTenureData) },
+    { name: "Tipo de vehículo",        rows: toLabelRows(vehicleTypeData) },
+    { name: "Modelo de vehículo",      rows: toLabelRows(vehicleModelData) },
+    { name: "Duración viajes",         rows: toLabelRows(durationHistogramData) },
+    { name: "Distribución horaria",    rows: hourlyModeData || [] },
+    { name: "Origen-Destino",          rows: toLabelRows(origenDestinoData) },
   ];
 
   const handleExportExcel = () => {
-    const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    exportToExcel(buildSheets(), `${dateStamp}_EncuestasHogares_AMVA2025.xlsx`);
+    const d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    exportToExcel(buildSheets(), `${d}_EncuestasHogares_AMVA2025.xlsx`);
   };
-
   const handleExportPdf = () => {
     if (!dashboardRef.current) return;
-    const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    exportToPdf(dashboardRef.current, `${dateStamp}_EncuestasHogares_AMVA2025`);
+    const d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    exportToPdf(dashboardRef.current, `${d}_EncuestasHogares_AMVA2025`);
   };
 
-  const thematicConfig = useMemo(
-    () => [
-      { key: "estrato", label: "Estrato", options: thematicOptions.estrato },
-      { key: "ageRange", label: "Edad", options: thematicOptions.ageRange },
-      { key: "gender", label: "Género", options: thematicOptions.gender },
-      { key: "occupation", label: "Ocupación", options: thematicOptions.occupation },
-      { key: "edu", label: "Escolaridad", options: thematicOptions.edu },
-      {
-        key: "populationInterest",
-        label: "Poblaciones de interés",
-        options: thematicOptions.populationInterest,
-      },
-    ],
-    [thematicOptions]
-  );
 
-  const activeThematic = thematicConfig.find((t) => t.key === activeThematicKey);
-
-  const isAllSelected =
-    (activeThematic?.options || []).length === localSelectedValues.length;
-
-  const selectedColorMap = useMemo(() => {
-    return new Map(
-      (localSelectedValues || []).slice(0, 3).map((v, i) => [v, COMPARE_COLORS[i]])
-    );
-  }, [localSelectedValues]);
-
-  const handleThematicKeyChange = (newKey) => {
-    setActiveThematicKey(newKey);
-    setIsCompareMode(false);
-    const newThematic = thematicConfig.find((t) => t.key === newKey);
-    const allOptions = newThematic?.options || [];
-    setLocalSelectedValues(allOptions);
-    startTransition(() => {
-      setThematicValues(newKey, allOptions);
-    });
-  };
-
-  const handleModeChange = (compareMode) => {
-    const options = compareMode
-      ? (activeThematic?.options || []).slice(0, 3)
-      : activeThematic?.options || [];
-    startTransition(() => {
-      setIsCompareMode(compareMode);
-      setLocalSelectedValues(options);
-      setThematicValues(activeThematicKey, options);
-    });
-  };
-
-  const toggleThematicValue = (value) => {
-    const current = localSelectedValues || [];
-    const exists = current.includes(value);
-    const next = exists ? current.filter((x) => x !== value) : [...current, value];
-    setLocalSelectedValues(next);
-    startTransition(() => setThematicValues(activeThematicKey, next));
-  };
-
+  /* =======================================================
+   RETORNO - RENDERIZACIÓN DEL COMPONENTE
+   ======================================================= */
   return (
     <main style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
+
+        {/* Panel de filtros */}
         <FiltersPanel
           municipios={municipios}
           filters={filters}
@@ -199,8 +295,7 @@ export default function DashboardSection() {
           handleThematicKeyChange={handleThematicKeyChange}
           activeThematic={activeThematic}
           isAllSelected={isAllSelected}
-          SECONDARY_GREEN={PRIMARY_GREEN}
-          isCompareMode={isCompareMode}
+          isCompareMode={compareMode}
           onModeChange={handleModeChange}
           localSelectedValues={localSelectedValues}
           toggleThematicValue={toggleThematicValue}
@@ -217,81 +312,84 @@ export default function DashboardSection() {
           }
         />
 
+        {/* Contenido principal */}
         <div style={{ position: "relative" }} ref={dashboardRef}>
-          <LoadingOverlay 
-            visible={isPending || isLoading} 
-            label={isLoading ? "Cargando datos..." : "Actualizando visualizaciones..."} 
+          <LoadingOverlay
+            visible={isPending || isLoading}
+            label={isLoading ? "Cargando datos…" : "Actualizando visualizaciones…"}
           />
-          {/* compute global baselines and pass to KPIs */}
+
+          {/* KPIs generales */}
           <div ref={statsSectionRef}>
-            <KpisPanel
-              filteredTrips={filteredTrips}
-              filteredPersons={filteredPersons}
-              filteredPersonsBase={filteredPersonsBase}
-              filteredHouseholds={filteredHouseholds}
-              totalTrips={198_957}
-              allTrips={trips}
-              allHouseholds={households}
-              allPersons={persons}
+            <KpisPanel 
+              kpisData={kpisGenerales} 
+              kpisGlobales={kpisGlobales}
             />
           </div>
+
+          {/* Indicadores de motorización */}
           <div ref={indicatorsSectionRef}>
             <MobilityIndicatorsPanel
-              vehicleRates={geoVehicleRates}
-              filteredHouseholds={filteredHouseholds}
+              kpisData={kpisMotorizacion}
+              kpisGlobales={kpisMotorizacionGlobales}
             />
           </div>
+
+          {/* Mapas */}
           <div ref={mapsSectionRef}>
             <MapsPanel
-              macroHeatData={macroHeatData}
-              filteredTrips={filteredTrips}
-              filters={filters} // IMPORTANTE: Pasar filters para filtrado por municipio
+              macroHeatData={indicadoresData?.[15]}
+              filters={filters}
             />
           </div>
+
+          {/* Patrones de movilidad */}
           <div ref={mobilitySectionRef}>
-          <MobilityPatternsPanel
-            hourlyModeData={geoHourlyModeData}
-            durationHistogramData={geoDurationHistogramData}
-            durationByModeGroupData={geoDurationByModeGroupData}
-            tripsByEstratoData={geoTripsByEstratoData}
-            tripFrequencyData={geoTripFrequencyData}
-          />
+            <MobilityPatternsPanel
+              hourlyModeData={mobilityPatternsData?.hourlyModeData}
+              durationHistogramData={mobilityPatternsData?.durationHistogramData}
+              tripFrequencyData={mobilityPatternsData?.tripFrequencyData}
+              tripsByEstratoData={mobilityPatternsData?.tripsByEstratoData}
+              durationByModeGroupData={mobilityPatternsData?.durationByModeGroupData}
+            />
           </div>
+
+          {/* Análisis – viajes */}
           <div ref={viajesSectionRef}>
             <AnalysisViewsPanel
               analysisView="viajes"
-              isCompareMode={isCompareMode}
+              isCompareMode={compareMode}
               localSelectedValues={localSelectedValues}
               selectedColorMap={selectedColorMap}
               activeThematicKey={activeThematicKey}
-              modeData={modeData}
-              purposeData={purposeData}
-              stageData={stageData}
-              noTravelReasonData={noTravelReasonData}
-              populationInterestData={populationInterestData}
-              vehicleTypeData={vehicleTypeData}
-              vehicleModelData={vehicleModelData}
-              vehicleTenureData={vehicleTenureData}
-              filteredTrips={filteredTrips}
-              filteredPersonsBase={filteredPersonsBase}
+              modeData={analysisViewsData?.modeData}
+              purposeData={analysisViewsData?.purposeData}
+              stageData={analysisViewsData?.stageData}
+              noTravelReasonData={analysisViewsData?.noTravelReasonData}
+              populationInterestData={analysisViewsData?.populationInterestData}
+              vehicleTypeData={analysisViewsData?.vehicleTypeData}
+              vehicleModelData={analysisViewsData?.vehicleModelData}
+              vehicleTenureData={analysisViewsData?.vehicleTenureData}
+              detailedData={detailedData}
             />
           </div>
+
+          {/* Análisis – vehicular */}
           <div ref={vehicularSectionRef}>
             <AnalysisViewsPanel
               analysisView="vehicular"
-              isCompareMode={isCompareMode}
+              isCompareMode={compareMode}
               localSelectedValues={localSelectedValues}
               selectedColorMap={selectedColorMap}
               activeThematicKey={activeThematicKey}
-              modeData={modeData}
-              purposeData={purposeData}
-              stageData={stageData}
-              noTravelReasonData={noTravelReasonData}
-              vehicleTypeData={vehicleTypeData}
-              vehicleModelData={vehicleModelData}
-              vehicleTenureData={vehicleTenureData}
-              filteredTrips={filteredTrips}
-              filteredPersonsBase={filteredPersonsBase}
+              modeData={analysisViewsData?.modeData}
+              purposeData={analysisViewsData?.purposeData}
+              stageData={analysisViewsData?.stageData}
+              noTravelReasonData={analysisViewsData?.noTravelReasonData}
+              vehicleTypeData={analysisViewsData?.vehicleTypeData}
+              vehicleModelData={analysisViewsData?.vehicleModelData}
+              vehicleTenureData={analysisViewsData?.vehicleTenureData}
+              detailedData={detailedData}
             />
           </div>
         </div>

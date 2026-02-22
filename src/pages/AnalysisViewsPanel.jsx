@@ -1,51 +1,8 @@
-import React from "react";
 import BarChartCard from "../components/BarChartCard";
 import { PRIMARY_GREEN, COMPARE_COLORS, SECONDARY_GREEN } from "../config/constants";
 
 const toLabelValue = (arr) => (arr || []).map((d) => ({ label: d.label || d.name || d[0], value: d.value || d[1] || 0 }));
 const sanitizeKey = (v) => String(v).replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-
-const groupModeLabel = (mode) => {
-  if (mode === "Metro" || mode === "Cable") return "Metro";
-  if (mode === "Metroplús" || mode === "Ruta integrada o alimentador C3 y C6") {
-    return "Metroplus";
-  }
-  if (mode === "Tranvía") return "Tranvía";
-  if (mode === "Bus / Buseta / Microbús urbano o metropolitano (1)") {
-    return "Transporte Público Colectivo";
-  }
-  if (mode === "Bus / Buseta / Microbús intermunicipal (1)") {
-    return "Otros";
-  }
-  if (
-    mode === "Taxi individual (amarillo)" ||
-    mode === "Taxi colectivo (amarillo)" ||
-    mode === "Taxi intermunicipal o colectivo (blanco)"
-  ) {
-    return "Taxi";
-  }
-  if (
-    mode === "Transporte informal o particular" ||
-    mode === "Vehículo de pago por plataforma" ||
-    mode === "Auto particular (conductor)" ||
-    mode === "Auto particular (acompañante)"
-  ) {
-    return "Auto";
-  }
-  if (mode === "Escolar") return "Transporte escolar";
-  if (
-    mode === "Moto (conductor)" ||
-    mode === "Moto (acompañante)" ||
-    mode === "Mototaxi" ||
-    mode === "Motocarro"
-  ) {
-    return "Moto";
-  }
-  if (mode === "Bicicleta propia" || mode === "Bicicleta pública") return "Bicicleta";
-  if (mode === "A pie") return "A Pie";
-  if (mode === "Vehículo empresarial" || mode === "Patineta eléctrica") return "Otros";
-  return mode;
-};
 
 export default function AnalysisViewsPanel({
   analysisView,
@@ -53,86 +10,153 @@ export default function AnalysisViewsPanel({
   localSelectedValues,
   selectedColorMap,
   activeThematicKey,
-  // data from hook
-  modeData,
-  purposeData,
-  stageData,
-  noTravelReasonData,
-  populationInterestData,
-  vehicleTypeData,
-  vehicleModelData,
-  vehicleTenureData,
-  filteredTrips,
-  filteredPersonsBase,
+  // data from hook (agregados)
+  modeData = [],
+  purposeData = [],
+  stageData = [],
+  noTravelReasonData = [],
+  populationInterestData = [],
+  vehicleTypeData = [],
+  vehicleModelData = [],
+  vehicleTenureData = [],
+  // datos detallados del backend (para modo COMPARAR)
+  detailedData,
 }) {
-  const getCategories = (arr) => (arr || []).map((d) => d.label || d.name || d);
   const groupedColor = SECONDARY_GREEN;
 
-  const buildMultiSeries = (targetField, categoriesSource) => {
-    const categories = getCategories(categoriesSource);
+  const buildComparisonSeries = (_, indicatorKey) => {
+    if (!detailedData?.comparaciones?.[activeThematicKey]) {
+      return { data: [], series: [] };
+    }
+
+    const indicatorData =
+      detailedData.comparaciones[activeThematicKey][indicatorKey];
+
+    if (!indicatorData) {
+      return { data: [], series: [] };
+    }
+
     const selected = (localSelectedValues || []).slice(0, 3);
+
     const series = selected.map((val, idx) => ({
       key: sanitizeKey(String(val)),
       label: String(val),
-      color: selectedColorMap?.get(val) || COMPARE_COLORS[idx] || COMPARE_COLORS[0],
+      color:
+        selectedColorMap?.get(val) ||
+        COMPARE_COLORS[idx] ||
+        COMPARE_COLORS[0],
       raw: val,
     }));
-    const mapValue = targetField === "mode" ? groupModeLabel : (value) => value;
 
-    const totals = series.reduce((acc, s) => {
-      const total = filteredTrips.filter((t) => String(t[activeThematicKey]) === String(s.raw)).length;
-      acc[s.key] = total;
-      return acc;
-    }, {});
+    // ----------------------------------------------------
+    // CASO AGRUPADO (comparativo_agrupado)
+    // ----------------------------------------------------
+    if (indicatorData.grupos) {
+      const data = indicatorData.grupos.map((grupoObj) => {
+        const row = { label: grupoObj.grupo };
 
-    const data = categories.map((cat) => {
-      const row = { label: cat };
-      series.forEach((s) => {
-        const matches = filteredTrips.filter(
-          (t) =>
-            String(mapValue(t[targetField])) === String(cat) &&
-            String(t[activeThematicKey]) === String(s.raw)
-        ).length;
-        row[s.key] = totals[s.key] ? Number(((matches / totals[s.key]) * 100).toFixed(1)) : 0;
+        series.forEach((s) => {
+          const found = grupoObj.comparativo?.find(
+            (c) => String(c.detalle) === String(s.raw)
+          );
+
+          let value =
+            found?.value ??
+            found?.valor ??
+            0;
+
+          if (value > 0 && value <= 1) {
+            value *= 100;
+          }
+
+          row[s.key] = value;
+        });
+
+        return row;
       });
-      return row;
-    });
 
-    return { data, series };
+      return { data, series };
+    }
+
+    // ----------------------------------------------------
+    // CASO SIMPLE (comparativo_simple)
+    // ----------------------------------------------------
+    if (indicatorData.comparativo) {
+      const row = { label: indicatorData.nombre || "Valor" };
+
+      series.forEach((s) => {
+        const found = indicatorData.comparativo?.find(
+          (c) => String(c.detalle) === String(s.raw)
+        );
+
+        let value =
+          found?.value ??
+          found?.valor ??
+          0;
+
+        if (value > 0 && value <= 1) {
+          value *= 100;
+        }
+
+        row[s.key] = value;
+      });
+
+      return { data: [row], series };
+    }
+
+    return { data: [], series: [] };
   };
 
-  const buildMultiSeriesFromPersons = (
-    targetField,
-    categoriesSource,
-    persons,
-    { filterByValue = false } = {}
-  ) => {
-    const categories = getCategories(categoriesSource);
+  const buildPopulationComparisonSeries = () => {
+    if (!detailedData?.comparaciones?.[activeThematicKey]) {
+      return { data: [], series: [] };
+    }
+
     const selected = (localSelectedValues || []).slice(0, 3);
+
     const series = selected.map((val, idx) => ({
       key: sanitizeKey(String(val)),
       label: String(val),
-      color: selectedColorMap?.get(val) || COMPARE_COLORS[idx] || COMPARE_COLORS[0],
+      color:
+        selectedColorMap?.get(val) ||
+        COMPARE_COLORS[idx] ||
+        COMPARE_COLORS[0],
       raw: val,
     }));
 
-    const basePersons = filterByValue ? persons.filter((p) => p[targetField]) : persons;
-    const totals = series.reduce((acc, s) => {
-      const total = basePersons.filter((p) => String(p[activeThematicKey]) === String(s.raw)).length;
-      acc[s.key] = total;
-      return acc;
-    }, {});
+    const populationIds = [31, 32, 33, 34, 35];
 
-    const data = categories.map((cat) => {
-      const row = { label: cat };
+    const populationLabels = [
+      "Cuidador",
+      "Extranjero (residente permanente)",
+      "Madre cabeza de familia",
+      "Persona en situación de discapacidad",
+      "Ninguna",
+    ];
+
+    const data = populationIds.map((id, index) => {
+      const indicator =
+        detailedData.comparaciones[activeThematicKey][id];
+
+      const row = { label: populationLabels[index] };
+
       series.forEach((s) => {
-        const matches = basePersons.filter(
-          (p) =>
-            String(p[targetField]) === String(cat) &&
-            String(p[activeThematicKey]) === String(s.raw)
-        ).length;
-        row[s.key] = totals[s.key] ? Number(((matches / totals[s.key]) * 100).toFixed(1)) : 0;
+        const found = indicator?.comparativo?.find(
+          (c) => String(c.detalle) === String(s.raw)
+        );
+
+        let value =
+          found?.value ??
+          found?.valor ??
+          0;
+
+        if (value > 0 && value <= 1) {
+          value *= 100;
+        }
+
+        row[s.key] = value;
       });
+
       return row;
     });
 
@@ -140,16 +164,13 @@ export default function AnalysisViewsPanel({
   };
 
   // Grid layout: 3 columns, 2 rows
-  // Modo principal occupies left column and spans 2 rows
-  // Motivo and Etapas occupy top row columns 2 and 3
-  // Horaria occupies bottom row across columns 2-3
   const viajesCharts = (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "auto auto", gap: 16 }}>
       {isCompareMode ? (
         <>
           <div style={{ gridColumn: "1 / 2", gridRow: "1 / span 2" }}>
             {(() => {
-              const m = buildMultiSeries("mode", modeData);
+              const m = buildComparisonSeries(modeData, 27);
               return (
                 <BarChartCard
                   title="Modo principal (% de viajes)"
@@ -166,7 +187,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "2 / 3", gridRow: "1 / 2" }}>
             {(() => {
-              const p = buildMultiSeries("tripPurpose", purposeData);
+              const p = buildComparisonSeries(purposeData, 28);
               return (
                 <BarChartCard
                   title="Motivo de viaje (% de viajes)"
@@ -183,7 +204,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "3 / 4", gridRow: "1 / 2" }}>
             {(() => {
-              const s = buildMultiSeries("stageBucket", stageData);
+              const s = buildComparisonSeries(stageData, 29);
               return (
                 <BarChartCard
                   title="Etapas (% de viajes)"
@@ -200,12 +221,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
             {(() => {
-              const n = buildMultiSeriesFromPersons(
-                "noTravelReason",
-                noTravelReasonData,
-                filteredPersonsBase || [],
-                { filterByValue: true }
-              );
+              const n = buildComparisonSeries(noTravelReasonData, 30);
               return (
                 <BarChartCard
                   title="Motivo de no viaje (% de personas que no viajan)"
@@ -221,7 +237,8 @@ export default function AnalysisViewsPanel({
           </div>
           <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
             {(() => {
-              const pop = buildMultiSeries("populationInterest", populationInterestData);
+              // CASO ESPECIAL: Compendio de indicadores
+              const pop = buildPopulationComparisonSeries();
               return (
                 <BarChartCard
                   title="% de personas que sí viajan en grupos poblacionales de interés"
@@ -306,15 +323,15 @@ export default function AnalysisViewsPanel({
       {isCompareMode ? (
         <>
           {(() => {
-            const t = buildMultiSeries("vehicleType", vehicleTypeData);
+            const t = buildComparisonSeries(vehicleTypeData, 36);
             return <BarChartCard title="Tipología (% de vehículos)" data={t.data} xKey="label" series={t.series} color={PRIMARY_GREEN} />;
           })()}
           {(() => {
-            const vt = buildMultiSeries("vehicleBucket", vehicleTenureData);
+            const vt = buildComparisonSeries(vehicleTenureData, 37);
             return <BarChartCard title="Cantidad (% de vehículos)" data={vt.data} xKey="label" series={vt.series} color={PRIMARY_GREEN} />;
           })()}
           {(() => {
-            const m = buildMultiSeries("vehicleModel", vehicleModelData);
+            const m = buildComparisonSeries(vehicleModelData, 38);
             return <BarChartCard title="Modelo (% de vehículos)" data={m.data} xKey="label" series={m.series} color={PRIMARY_GREEN} />;
           })()}
         </>
