@@ -338,7 +338,7 @@ export default function DashboardSection() {
           {/* Mapas */}
           <div ref={mapsSectionRef}>
             <MapsPanel
-              macroHeatData={indicadoresData?.[15]}
+              macroHeatData={indicadoresData?.[15] ?? { data: [] }}
               filters={filters}
             />
           </div>
