@@ -1,4 +1,3 @@
-import React from "react";
 import BarChartCard from "../components/BarChartCard";
 import HourlyModeChartCard from "../components/HourlyModeChartCard";
 import { SECONDARY_GREEN, TERTIARY_BLUE, TERTIARY_ORANGE, TERTIARY_PINK } from "../config/constants";

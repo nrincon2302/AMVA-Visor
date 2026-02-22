@@ -20,7 +20,6 @@ const IND = {
   motivo:          "motivo_viaje",
   etapas:          "etapas",
   motivoNoViaje:   "motivo_no_viaje",
-  poblacion:       "poblacion_interes",
   /* análisis – vehicular */
   tenencia:        "tenencia_vehicular",
   tipoVehiculo:    "tipo_vehiculo",
@@ -47,6 +46,7 @@ export default function DashboardSection() {
     indicadoresData,
     indicadoresGlobales,
     mobilityPatternsData,
+    analysisViewsData,
     detailedData,
     compareMode,
     setCompareMode,
@@ -133,7 +133,6 @@ export default function DashboardSection() {
   const purposeData            = ind(IND.motivo);
   const stageData              = ind(IND.etapas);
   const noTravelReasonData     = ind(IND.motivoNoViaje);
-  const populationInterestData = ind(IND.poblacion);
   const vehicleTenureData      = ind(IND.tenencia);
   const vehicleTypeData        = ind(IND.tipoVehiculo);
   const vehicleModelData       = ind(IND.modeloVehiculo);
@@ -363,14 +362,14 @@ export default function DashboardSection() {
               localSelectedValues={localSelectedValues}
               selectedColorMap={selectedColorMap}
               activeThematicKey={activeThematicKey}
-              modeData={modeData}
-              purposeData={purposeData}
-              stageData={stageData}
-              noTravelReasonData={noTravelReasonData}
-              populationInterestData={populationInterestData}
-              vehicleTypeData={vehicleTypeData}
-              vehicleModelData={vehicleModelData}
-              vehicleTenureData={vehicleTenureData}
+              modeData={analysisViewsData?.modeData}
+              purposeData={analysisViewsData?.purposeData}
+              stageData={analysisViewsData?.stageData}
+              noTravelReasonData={analysisViewsData?.noTravelReasonData}
+              populationInterestData={analysisViewsData?.populationInterestData}
+              vehicleTypeData={analysisViewsData?.vehicleTypeData}
+              vehicleModelData={analysisViewsData?.vehicleModelData}
+              vehicleTenureData={analysisViewsData?.vehicleTenureData}
               detailedData={detailedData}
             />
           </div>
@@ -383,13 +382,13 @@ export default function DashboardSection() {
               localSelectedValues={localSelectedValues}
               selectedColorMap={selectedColorMap}
               activeThematicKey={activeThematicKey}
-              modeData={modeData}
-              purposeData={purposeData}
-              stageData={stageData}
-              noTravelReasonData={noTravelReasonData}
-              vehicleTypeData={vehicleTypeData}
-              vehicleModelData={vehicleModelData}
-              vehicleTenureData={vehicleTenureData}
+              modeData={analysisViewsData?.modeData}
+              purposeData={analysisViewsData?.purposeData}
+              stageData={analysisViewsData?.stageData}
+              noTravelReasonData={analysisViewsData?.noTravelReasonData}
+              vehicleTypeData={analysisViewsData?.vehicleTypeData}
+              vehicleModelData={analysisViewsData?.vehicleModelData}
+              vehicleTenureData={analysisViewsData?.vehicleTenureData}
               detailedData={detailedData}
             />
           </div>

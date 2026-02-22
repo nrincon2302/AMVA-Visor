@@ -6,7 +6,7 @@ export function useTravelDataFromAPI() {
   const [municipios, setMunicipios] = useState([]);
   const [temas, setTemas] = useState([]); 
   const [temasDetalles, setTemasDetalles] = useState({});
-  const [indicadorNombres, setIndicadorNombres] = useState([]);
+  const [indicadorIds, setIndicadorIds] = useState([]);
   const [metadataLoaded, setMetadataLoaded] = useState(false);
 
   // Hooks de estado para Filtros
@@ -15,7 +15,7 @@ export function useTravelDataFromAPI() {
   const [macrozona_origen, setMacrozonaOrigen] = useState("");
   const [macrozona_destino, setMacrozonaDestino] = useState("");
   const [zona, setZona] = useState("");
-  const [temasFiltros, _setTemasFiltros] = useState({});
+  const [temasFiltros, setTemasFiltros] = useState({});
 
   // Hooks de estado para Indicadores
   const [indicadoresData, setIndicadoresData] = useState({});
@@ -27,16 +27,8 @@ export function useTravelDataFromAPI() {
   const [error, setError] = useState(null);
 
   // Hooks de estado para control de Modo de Comparación
-  const [compareMode,   setCompareMode]   = useState(false);
-  const [compareTema,   setCompareTema]   = useState(null);
-
-  // Inicializar compareTema con el primer tema disponible
-  useEffect(() => {
-    if (temas.length > 0 && !compareTema) {
-      const firstTema = temas[0].id;
-      setCompareTema(firstTema);
-    }
-  }, [temas, compareTema]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareTema, setCompareTema] = useState(null);
 
 
   /* ========================================================
@@ -47,48 +39,44 @@ export function useTravelDataFromAPI() {
       try {
         setIsLoading(true);
 
-        // tres llamadas en paralelo (sin detalles)
         const [municipiosRaw, temasRaw, indicadoresRaw] = await Promise.all([
           fetchJSON(urls.municipios()),
           fetchJSON(urls.temas()),
           fetchJSON(urls.indicadores()),
         ]);
 
-        // Extraer arrays de las respuestas
         const mArray = municipiosRaw?.municipios ?? municipiosRaw ?? [];
         const tArray = temasRaw?.temas ?? temasRaw ?? [];
-        const iArray = indicadoresRaw?.ids_indicadores ?? indicadoresRaw?.indicadores ?? indicadoresRaw ?? []; 
+        const iArray =
+          indicadoresRaw?.ids_indicadores ??
+          indicadoresRaw?.indicadores ??
+          indicadoresRaw ??
+          [];
 
-        // normalizar municipios → string[]
         const mList = (Array.isArray(mArray) ? mArray : []).map((m) =>
-          typeof m === "string" ? m : (m.nombre ?? m.name ?? m.id));
-        // Solo agregar "AMVA General" si no viene ya del backend
-        const finalMunicipios = mList.includes("AMVA General") 
-          ? mList 
-          : ["AMVA General", ...mList];
-        setMunicipios(finalMunicipios);
+          typeof m === "string" ? m : m.nombre ?? m.id
+        );
 
-        // normalizar indicadores → string[]
-        setIndicadorNombres(Array.isArray(iArray) ? iArray : []);
+        setMunicipios(
+          mList.includes("AMVA General")
+            ? mList
+            : ["AMVA General", ...mList]
+        );
 
-        // normalizar temas → [{ id, nombre }]
-        const tNorm = (Array.isArray(tArray) ? tArray : []).map((t) =>
+        const temasNorm = (Array.isArray(tArray) ? tArray : []).map((t) =>
           typeof t === "string"
             ? { id: t, nombre: t }
             : { id: t.id ?? t.nombre, nombre: t.nombre ?? t.id }
         );
-        setTemas(tNorm);
 
-        // inicializar filtros VACÍOS (en modo AGRUPAR no se filtran por temas)
-        // Solo guardamos la estructura para saber qué temas existen
+        setTemas(temasNorm);
+        setIndicadorIds(Array.isArray(iArray) ? iArray : []);
+
         const init = {};
-        tNorm.forEach(({ id }) => {
-          init[id] = [];  // Vacío por defecto
-        });
-        _setTemasFiltros(init);
+        temasNorm.forEach(({ id }) => (init[id] = []));
+        setTemasFiltros(init);
 
       } catch (e) {
-        console.error("Error cargando metadata:", e);
         setError(e);
       } finally {
         setIsLoading(false);
@@ -96,6 +84,36 @@ export function useTravelDataFromAPI() {
     })();
   }, []);
 
+  // Inicializar compareTema con el primer tema disponible
+  useEffect(() => {
+    if (temas.length && !compareTema) {
+      setCompareTema(temas[0].id);
+    }
+  }, [temas, compareTema]);
+  
+
+  /* =============================================================
+   Generación del Query String
+   ============================================================== */ 
+  const qs = useMemo(() => {
+    if (!municipio || !compareTema) return "";
+
+    const params = {
+      municipio,
+      tema: compareTema,
+    };
+
+    const valoresSeleccionados = temasFiltros[compareTema];
+
+    if (valoresSeleccionados?.length) {
+      params.detalles = valoresSeleccionados;
+    }
+
+    return buildQueryParams(params);
+  }, [municipio, compareTema, temasFiltros
+  ]);
+
+  
   /* =====================================================
    Cargar los detalles de un tema una vez este ya haya cargado
    ===================================================== */
@@ -156,25 +174,6 @@ export function useTravelDataFromAPI() {
     return () => { mounted = false; };
   }, [temas]);
 
-  /* =============================================================
-   Generación del Query String
-   ============================================================== */ 
-  const qs = useMemo(() => {
-    if (!municipio || !compareTema) return "";
-
-    const params = {};
-
-    if (municipio) params.municipio = municipio;
-    if (compareTema) params.tema = compareTema;
-
-    const valoresSeleccionados = temasFiltros[compareTema];
-
-    if (Array.isArray(valoresSeleccionados) && valoresSeleccionados.length > 0) {
-      params.detalles = valoresSeleccionados.filter(Boolean);
-    }
-
-    return buildQueryParams(params);
-  }, [municipio, compareTema, temasFiltros]);
 
   /* =============================================================
    Carga de los datos desde el Backend mediante hook de efecto
@@ -183,25 +182,25 @@ export function useTravelDataFromAPI() {
     async function fetchGlobalKpis() {
       const ids = [1,2,3,4,5,6,7,8,9,10,11,12,13,14];
 
-      const entries = await Promise.all(
-        ids.map(async (id) => {
-          const url = urls.agregado(id);
-          const res = await fetchJSON(url);
+      try {
+        const entries = await Promise.all(
+          ids.map(async (id) => {
+            const res = await fetchJSON(urls.agregado(id));
+            return [id, transformAgregado(res)];
+          })
+        );
 
-          const transformed = transformAgregado(res, id);
-
-          return [id, transformed];
-        })
-      );
-
-      setIndicadoresGlobales(Object.fromEntries(entries));
+        setIndicadoresGlobales(Object.fromEntries(entries));
+      } catch (e) {
+        console.error("Error cargando KPIs globales:", e);
+      }
     }
 
     fetchGlobalKpis();
   }, []);
 
   useEffect(() => {
-    if (!metadataLoaded || !indicadorNombres.length) return;
+    if (!metadataLoaded || !indicadorIds.length) return;
     // No cargar si no tenemos query string válido (falta municipio o tema)
     if (!qs) return;
 
@@ -212,7 +211,7 @@ export function useTravelDataFromAPI() {
       setIsLoading(true);
       try {
         const entries = await Promise.all(
-          indicadorNombres.map(async (nombre) => {
+          indicadorIds.map(async (nombre) => {
             try {
               let finalQs = qs;
 
@@ -232,7 +231,7 @@ export function useTravelDataFromAPI() {
 
               const transformedData = compareMode
                 ? transformPerDetalle(response, nombre)
-                : transformAgregado(response, nombre);
+                : transformAgregado(response);
 
               return [nombre, transformedData];
             } catch (e) {
@@ -259,8 +258,12 @@ export function useTravelDataFromAPI() {
         setIsLoading(false);
       }
     })();
-  }, [metadataLoaded, indicadorNombres, qs, compareMode, compareTema, macrozona_origen, macrozona_destino]);
+  }, [metadataLoaded, indicadorIds, qs, compareMode, compareTema, macrozona_origen, macrozona_destino]);
 
+
+  /* =============================================================
+    Herramientas y callbacks de apoyo
+  ============================================================= */
   // Setters de filtro
   const setDestinationMunicipio = useCallback(
     (val) => setMunicipioDestino(val), []
@@ -268,7 +271,7 @@ export function useTravelDataFromAPI() {
 
   // Cambiar los valores seleccionados de un tema
   const setTemaValues = useCallback((temaId, valores) => {
-    _setTemasFiltros((prev) => ({ ...prev, [temaId]: valores }));
+    setTemasFiltros((prev) => ({ ...prev, [temaId]: valores }));
   }, []);
 
   // Cambiar el tema activo (siempre actualiza compareTema para que el query tenga tema)
@@ -293,56 +296,121 @@ export function useTravelDataFromAPI() {
     temasFiltros,
   }), [municipio, municipio_destino, temasFiltros]);
 
-  const mobilityPatternsData = useMemo(() => {
-    return buildMobilityPatternsData(indicadoresData);
-  }, [indicadoresData]);
+
+  /* =============================================================
+     NORMALIZAR PARA KPI Y DASH
+  ============================================================= */
+  const activeDetail =
+    compareMode && temasFiltros[compareTema]?.length
+      ? temasFiltros[compareTema][0]
+      : null;
+
+  const normalizedIndicadores = useMemo(() => {
+    if (!compareMode || !activeDetail) return indicadoresData;
+
+    const out = {};
+
+    Object.entries(indicadoresData).forEach(([id, ind]) => {
+      if (!ind) {
+        out[id] = null;
+        return;
+      }
+
+      // 🔹 Comparativo simple → convertir a simple
+      if (ind.tipo === "comparativo_simple") {
+        const found = ind.comparativo.find(
+          (d) => String(d.detalle) === String(activeDetail)
+        );
+
+        out[id] = {
+          tipo: "simple",
+          nombre: ind.nombre, // 👈 IMPORTANTE
+          value: found?.value ?? 0,
+        };
+        return;
+      }
+
+      // 🔹 Comparativo agrupado → convertir a agrupado
+      if (ind.tipo === "comparativo_agrupado") {
+        out[id] = {
+          tipo: "agrupado",
+          nombre: ind.nombre, // 👈 IMPORTANTE
+          data: ind.grupos.map((g) => {
+            const found = g.comparativo.find(
+              (d) => String(d.detalle) === String(activeDetail)
+            );
+
+            return {
+              label: g.grupo,
+              value: found?.value ?? 0,
+            };
+          }),
+        };
+        return;
+      }
+
+      // 🔹 Si no es comparativo, dejar igual
+      out[id] = ind;
+    });
+
+    return out;
+  }, [indicadoresData, compareMode, activeDetail]);
+
+
+  /* =============================================================
+     DATA DERIVADA
+  ============================================================= */
+  const mobilityPatternsData = useMemo(
+    () => buildMobilityPatternsData(normalizedIndicadores),
+    [normalizedIndicadores]
+  );
+
+  const analysisViewsData = useMemo(
+    () => buildAnalysisViewsData(normalizedIndicadores),
+    [normalizedIndicadores]
+  );
 
 
   return {
-    /* metadata */
     municipios,
-    temas,                 // [{ id, nombre }]
-    temasDetalles,         // { id → { valores, nombre, … } }
-    indicadorNombres,      // string[]  – los IDs disponibles
-    thematicOptions,       // { temaId → valores[] }
+    temas,
+    temasDetalles,
+    indicadorIds,
+    thematicOptions,
     metadataLoaded,
 
-    /* filtros */
     filters,
     municipio,
-    municipio_destino,
     setMunicipio,
+    municipio_destino,
     setDestinationMunicipio,
     temasFiltros,
     setTemaValues,
     setActiveTema,
 
-    /* modo comparar */
     compareMode,
     setCompareMode,
     compareTema,
+    setCompareTema,
 
-    /* datos */
-    indicadoresData,
+    indicadoresData: normalizedIndicadores,
     indicadoresGlobales,
-    mobilityPatternsData,
     detailedData,
 
-    /* estado */
+    mobilityPatternsData,
+    analysisViewsData,
+
     isLoading,
     error,
   };
 }
 
 function buildDetailedData(tema, indicadoresMap) {
-  const comparaciones = {};
-  comparaciones[tema] = {};
+  const comparaciones = { [tema]: {} };
 
-  Object.entries(indicadoresMap).forEach(([nombre, transformedData]) => {
-    if (transformedData == null) return;
-    // transformedData ya viene transformado por transformPerDetalle
-    // estructura: { "Campo de Gráfica": { "12-17": { valor, count, suma_bases }, ... } }
-    comparaciones[tema][nombre] = transformedData;
+  Object.entries(indicadoresMap).forEach(([id, data]) => {
+    if (!data) return;
+    comparaciones[tema][id] = data;
   });
 
   return { comparaciones };
@@ -351,28 +419,25 @@ function buildDetailedData(tema, indicadoresMap) {
 function transformAgregado(response) {
   if (!response || typeof response !== "object") return null;
 
-  // 🔹 Caso 1: indicador simple → { valor: number }
   if (typeof response.valor === "number") {
     return {
       tipo: "simple",
-      value: response.valor,
       nombre: response.nombre,
+      value: response.valor,
     };
   }
 
-  // 🔹 Caso 2: indicador agrupado → { grupos: [{ criterio, valor }] }
   if (Array.isArray(response.grupos)) {
     return {
       tipo: "agrupado",
       nombre: response.nombre,
       data: response.grupos.map(g => ({
-        label: g.criterio,
+        label: g.criterio ?? g.grupo,
         value: g.valor,
       })),
     };
   }
 
-  // 🔹 Caso 3: indicador 15 (matriz OD)
   if (Array.isArray(response.matriz)) {
     return {
       tipo: "matriz",
@@ -387,34 +452,33 @@ function transformAgregado(response) {
 function transformPerDetalle(response) {
   if (!response || typeof response !== "object") return null;
 
-  // 🔹 Caso simple → { comparativo: [{ detalle, valor }] }
+  // 🔹 Simple comparativo
   if (Array.isArray(response.comparativo)) {
     return {
       tipo: "comparativo_simple",
       nombre: response.nombre,
-      data: response.comparativo.map(d => ({
-        label: d.detalle,
+      comparativo: response.comparativo.map(d => ({
+        detalle: d.detalle,
         value: d.valor,
       })),
     };
   }
 
-  // 🔹 Caso agrupado → { grupos: [{ grupo, comparativo: [...] }] }
+  // 🔹 Agrupado comparativo
   if (Array.isArray(response.grupos)) {
     return {
       tipo: "comparativo_agrupado",
       nombre: response.nombre,
-      data: response.grupos.map(g => ({
+      grupos: response.grupos.map(g => ({
         grupo: g.grupo,
-        data: g.comparativo.map(d => ({
-          label: d.detalle,
+        comparativo: g.comparativo.map(d => ({
+          detalle: d.detalle,
           value: d.valor,
         })),
       })),
     };
   }
 
-  // 🔹 Caso especial indicador 15 → devuelve matriz igual que /agregado
   if (Array.isArray(response.matriz)) {
     return {
       tipo: "matriz",
@@ -425,10 +489,6 @@ function transformPerDetalle(response) {
 
   return null;
 }
-
-/* ============================================================
-   BUILD MOBILITY PATTERNS DATA (Indicadores 16–26)
-============================================================ */
 
 function buildMobilityPatternsData(indicadoresData) {
   if (!indicadoresData) return null;
@@ -523,5 +583,59 @@ function buildMobilityPatternsData(indicadoresData) {
     tripFrequencyData,
     tripsByEstratoData,
     durationByModeGroupData,
+  };
+}
+
+function buildAnalysisViewsData(indicadoresData) {
+  if (!indicadoresData) return null;
+
+  const mapAgrupadoPercent = (id) =>
+    indicadoresData[id]?.tipo === "agrupado"
+      ? indicadoresData[id].data.map(d => ({
+          label: d.label,
+          value: d.value * 100,
+        }))
+      : [];
+
+  /* =============================
+     VIAJES (27–35)
+  ============================= */
+  const modeData = mapAgrupadoPercent(27);
+  const purposeData = mapAgrupadoPercent(28);
+  const stageData = mapAgrupadoPercent(29);
+  const noTravelReasonData = mapAgrupadoPercent(30);
+
+  // 31–35 simples (%)
+  const populationLabels = [
+    "Cuidador",
+    "Extranjero (residente permanente)",
+    "Madre cabeza de familia",
+    "Persona en situación de discapacidad",
+    "Ninguna",
+  ];
+
+  const populationIds = [31, 32, 33, 34, 35];
+
+  const populationInterestData = populationIds.map((id, index) => ({
+    label: populationLabels[index],
+    value: (indicadoresData[id]?.value ?? 0) * 100,
+  }));
+
+  /* =============================
+     VEHICULAR (36–38)
+  ============================= */
+  const vehicleTypeData = mapAgrupadoPercent(36);
+  const vehicleTenureData = mapAgrupadoPercent(37);
+  const vehicleModelData = mapAgrupadoPercent(38);
+
+  return {
+    modeData,
+    purposeData,
+    stageData,
+    noTravelReasonData,
+    populationInterestData,
+    vehicleTypeData,
+    vehicleTenureData,
+    vehicleModelData,
   };
 }

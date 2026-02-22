@@ -1,7 +1,6 @@
 import KpiCard from "../components/KpiCard";
 import {
   PRIMARY_GREEN,
-  SECONDARY_GREEN,
   TERTIARY_PINK,
   TERTIARY_BLUE,
   TERTIARY_ORANGE,
