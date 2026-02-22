@@ -22,7 +22,7 @@ export const MUNICIPIO_MACROZONA_HIERARCHY = {
     "Santa Cruz",
     "Villa Hermosa",
   ],
-  Barbosa: ["Rural", "Urbana"],
+  Barbosa: ["Rural Barbosa", "Urbana Barbosa"],
   Bello: [
     "Acevedo",
     "Altos de Niquía",
@@ -38,8 +38,8 @@ export const MUNICIPIO_MACROZONA_HIERARCHY = {
     "Rural",
     "Santa Ana",
   ],
-  Caldas: ["Rural", "Urbana"],
-  Copacabana: ["Rural", "Urbana"],
+  Caldas: ["Rural Caldas", "Urbana Caldas"],
+  Copacabana: ["Rural Copacabana", "Urbana Copacabana"],
   Envigado: [
     "Alcalá",
     "El Dorado - La Paz",
@@ -55,7 +55,7 @@ export const MUNICIPIO_MACROZONA_HIERARCHY = {
     "Vereda Perico y Pantanillo",
     "Z. Centro",
   ],
-  Girardota: ["Rural", "Urbana"],
+  Girardota: ["Rural Girardota", "Urbana Girardota"],
   Itagüí: [
     "Calatrava",
     "El Rosario",
@@ -65,6 +65,6 @@ export const MUNICIPIO_MACROZONA_HIERARCHY = {
     "San Francisco",
     "Z. Centro",
   ],
-  "La Estrella": ["Rural", "Urbana"],
-  Sabaneta: ["Rural", "Urbana"],
+  "La Estrella": ["Rural La Estrella", "Urbana La Estrella"],
+  Sabaneta: ["Rural Sabaneta", "Urbana Sabaneta"],
 };
