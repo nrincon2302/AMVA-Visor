@@ -15,7 +15,7 @@ const AnalysisSelector = ({
     <>
       <div>
         <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 10 }}>
-          Variables temáticas
+          Variables temáticas socioeconómicas
         </div>
         <div style={{ display: "grid", gap: 12 }}>
           <label style={{ fontSize: 12, fontWeight: 600 }}>
