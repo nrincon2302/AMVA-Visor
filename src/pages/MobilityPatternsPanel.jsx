@@ -1,6 +1,7 @@
 import BarChartCard from "../components/BarChartCard";
 import HourlyModeChartCard from "../components/HourlyModeChartCard";
 import { SECONDARY_GREEN, TERTIARY_BLUE, TERTIARY_ORANGE, TERTIARY_PINK } from "../config/constants";
+import { buildComparisonSeries, buildTransportationComparisonSeries } from "../utils/groupingFunctions";
 
 const HOURLY_SERIES = [
   { key: "informal", label: "Viajes en transporte informal", color: SECONDARY_GREEN },
@@ -10,12 +11,20 @@ const HOURLY_SERIES = [
 ];
 
 export default function MobilityPatternsPanel({
+  isCompareMode,
+  localSelectedValues,
+  selectedColorMap,
+  activeThematicKey,
+  detailedData,
   hourlyModeData = [],
+  hourlyModeDatasets = null,
   durationHistogramData = [],
   durationByModeGroupData = [],
   tripsByEstratoData = [],
   tripFrequencyData = [],
 }) {
+
+  
   return (
     <section
       style={{
@@ -30,49 +39,88 @@ export default function MobilityPatternsPanel({
       <h3 style={{ marginTop: 0, marginBottom: 16 }}>Patrones de Movilidad</h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ gridColumn: "1 / -1" }}>
-          <HourlyModeChartCard
-            title="Distribución de viajes en un día (según hora de inicio)"
-            data={hourlyModeData}
-            series={HOURLY_SERIES}
-            showLegend
-          />
+        {(() => {
+          return (
+            <HourlyModeChartCard
+              title="Distribución de viajes en un día (según hora de inicio)"
+              data={hourlyModeData}
+              datasets={hourlyModeDatasets}
+              series={HOURLY_SERIES}
+              showLegend
+            />
+          );
+        })()}
+
         </div>
-        <BarChartCard
-          title="Distribución de los viajes según su duración (% de viajes)"
-          data={durationHistogramData}
-          xKey="label"
-          yKey="value"
-          orientation="vertical"
-          showPercent
-          color={SECONDARY_GREEN}
-        />
-        <BarChartCard
-          title="Frecuencia del viaje (% de viajes)"
-          data={tripFrequencyData}
-          xKey="label"
-          yKey="value"
-          orientation="vertical"
-          showPercent
-          color={SECONDARY_GREEN}
-        />
-        <BarChartCard
-          title="Viajes diarios según estrato (% de viajes)"
-          data={tripsByEstratoData}
-          xKey="label"
-          yKey="value"
-          color={SECONDARY_GREEN}
-          showPercent
-          orientation="vertical"
-        />
-        <BarChartCard
-          title="Tiempo promedio de viaje por modo de transporte (min)"
-          data={durationByModeGroupData}
-          xKey="label"
-          yKey="value"
-          color={SECONDARY_GREEN}
-          showPercent={false}
-          orientation="vertical"
-        />
+        {(() => {
+          const t = buildComparisonSeries(durationHistogramData, 20, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+          return ( 
+              <BarChartCard
+              title="Distribución de los viajes según su duración (% de viajes)"
+              data={isCompareMode ? t.data : durationHistogramData}
+              series={isCompareMode ? t.series : undefined}
+              xKey="label"
+              yKey="value"
+              orientation="vertical"
+              showPercent
+              color={SECONDARY_GREEN}
+              isCompareMode={isCompareMode}
+            />
+          );
+        })()}
+
+        {(() => {
+          const t = buildComparisonSeries(tripFrequencyData, 21, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+          return (
+            <BarChartCard
+              title="Frecuencia del viaje (% de viajes)"
+              data={isCompareMode ? t.data : tripFrequencyData}
+              series={isCompareMode ? t.series : undefined}
+              xKey="label"
+              yKey="value"
+              orientation="vertical"
+              showPercent
+              color={SECONDARY_GREEN}
+              isCompareMode={isCompareMode}
+            />
+          );
+        })()}
+
+        {(() => {
+          const t = buildComparisonSeries(tripsByEstratoData, 22, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+          return (
+            <BarChartCard
+              title="Viajes diarios según estrato (% de viajes)"
+              data={isCompareMode ? t.data : tripsByEstratoData}
+              series={isCompareMode ? t.series : undefined}
+              xKey="label"
+              yKey="value"
+              color={SECONDARY_GREEN}
+              showPercent
+              orientation="vertical"
+              isCompareMode={isCompareMode}
+            />
+          );
+        })()}
+
+        {(() => {
+          // CASO ESPECIAL: Compendio de indicadores
+          const n = buildTransportationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+          return (
+            <BarChartCard
+              title="Tiempo promedio de viaje por modo de transporte (min)"
+              data={isCompareMode ? n.data : durationByModeGroupData}
+              series={isCompareMode ? n.series : undefined}
+              xKey="label"
+              yKey="value"
+              color={SECONDARY_GREEN}
+              showPercent={false}
+              orientation="vertical"
+              isCompareMode={isCompareMode}
+            />
+          );
+        })()}
+
       </div>
     </section>
   );

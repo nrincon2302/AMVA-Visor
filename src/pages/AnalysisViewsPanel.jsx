@@ -1,8 +1,8 @@
 import BarChartCard from "../components/BarChartCard";
-import { PRIMARY_GREEN, COMPARE_COLORS, SECONDARY_GREEN } from "../config/constants";
+import { PRIMARY_GREEN, SECONDARY_GREEN } from "../config/constants";
+import { buildComparisonSeries, buildPopulationComparisonSeries } from "../utils/groupingFunctions";
 
 const toLabelValue = (arr) => (arr || []).map((d) => ({ label: d.label || d.name || d[0], value: d.value || d[1] || 0 }));
-const sanitizeKey = (v) => String(v).replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
 
 export default function AnalysisViewsPanel({
   analysisView,
@@ -24,145 +24,6 @@ export default function AnalysisViewsPanel({
 }) {
   const groupedColor = SECONDARY_GREEN;
 
-  const buildComparisonSeries = (_, indicatorKey) => {
-    if (!detailedData?.comparaciones?.[activeThematicKey]) {
-      return { data: [], series: [] };
-    }
-
-    const indicatorData =
-      detailedData.comparaciones[activeThematicKey][indicatorKey];
-
-    if (!indicatorData) {
-      return { data: [], series: [] };
-    }
-
-    const selected = (localSelectedValues || []).slice(0, 3);
-
-    const series = selected.map((val, idx) => ({
-      key: sanitizeKey(String(val)),
-      label: String(val),
-      color:
-        selectedColorMap?.get(val) ||
-        COMPARE_COLORS[idx] ||
-        COMPARE_COLORS[0],
-      raw: val,
-    }));
-
-    // ----------------------------------------------------
-    // CASO AGRUPADO (comparativo_agrupado)
-    // ----------------------------------------------------
-    if (indicatorData.grupos) {
-      const data = indicatorData.grupos.map((grupoObj) => {
-        const row = { label: grupoObj.grupo };
-
-        series.forEach((s) => {
-          const found = grupoObj.comparativo?.find(
-            (c) => String(c.detalle) === String(s.raw)
-          );
-
-          let value =
-            found?.value ??
-            found?.valor ??
-            0;
-
-          if (value > 0 && value <= 1) {
-            value *= 100;
-          }
-
-          row[s.key] = value;
-        });
-
-        return row;
-      });
-
-      return { data, series };
-    }
-
-    // ----------------------------------------------------
-    // CASO SIMPLE (comparativo_simple)
-    // ----------------------------------------------------
-    if (indicatorData.comparativo) {
-      const row = { label: indicatorData.nombre || "Valor" };
-
-      series.forEach((s) => {
-        const found = indicatorData.comparativo?.find(
-          (c) => String(c.detalle) === String(s.raw)
-        );
-
-        let value =
-          found?.value ??
-          found?.valor ??
-          0;
-
-        if (value > 0 && value <= 1) {
-          value *= 100;
-        }
-
-        row[s.key] = value;
-      });
-
-      return { data: [row], series };
-    }
-
-    return { data: [], series: [] };
-  };
-
-  const buildPopulationComparisonSeries = () => {
-    if (!detailedData?.comparaciones?.[activeThematicKey]) {
-      return { data: [], series: [] };
-    }
-
-    const selected = (localSelectedValues || []).slice(0, 3);
-
-    const series = selected.map((val, idx) => ({
-      key: sanitizeKey(String(val)),
-      label: String(val),
-      color:
-        selectedColorMap?.get(val) ||
-        COMPARE_COLORS[idx] ||
-        COMPARE_COLORS[0],
-      raw: val,
-    }));
-
-    const populationIds = [31, 32, 33, 34, 35];
-
-    const populationLabels = [
-      "Cuidador",
-      "Extranjero (residente permanente)",
-      "Madre cabeza de familia",
-      "Persona en situación de discapacidad",
-      "Ninguna",
-    ];
-
-    const data = populationIds.map((id, index) => {
-      const indicator =
-        detailedData.comparaciones[activeThematicKey][id];
-
-      const row = { label: populationLabels[index] };
-
-      series.forEach((s) => {
-        const found = indicator?.comparativo?.find(
-          (c) => String(c.detalle) === String(s.raw)
-        );
-
-        let value =
-          found?.value ??
-          found?.valor ??
-          0;
-
-        if (value > 0 && value <= 1) {
-          value *= 100;
-        }
-
-        row[s.key] = value;
-      });
-
-      return row;
-    });
-
-    return { data, series };
-  };
-
   // Grid layout: 3 columns, 2 rows
   const viajesCharts = (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "auto auto", gap: 16 }}>
@@ -170,7 +31,7 @@ export default function AnalysisViewsPanel({
         <>
           <div style={{ gridColumn: "1 / 2", gridRow: "1 / span 2" }}>
             {(() => {
-              const m = buildComparisonSeries(modeData, 27);
+              const m = buildComparisonSeries(modeData, 27, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
                 <BarChartCard
                   title="Modo principal (% de viajes)"
@@ -180,6 +41,7 @@ export default function AnalysisViewsPanel({
                   color={PRIMARY_GREEN}
                   orientation="horizontal"
                   chartHeight={720}
+                  isCompareMode={isCompareMode}
                 />
               );
             })()}
@@ -187,7 +49,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "2 / 3", gridRow: "1 / 2" }}>
             {(() => {
-              const p = buildComparisonSeries(purposeData, 28);
+              const p = buildComparisonSeries(purposeData, 28, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
                 <BarChartCard
                   title="Motivo de viaje (% de viajes)"
@@ -197,6 +59,7 @@ export default function AnalysisViewsPanel({
                   color={PRIMARY_GREEN}
                   orientation="horizontal"
                   chartHeight={360}
+                  isCompareMode={isCompareMode}
                 />
               );
             })()}
@@ -204,7 +67,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "3 / 4", gridRow: "1 / 2" }}>
             {(() => {
-              const s = buildComparisonSeries(stageData, 29);
+              const s = buildComparisonSeries(stageData, 29, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
                 <BarChartCard
                   title="Etapas (% de viajes)"
@@ -214,6 +77,7 @@ export default function AnalysisViewsPanel({
                   color={PRIMARY_GREEN}
                   orientation="horizontal"
                   chartHeight={360}
+                  isCompareMode={isCompareMode}
                 />
               );
             })()}
@@ -221,7 +85,7 @@ export default function AnalysisViewsPanel({
 
           <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
             {(() => {
-              const n = buildComparisonSeries(noTravelReasonData, 30);
+              const n = buildComparisonSeries(noTravelReasonData, 30, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
                 <BarChartCard
                   title="Motivo de no viaje (% de personas que no viajan)"
@@ -231,6 +95,7 @@ export default function AnalysisViewsPanel({
                   color={PRIMARY_GREEN}
                   orientation="horizontal"
                   chartHeight={360}
+                  isCompareMode={isCompareMode}
                 />
               );
             })()}
@@ -238,7 +103,7 @@ export default function AnalysisViewsPanel({
           <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
             {(() => {
               // CASO ESPECIAL: Compendio de indicadores
-              const pop = buildPopulationComparisonSeries();
+              const pop = buildPopulationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
                 <BarChartCard
                   title="% de personas que sí viajan en grupos poblacionales de interés"
@@ -248,6 +113,7 @@ export default function AnalysisViewsPanel({
                   color={PRIMARY_GREEN}
                   orientation="horizontal"
                   chartHeight={360}
+                  isCompareMode={isCompareMode}
                 />
               );
             })()}
@@ -323,16 +189,16 @@ export default function AnalysisViewsPanel({
       {isCompareMode ? (
         <>
           {(() => {
-            const t = buildComparisonSeries(vehicleTypeData, 36);
-            return <BarChartCard title="Tipología (% de vehículos)" data={t.data} xKey="label" series={t.series} color={PRIMARY_GREEN} />;
+            const t = buildComparisonSeries(vehicleTypeData, 36, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+            return <BarChartCard title="Tipología (% de vehículos)" data={t.data} xKey="label" series={t.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} />;
           })()}
           {(() => {
-            const vt = buildComparisonSeries(vehicleTenureData, 37);
-            return <BarChartCard title="Cantidad (% de vehículos)" data={vt.data} xKey="label" series={vt.series} color={PRIMARY_GREEN} />;
+            const vt = buildComparisonSeries(vehicleTenureData, 37, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+            return <BarChartCard title="Cantidad (% de vehículos)" data={vt.data} xKey="label" series={vt.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} />;
           })()}
           {(() => {
-            const m = buildComparisonSeries(vehicleModelData, 38);
-            return <BarChartCard title="Modelo (% de vehículos)" data={m.data} xKey="label" series={m.series} color={PRIMARY_GREEN} />;
+            const m = buildComparisonSeries(vehicleModelData, 38, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+            return <BarChartCard title="Modelo (% de vehículos)" data={m.data} xKey="label" series={m.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} />;
           })()}
         </>
       ) : (

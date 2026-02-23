@@ -361,9 +361,15 @@ export function useTravelDataFromAPI() {
      DATA DERIVADA
   ============================================================= */
   const mobilityPatternsData = useMemo(
-    () => buildMobilityPatternsData(normalizedIndicadores),
-    [normalizedIndicadores]
+    () => buildMobilityPatternsData(
+      compareMode ? indicadoresData : normalizedIndicadores,
+      compareMode
+    ),
+    [indicadoresData, normalizedIndicadores, compareMode]
   );
+
+  // Extraer hourlyModeDatasets si están disponibles
+  const hourlyModeDatasets = mobilityPatternsData?.hourlyModeDatasets || null;
 
   const analysisViewsData = useMemo(
     () => buildAnalysisViewsData(normalizedIndicadores),
@@ -398,6 +404,7 @@ export function useTravelDataFromAPI() {
     detailedData,
 
     mobilityPatternsData,
+    hourlyModeDatasets,
     analysisViewsData,
 
     isLoading,
@@ -490,7 +497,7 @@ function transformPerDetalle(response) {
   return null;
 }
 
-function buildMobilityPatternsData(indicadoresData) {
+function buildMobilityPatternsData(indicadoresData, isCompareMode) {
   if (!indicadoresData) return null;
 
   /* =============================
@@ -502,7 +509,9 @@ function buildMobilityPatternsData(indicadoresData) {
   const ind19 = indicadoresData[19];
 
   let hourlyModeData = [];
+  let hourlyModeDatasets = null;
 
+  // Caso normal: todos agrupados
   if (
     ind16?.tipo === "agrupado" &&
     ind17?.tipo === "agrupado" &&
@@ -523,6 +532,51 @@ function buildMobilityPatternsData(indicadoresData) {
         public: publicV,
         private: privateV,
         nonMotorized: nonMotorizedV,
+      };
+    });
+  }
+  // Caso comparativo: todos comparativo_agrupado
+  else if (
+    isCompareMode &&
+    ind16?.tipo === "comparativo_agrupado" &&
+    ind17?.tipo === "comparativo_agrupado" &&
+    ind18?.tipo === "comparativo_agrupado" &&
+    ind19?.tipo === "comparativo_agrupado"
+  ) {
+    // Extraer los detalles únicos de los indicadores
+    const detalles = new Set();
+    [ind16, ind17, ind18, ind19].forEach(ind => {
+      if (ind?.grupos) {
+        ind.grupos.forEach(g => {
+          g.comparativo?.forEach(d => {
+            detalles.add(String(d.detalle));
+          });
+        });
+      }
+    });
+
+    // Para cada detalle, construir un dataset
+    hourlyModeDatasets = Array.from(detalles).map(detalle => {
+      const data = ind16.grupos.map(grupoObj => {
+        const grupoLabel = grupoObj.grupo;
+        
+        const informalComp = ind16.grupos.find(x => x.grupo === grupoLabel)?.comparativo?.find(c => String(c.detalle) === String(detalle));
+        const publicComp = ind17.grupos.find(x => x.grupo === grupoLabel)?.comparativo?.find(c => String(c.detalle) === String(detalle));
+        const privateComp = ind18.grupos.find(x => x.grupo === grupoLabel)?.comparativo?.find(c => String(c.detalle) === String(detalle));
+        const nonMotorizedComp = ind19.grupos.find(x => x.grupo === grupoLabel)?.comparativo?.find(c => String(c.detalle) === String(detalle));
+
+        return {
+          hour: grupoLabel,
+          informal: Math.round(informalComp?.value ?? 0),
+          public: Math.round(publicComp?.value ?? 0),
+          private: Math.round(privateComp?.value ?? 0),
+          nonMotorized: Math.round(nonMotorizedComp?.value ?? 0),
+        };
+      });
+
+      return {
+        nombre: String(detalle),
+        data: data,
       };
     });
   }
@@ -579,6 +633,7 @@ function buildMobilityPatternsData(indicadoresData) {
 
   return {
     hourlyModeData,
+    hourlyModeDatasets,
     durationHistogramData,
     tripFrequencyData,
     tripsByEstratoData,

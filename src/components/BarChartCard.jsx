@@ -30,6 +30,7 @@ const BarChartCard = ({
   highlightKey,
   highlightColor,
   onSelect,
+  isCompareMode = false,
 }) => {
   const extractValues = () => {
     if (!data?.length) return [];
@@ -149,7 +150,13 @@ const BarChartCard = ({
           <Tooltip
             cursor={{ fill: "rgba(148,163,184,0.15)" }}
             contentStyle={{ borderRadius: 8, border: "none" }}
-            formatter={(value) => [formatValue(value), showPercent ? "Participación" : "Valor"]}
+            formatter={(value, name) => {
+              // En modo comparación, mostrar el nombre de la serie en lugar de "Valor" o "Participación"
+              if (isCompareMode && series?.length) {
+                return [formatValue(value), name];
+              }
+              return [formatValue(value), showPercent ? "Participación" : "Valor"];
+            }}
           />
           {series?.length ? (
             series.map((entry) => (
@@ -161,12 +168,14 @@ const BarChartCard = ({
                 fill={entry.color}
                 maxBarSize={36}
               >
-                <LabelList
-                  dataKey={entry.key}
-                  position={isHorizontal ? "right" : "top"}
-                  style={{ fontSize: "10pt", fill: "#0f172a" }}
-                  formatter={formatValue}
-                />
+                {!isCompareMode && (
+                  <LabelList
+                    dataKey={entry.key}
+                    position={isHorizontal ? "right" : "top"}
+                    style={{ fontSize: "10pt", fill: "#0f172a" }}
+                    formatter={formatValue}
+                  />
+                )}
               </Bar>
             ))
           ) : (

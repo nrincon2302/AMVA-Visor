@@ -46,6 +46,7 @@ export default function DashboardSection() {
     indicadoresData,
     indicadoresGlobales,
     mobilityPatternsData,
+    hourlyModeDatasets,
     analysisViewsData,
     detailedData,
     compareMode,
@@ -350,7 +351,13 @@ export default function DashboardSection() {
           {/* Patrones de movilidad */}
           <div ref={mobilitySectionRef}>
             <MobilityPatternsPanel
+              isCompareMode={compareMode}
+              localSelectedValues={localSelectedValues}
+              selectedColorMap={selectedColorMap}
+              activeThematicKey={activeThematicKey}
+              detailedData={detailedData}
               hourlyModeData={mobilityPatternsData?.hourlyModeData}
+              hourlyModeDatasets={hourlyModeDatasets}
               durationHistogramData={mobilityPatternsData?.durationHistogramData}
               tripFrequencyData={mobilityPatternsData?.tripFrequencyData}
               tripsByEstratoData={mobilityPatternsData?.tripsByEstratoData}
