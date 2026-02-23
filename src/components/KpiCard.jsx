@@ -1,12 +1,13 @@
 import React from "react";
+import { SECONDARY_GREEN, BANNER_IMAGE_URL } from "../config/constants";
 
 const KpiCard = ({
   label,
   value,
   subLabel,
-  headerColor = "#66CC33",
+  headerColor = SECONDARY_GREEN,
   headerTextColor = "#ffffff",
-  bannerImageUrl,
+  bannerImageUrl = BANNER_IMAGE_URL,
   contextLines = [],
 }) => {
   const headerBackgroundStyle = bannerImageUrl
@@ -60,7 +61,7 @@ const KpiCard = ({
           {subLabel && (
             <div
               style={{
-                fontSize: "11pt",
+                fontSize: "9pt",
                 color: "#6b7280",
                 marginTop: 4,
               }}

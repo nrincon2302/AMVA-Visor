@@ -235,11 +235,8 @@ const Header = () => {
             }}
         >
           <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>
-            Encuesta de Origen – Destino a Hogares (2025)
+            Encuesta Origen - Destino 2025
             </h1>
-            <p style={{ margin: 0, fontSize: 16, maxWidth: 600 }}>
-                Encuestas de viajes de orígenes a destinos
-            </p>
         </div>
       </section>
       <div

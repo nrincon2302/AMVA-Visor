@@ -1,12 +1,5 @@
 import { useState, useEffect } from "react";
 import KpiCard from "../components/KpiCard";
-import {
-  PRIMARY_GREEN,
-  TERTIARY_PINK,
-  TERTIARY_BLUE,
-  TERTIARY_ORANGE,
-  BANNER_IMAGE_URL,
-} from "../config/constants";
 
 export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, localSelectedValues, selectedColorMap }) {
   const [activeComparisonIndex, setActiveComparisonIndex] = useState(0);
@@ -50,7 +43,7 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
   const viajesPorPersonaGlobal = kpisGlobales[7]?.value ?? 0;
   const viajesPorViajeroGlobal = kpisGlobales[8]?.value ?? 0;
 
-  const globalLabel = "Estadística global para Valle de Aburrá";
+  const globalLabel = "Estadística global para el Valle de Aburrá";
 
   const formatDelta = (filtrado, global, unit) => {
     if (!global || global === 0) return "N/A";
@@ -125,72 +118,56 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
           label={kpisData[1]?.nombre ?? "Viajes totales diarios"}
           value={(viajesTotales || 0).toLocaleString()}
           subLabel={viajesTotales ? `${globalLabel}: ${(viajesTotalesGlobal || 0).toLocaleString()}` : undefined}
-          headerColor={PRIMARY_GREEN}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={viajesTotales ? [formatDelta(viajesTotales, viajesTotalesGlobal, "viajes")] : []}
+          contextLines={viajesTotales ? [formatDelta(viajesTotales, viajesTotalesGlobal, "viajes que el Indicador AMVA")] : []}
         />
 
         <KpiCard
           label={kpisData[2]?.nombre ?? "% de personas que no viajan"}
           value={`${(porcentajeNoViajan || 0).toFixed(1)}%`}
           subLabel={porcentajeNoViajasGlobal ? `${globalLabel}: ${(porcentajeNoViajasGlobal || 0).toFixed(1)}%` : undefined}
-          headerColor={TERTIARY_PINK}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={porcentajeNoViajasGlobal ? [formatDelta(porcentajeNoViajan, porcentajeNoViajasGlobal, "personas que no viajan")] : []}
+          contextLines={porcentajeNoViajasGlobal ? [formatDelta(porcentajeNoViajan, porcentajeNoViajasGlobal, "personas que el Indicador AMVA")] : []}
         />
 
         <KpiCard
           label={kpisData[3]?.nombre ?? "Tiempo promedio de viaje (min)"}
           value={`${(duracionPromedio || 0).toFixed(1)} min`}
           subLabel={duracionPromedioGlobal ? `${globalLabel}: ${(duracionPromedioGlobal || 0).toFixed(1)} min` : undefined}
-          headerColor={TERTIARY_BLUE}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={duracionPromedioGlobal ? [formatDelta(duracionPromedio, duracionPromedioGlobal, "minutos")] : []}
+          contextLines={duracionPromedioGlobal ? [formatDelta(duracionPromedio, duracionPromedioGlobal, "minutos que el Indicador AMVA")] : []}
         />
 
         <KpiCard
           label={kpisData[4]?.nombre ?? "Tamaño promedio del hogar (personas de más de 5 años)"}
           value={`${(tamanoPromedio || 0).toFixed(2)}`}
           subLabel={tamanoPromedioGlobal ? `${globalLabel}: ${(tamanoPromedioGlobal || 0).toFixed(2)}` : undefined}
-          headerColor={TERTIARY_ORANGE}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={tamanoPromedioGlobal ? [formatDelta(tamanoPromedio, tamanoPromedioGlobal, "personas por hogar")] : []}
+          contextLines={tamanoPromedioGlobal ? [formatDelta(tamanoPromedio, tamanoPromedioGlobal, "personas por hogar que el Indicador AMVA")] : []}
         />
 
         <KpiCard
           label={kpisData[5]?.nombre ?? "Viajes diarios en modos no motorizados"}
           value={(viajesModoNoMotorizado || 0).toLocaleString()}
           subLabel={viajesNoMotorizadoGlobal ? `${globalLabel}: ${(viajesNoMotorizadoGlobal || 0).toLocaleString()}` : undefined}
-          headerColor={TERTIARY_BLUE}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={viajesNoMotorizadoGlobal ? [formatDelta(viajesModoNoMotorizado, viajesNoMotorizadoGlobal, "viajes diarios")] : []}
+          contextLines={viajesNoMotorizadoGlobal ? [formatDelta(viajesModoNoMotorizado, viajesNoMotorizadoGlobal, "viajes diarios que el Indicador AMVA")] : []}
         />
 
         <KpiCard
           label={kpisData[6]?.nombre ?? "Viajes diarios por hogar"}
           value={`${(viajesPorHogar || 0).toFixed(2)}`}
           subLabel={`${globalLabel}: ${(viajesPorHogarGlobal || 0).toFixed(2)}`}
-          headerColor={TERTIARY_ORANGE}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={[formatDelta(viajesPorHogar, viajesPorHogarGlobal, "viajes por hogar")]}
+          contextLines={[formatDelta(viajesPorHogar, viajesPorHogarGlobal, "viajes por hogar que el Indicador AMVA")]}
         />
 
         <KpiCard
           label={kpisData[7]?.nombre ?? "Viajes diarios promedio por persona"}
           value={`${(viajesPorPersona || 0).toFixed(2)}`}
           subLabel={`${globalLabel}: ${(viajesPorPersonaGlobal || 0).toFixed(2)}`}
-          headerColor={PRIMARY_GREEN}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={[formatDelta(viajesPorPersona, viajesPorPersonaGlobal, "viajes por persona")]}
+          contextLines={[formatDelta(viajesPorPersona, viajesPorPersonaGlobal, "viajes por persona que el Indicador AMVA")]}
         />
 
         <KpiCard
           label={kpisData[8]?.nombre ?? "Viajes diarios promedio por personas que realizan viajes"}
           value={`${(viajesPorViajero || 0).toFixed(2)}`}
           subLabel={`${globalLabel}: ${(viajesPorViajeroGlobal || 0).toFixed(2)}`}
-          headerColor={TERTIARY_PINK}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={[formatDelta(viajesPorViajero, viajesPorViajeroGlobal, "viajes diarios")]}
+          contextLines={[formatDelta(viajesPorViajero, viajesPorViajeroGlobal, "viajes diarios que el Indicador AMVA")]}
         />
       </div>
     </section>

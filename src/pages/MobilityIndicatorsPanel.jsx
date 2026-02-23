@@ -1,13 +1,5 @@
 import { useState } from "react";
 import KpiCard from "../components/KpiCard";
-import {
-  PRIMARY_GREEN,
-  SECONDARY_GREEN,
-  TERTIARY_PINK,
-  TERTIARY_ORANGE,
-  TERTIARY_BLUE,
-  BANNER_IMAGE_URL,
-} from "../config/constants";
 
 export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales, isCompareMode, localSelectedValues, selectedColorMap }) {
   const [activeComparisonIndex, setActiveComparisonIndex] = useState(0);
@@ -40,7 +32,7 @@ export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales, isComp
   const motosGlobal = kpisGlobales[13]?.value ?? 0;  
   const bicicletasGlobal = kpisGlobales[14]?.value ?? 0;
 
-  const globalLabel = "Estadística global para Valle de Aburrá";
+  const globalLabel = "Estadística global para el Valle de Aburrá";
 
   const formatDelta = (filtrado, global, unit) => {
     if (!global || global === 0) return "N/A";
@@ -119,49 +111,37 @@ export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales, isComp
           label={kpisData[9]?.nombre ?? "Número total de vehículos propios (toda tipología)"}
           value={(totalVehicles || 0).toLocaleString()}
           subLabel={hasValue(totalVehicles) ? `${globalLabel}: ${(totalVehiclesGlobal || 0).toLocaleString()}` : undefined}
-          headerColor={PRIMARY_GREEN}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={hasValue(totalVehicles) ? [formatDelta(totalVehicles, totalVehiclesGlobal, "vehículos propios")] : []}
+          contextLines={hasValue(totalVehicles) ? [formatDelta(totalVehicles, totalVehiclesGlobal, "vehículos propios que el Indicador AMVA")] : []}
         />
         <KpiCard
           label={kpisData[10]?.nombre ?? "Número promedio de vehículos por hogar"}
           value={`${(avgVehiclesPerHousehold || 0).toFixed(3)}`}
           subLabel={hasValue(avgVehiclesPerHousehold) ? `${globalLabel}: ${(avgVehiclesPerHouseholdGlobal || 0).toFixed(3)}` : undefined}
-          headerColor={TERTIARY_PINK}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={hasValue(avgVehiclesPerHousehold) ? [formatDelta(avgVehiclesPerHousehold, avgVehiclesPerHouseholdGlobal, "vehículos por hogar")] : []}
+          contextLines={hasValue(avgVehiclesPerHousehold) ? [formatDelta(avgVehiclesPerHousehold, avgVehiclesPerHouseholdGlobal, "vehículos por hogar que el Indicador AMVA")] : []}
         />
         <KpiCard
           label={kpisData[11]?.nombre ?? "% de vehículos que operan con tecnologías limpias"}
           value={`${cleanVehiclesPct.toFixed(3)}%`}
           subLabel={hasValue(cleanVehiclesPct) ? `${globalLabel}: ${(cleanVehiclesPctGlobal || 0).toFixed(3)}%` : undefined}
-          headerColor={TERTIARY_BLUE}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={hasValue(cleanVehiclesPct) ? [formatDelta(cleanVehiclesPct, cleanVehiclesPctGlobal, "vehículos limpios")] : []}
+          contextLines={hasValue(cleanVehiclesPct) ? [formatDelta(cleanVehiclesPct, cleanVehiclesPctGlobal, "vehículos limpios que el Indicador AMVA")] : []}
         />
         <KpiCard
           label={kpisData[12]?.nombre ?? "Autos por 1000 habitantes"}
           value={(autos || 0).toFixed(2)}
           subLabel={hasValue(autos) ? `${globalLabel}: ${(autosGlobal || 0).toFixed(2)}` : undefined}
-          headerColor={TERTIARY_ORANGE}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={hasValue(autos) ? [formatDelta(autos, autosGlobal, "automóviles")] : []}
+          contextLines={hasValue(autos) ? [formatDelta(autos, autosGlobal, "automóviles que el Indicador AMVA")] : []}
         />
         <KpiCard
           label={kpisData[13]?.nombre ?? "Motocicletas por 1000 habitantes"}
           value={(motos || 0).toFixed(2)}
           subLabel={hasValue(motos) ? `${globalLabel}: ${(motosGlobal || 0).toFixed(2)}` : undefined}
-          headerColor={SECONDARY_GREEN}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={hasValue(motos) ? [formatDelta(motos, motosGlobal, "motocicletas")] : []}
+          contextLines={hasValue(motos) ? [formatDelta(motos, motosGlobal, "motocicletas que el Indicador AMVA")] : []}
         />
         <KpiCard
           label={kpisData[14]?.nombre ?? "Bicicletas por 1000 habitantes"}
           value={(bicicletas || 0).toFixed(2)}
           subLabel={hasValue(bicicletas) ? `${globalLabel}: ${(bicicletasGlobal || 0).toFixed(2)}` : undefined}
-          headerColor={PRIMARY_GREEN}
-          bannerImageUrl={BANNER_IMAGE_URL}
-          contextLines={hasValue(bicicletas) ? [formatDelta(bicicletas, bicicletasGlobal, "bicicletas")] : []}
+          contextLines={hasValue(bicicletas) ? [formatDelta(bicicletas, bicicletasGlobal, "bicicletas que el Indicador AMVA")] : []}
         />
       </div>
     </section>
