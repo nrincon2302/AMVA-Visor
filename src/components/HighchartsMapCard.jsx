@@ -11,7 +11,7 @@ if (typeof TiledWebMap === "function") {
   TiledWebMap(Highcharts);
 }
 
-const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false, selectedMacrozone }) => {
+const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false, selectedMacrozone, expandedHeight }) => {
   
   const [mapGeoJSON, setMapGeoJSON] = useState(null);
 
@@ -45,7 +45,7 @@ const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false
   const options = {
     chart: {
       // No definir 'map' aquí globalmente para evitar conflictos con tiledwebmap
-      height: 320,
+      height: expandedHeight ?? 320,
       spacing: [0, 0, 0, 0],
     },
 

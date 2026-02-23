@@ -345,6 +345,7 @@ export default function DashboardSection() {
             <MapsPanel
               macroHeatData={indicadoresData?.[15] ?? { data: [] }}
               filters={filters}
+              isCompareMode={compareMode}
             />
           </div>
 

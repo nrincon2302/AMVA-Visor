@@ -11,7 +11,8 @@ const MapCardWithHeader = ({
   title, 
   data, 
   palette, 
-  selectedMacrozone 
+  selectedMacrozone,
+  onExpand,
 }) => {
   const headerGradient = palette === "green" 
     ? `linear-gradient(135deg, ${PRIMARY_GREEN} 0%, ${SECONDARY_GREEN} 100%)`
@@ -30,6 +31,9 @@ const MapCardWithHeader = ({
         padding: "16px 20px",
         background: headerGradient,
         overflow: "hidden",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
       }}>
         <div style={{
           position: "absolute",
@@ -51,6 +55,35 @@ const MapCardWithHeader = ({
         }}>
           {title}
         </div>
+        {onExpand && (
+          <button
+            onClick={onExpand}
+            style={{
+              position: "relative",
+              background: "rgba(255, 255, 255, 0.2)",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              color: "#ffffff",
+              padding: "6px 10px",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+              transition: "all 0.2s ease",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = "rgba(255, 255, 255, 0.3)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = "rgba(255, 255, 255, 0.2)";
+            }}
+          >
+            <span>⛶</span>
+            <span>Expandir</span>
+          </button>
+        )}
       </div>
 
       {/* Mapa */}
