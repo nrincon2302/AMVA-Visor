@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import KpiCard from "../components/KpiCard";
 import {
   PRIMARY_GREEN,
@@ -7,26 +8,47 @@ import {
   BANNER_IMAGE_URL,
 } from "../config/constants";
 
-export default function KpisPanel({ kpisData, kpisGlobales }) {
-  // Obtener los valores
-  const viajesTotales = Math.round(kpisData[1]?.value);
-  const porcentajeNoViajan = 100*kpisData[2]?.value;
-  const duracionPromedio = kpisData[3]?.value;
-  const tamanoPromedio = kpisData[4]?.value;
-  const viajesModoNoMotorizado = Math.round(kpisData[5]?.value);
-  const viajesPorHogar = kpisData[6]?.value;
-  const viajesPorPersona = kpisData[7]?.value;
-  const viajesPorViajero = kpisData[8]?.value;
+export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, localSelectedValues, selectedColorMap }) {
+  const [activeComparisonIndex, setActiveComparisonIndex] = useState(0);
 
-  // Si se proporcionan valores globales para comparación, usarlos
-  const viajesTotalesGlobal = Math.round(kpisGlobales[1]?.value);
-  const porcentajeNoViajasGlobal = 100*kpisGlobales[2]?.value;
-  const duracionPromedioGlobal = kpisGlobales[3]?.value;
-  const tamanoPromedioGlobal = kpisGlobales[4]?.value;
-  const viajesNoMotorizadoGlobal = Math.round(kpisGlobales[5]?.value);  
-  const viajesPorHogarGlobal = kpisGlobales[6]?.value;
-  const viajesPorPersonaGlobal = kpisGlobales[7]?.value;
-  const viajesPorViajeroGlobal = kpisGlobales[8]?.value;
+  useEffect(() => {
+    if (!localSelectedValues?.length) {
+      setActiveComparisonIndex(0);
+    } else {
+      setActiveComparisonIndex(0);
+    }
+  }, [localSelectedValues, isCompareMode]);
+
+  const getValue = (id) => {
+    const item = kpisData[id];
+    if (!item) return 0;
+
+    if (isCompareMode && item.tipo === "comparativo_simple") {
+      return item.comparativo[activeComparisonIndex]?.value ?? 0;
+    }
+
+    return item?.value ?? 0;
+  };
+
+  // Valores dinámicos
+  const viajesTotales = Math.round(getValue(1));
+  const porcentajeNoViajan = 100 * getValue(2);
+  const duracionPromedio = getValue(3);
+  const tamanoPromedio = getValue(4);
+  const viajesModoNoMotorizado = Math.round(getValue(5));
+  const viajesPorHogar = getValue(6);
+  const viajesPorPersona = getValue(7);
+  const viajesPorViajero = getValue(8);
+
+  // Globales (no cambian por comparación)
+  const viajesTotalesGlobal = Math.round(kpisGlobales[1]?.value ?? 0);
+  const porcentajeNoViajasGlobal = 100 * (kpisGlobales[2]?.value ?? 0);
+  const duracionPromedioGlobal = kpisGlobales[3]?.value ?? 0;
+  const tamanoPromedioGlobal = kpisGlobales[4]?.value ?? 0;
+  const viajesNoMotorizadoGlobal = Math.round(kpisGlobales[5]?.value ?? 0);
+  const viajesPorHogarGlobal = kpisGlobales[6]?.value ?? 0;
+  const viajesPorPersonaGlobal = kpisGlobales[7]?.value ?? 0;
+  const viajesPorViajeroGlobal = kpisGlobales[8]?.value ?? 0;
 
   const globalLabel = "Estadística global para Valle de Aburrá";
 
@@ -49,7 +71,56 @@ export default function KpisPanel({ kpisData, kpisGlobales }) {
       }}
     >
       <h3 style={{ marginTop: 0 }}>Estadísticas generales</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(180px,1fr))", gap: 12 }}>
+
+      {isCompareMode && localSelectedValues?.length > 0 && (
+        <div style={{
+          display: "flex",
+          gap: 12,
+          marginBottom: 16,
+          flexWrap: "wrap"
+        }}>
+          {localSelectedValues.map((value, index) => {
+            const isActive = index === activeComparisonIndex;
+
+            return (
+              <button
+                key={value}
+                onClick={() => setActiveComparisonIndex(index)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 12px",
+                  borderRadius: 20,
+                  border: isActive ? "2px solid #1e293b" : "1px solid #cbd5e1",
+                  background: isActive ? "#f1f5f9" : "#ffffff",
+                  cursor: "pointer",
+                  fontWeight: isActive ? 600 : 500,
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: selectedColorMap?.get(value) || "#999"
+                  }}
+                />
+                {value}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(180px,1fr))",
+          gap: 12,
+        }}
+      >
         <KpiCard
           label={kpisData[1]?.nombre ?? "Viajes totales diarios"}
           value={(viajesTotales || 0).toLocaleString()}

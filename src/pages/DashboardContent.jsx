@@ -320,18 +320,22 @@ export default function DashboardSection() {
           />
 
           {/* KPIs generales */}
-          <div ref={statsSectionRef}>
-            <KpisPanel 
-              kpisData={kpisGenerales} 
-              kpisGlobales={kpisGlobales}
-            />
-          </div>
+          <KpisPanel 
+            kpisData={kpisGenerales} 
+            kpisGlobales={kpisGlobales}
+            isCompareMode={compareMode}
+            localSelectedValues={localSelectedValues}
+            selectedColorMap={selectedColorMap}
+          />
 
           {/* Indicadores de motorización */}
           <div ref={indicatorsSectionRef}>
             <MobilityIndicatorsPanel
               kpisData={kpisMotorizacion}
               kpisGlobales={kpisMotorizacionGlobales}
+              isCompareMode={compareMode}
+              localSelectedValues={localSelectedValues}
+              selectedColorMap={selectedColorMap}
             />
           </div>
 

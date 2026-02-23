@@ -1,3 +1,4 @@
+import { useState } from "react";
 import KpiCard from "../components/KpiCard";
 import {
   PRIMARY_GREEN,
@@ -8,23 +9,36 @@ import {
   BANNER_IMAGE_URL,
 } from "../config/constants";
 
-export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales }) {
-  // Obtener los valores
+export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales, isCompareMode, localSelectedValues, selectedColorMap }) {
+  const [activeComparisonIndex, setActiveComparisonIndex] = useState(0);
+
+  const getValue = (id) => {
+    const item = kpisData[id];
+    if (!item) return 0;
+
+    if (isCompareMode && item.tipo === "comparativo_simple") {
+      return item.comparativo[activeComparisonIndex]?.value ?? 0;
+    }
+
+    return item?.value ?? 0;
+  };
+
+  // Valores dinámicos
   //console.log("Datos en panel de KPIS", kpisData)
-  const totalVehicles = Math.round(kpisData[9]?.value);
-  const avgVehiclesPerHousehold = kpisData[10]?.value;
-  const cleanVehiclesPct = 100*kpisData[11]?.value;
-  const autos = kpisData[12]?.value;
-  const motos = kpisData[13]?.value;
-  const bicicletas = kpisData[14]?.value;
+  const totalVehicles = Math.round(getValue(9));
+  const avgVehiclesPerHousehold = getValue(10);
+  const cleanVehiclesPct = 100*getValue(11);
+  const autos = getValue(12);
+  const motos = getValue(13);
+  const bicicletas = getValue(14);
 
   // Si se proporcionan valores globales para comparación, usarlos
-  const totalVehiclesGlobal = Math.round(kpisGlobales[9]?.value);
-  const avgVehiclesPerHouseholdGlobal = kpisGlobales[10]?.value;
-  const cleanVehiclesPctGlobal = 100*kpisGlobales[11]?.value;
-  const autosGlobal = kpisGlobales[12]?.value;
-  const motosGlobal = kpisGlobales[13]?.value;  
-  const bicicletasGlobal = kpisGlobales[14]?.value;
+  const totalVehiclesGlobal = Math.round(kpisGlobales[9]?.value ?? 0);
+  const avgVehiclesPerHouseholdGlobal = kpisGlobales[10]?.value ?? 0;
+  const cleanVehiclesPctGlobal = 100*(kpisGlobales[11]?.value ?? 0);
+  const autosGlobal = kpisGlobales[12]?.value ?? 0;
+  const motosGlobal = kpisGlobales[13]?.value ?? 0;  
+  const bicicletasGlobal = kpisGlobales[14]?.value ?? 0;
 
   const globalLabel = "Estadística global para Valle de Aburrá";
 
@@ -49,6 +63,57 @@ export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales }) {
       }}
     >
       <h3 style={{ marginTop: 0 }}>Indicadores de motorización</h3>
+
+      {isCompareMode && localSelectedValues?.length > 0 && (
+        <div style={{
+          display: "flex",
+          gap: 12,
+          marginBottom: 16,
+          flexWrap: "wrap"
+        }}>
+          {localSelectedValues.map((value, index) => {
+            const isActive = index === activeComparisonIndex;
+
+            return (
+              <button
+                key={value}
+                onClick={() => setActiveComparisonIndex(index)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 12px",
+                  borderRadius: 20,
+                  border: isActive ? "2px solid #1e293b" : "1px solid #cbd5e1",
+                  background: isActive ? "#f1f5f9" : "#ffffff",
+                  cursor: "pointer",
+                  fontWeight: isActive ? 600 : 500,
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: selectedColorMap?.get(value) || "#999"
+                  }}
+                />
+                {value}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, minmax(180px,1fr))",
+          gap: 12,
+        }}
+      ></div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12 }}>
         <KpiCard
           label={kpisData[9]?.nombre ?? "Número total de vehículos propios (toda tipología)"}

@@ -316,7 +316,7 @@ export function useTravelDataFromAPI() {
         return;
       }
 
-      // 🔹 Comparativo simple → convertir a simple
+      // Comparativo simple → convertir a simple
       if (ind.tipo === "comparativo_simple") {
         const found = ind.comparativo.find(
           (d) => String(d.detalle) === String(activeDetail)
@@ -324,17 +324,17 @@ export function useTravelDataFromAPI() {
 
         out[id] = {
           tipo: "simple",
-          nombre: ind.nombre, // 👈 IMPORTANTE
+          nombre: ind.nombre,
           value: found?.value ?? 0,
         };
         return;
       }
 
-      // 🔹 Comparativo agrupado → convertir a agrupado
+      // Comparativo agrupado → convertir a agrupado
       if (ind.tipo === "comparativo_agrupado") {
         out[id] = {
           tipo: "agrupado",
-          nombre: ind.nombre, // 👈 IMPORTANTE
+          nombre: ind.nombre,
           data: ind.grupos.map((g) => {
             const found = g.comparativo.find(
               (d) => String(d.detalle) === String(activeDetail)
@@ -349,7 +349,7 @@ export function useTravelDataFromAPI() {
         return;
       }
 
-      // 🔹 Si no es comparativo, dejar igual
+      // Si no es comparativo, dejar igual
       out[id] = ind;
     });
 
@@ -393,7 +393,7 @@ export function useTravelDataFromAPI() {
     compareTema,
     setCompareTema,
 
-    indicadoresData: normalizedIndicadores,
+    indicadoresData: compareMode ? indicadoresData : normalizedIndicadores,
     indicadoresGlobales,
     detailedData,
 
@@ -452,7 +452,7 @@ function transformAgregado(response) {
 function transformPerDetalle(response) {
   if (!response || typeof response !== "object") return null;
 
-  // 🔹 Simple comparativo
+  // Simple comparativo
   if (Array.isArray(response.comparativo)) {
     return {
       tipo: "comparativo_simple",
@@ -464,7 +464,7 @@ function transformPerDetalle(response) {
     };
   }
 
-  // 🔹 Agrupado comparativo
+  // Agrupado comparativo
   if (Array.isArray(response.grupos)) {
     return {
       tipo: "comparativo_agrupado",
