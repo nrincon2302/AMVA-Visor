@@ -24,12 +24,12 @@ export default function AnalysisViewsPanel({
 }) {
   const groupedColor = SECONDARY_GREEN;
 
-  // Grid layout: 3 columns, 2 rows
+  // Grid layout: 2 columnas
   const viajesCharts = (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gridTemplateRows: "auto auto", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
       {isCompareMode ? (
         <>
-          <div style={{ gridColumn: "1 / 2", gridRow: "1 / span 2" }}>
+          <div style={{ gridColumn: "1 / -1", gridRow: "1 / 2" }}>
             {(() => {
               const m = buildComparisonSeries(modeData, 27, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
@@ -39,15 +39,17 @@ export default function AnalysisViewsPanel({
                   xKey="label"
                   series={m.series}
                   color={PRIMARY_GREEN}
-                  orientation="horizontal"
-                  chartHeight={720}
+                  orientation="vertical"
+                  chartHeight={320}
                   isCompareMode={isCompareMode}
+                  xAxisLabel="Modo"
+                  yAxisLabel="% de viajes"
                 />
               );
             })()}
           </div>
 
-          <div style={{ gridColumn: "2 / 3", gridRow: "1 / 2" }}>
+          <div style={{ gridColumn: "1 / 2", gridRow: "2 / 3" }}>
             {(() => {
               const p = buildComparisonSeries(purposeData, 28, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
@@ -60,12 +62,14 @@ export default function AnalysisViewsPanel({
                   orientation="horizontal"
                   chartHeight={360}
                   isCompareMode={isCompareMode}
+                  xAxisLabel="% de viajes"
+                  yAxisLabel="Motivo"
                 />
               );
             })()}
           </div>
 
-          <div style={{ gridColumn: "3 / 4", gridRow: "1 / 2" }}>
+          <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
             {(() => {
               const s = buildComparisonSeries(stageData, 29, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
@@ -78,12 +82,14 @@ export default function AnalysisViewsPanel({
                   orientation="horizontal"
                   chartHeight={360}
                   isCompareMode={isCompareMode}
+                  xAxisLabel="% de viajes"
+                  yAxisLabel="Etapas"
                 />
               );
             })()}
           </div>
 
-          <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
+          <div style={{ gridColumn: "1 / 2", gridRow: "3 / 4" }}>
             {(() => {
               const n = buildComparisonSeries(noTravelReasonData, 30, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return (
@@ -96,11 +102,13 @@ export default function AnalysisViewsPanel({
                   orientation="horizontal"
                   chartHeight={360}
                   isCompareMode={isCompareMode}
+                  xAxisLabel="% de personas"
+                  yAxisLabel="Motivo"
                 />
               );
             })()}
           </div>
-          <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
+          <div style={{ gridColumn: "2 / 3", gridRow: "3 / 4" }}>
             {(() => {
               // CASO ESPECIAL: Compendio de indicadores
               const pop = buildPopulationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
@@ -114,6 +122,8 @@ export default function AnalysisViewsPanel({
                   orientation="horizontal"
                   chartHeight={360}
                   isCompareMode={isCompareMode}
+                  xAxisLabel="% de personas"
+                  yAxisLabel="Grupo poblacional"
                 />
               );
             })()}
@@ -121,19 +131,21 @@ export default function AnalysisViewsPanel({
         </>
       ) : (
         <>
-          <div style={{ gridColumn: "1 / 2", gridRow: "1 / span 2" }}>
+          <div style={{ gridColumn: "1 / -1", gridRow: "1 / 2" }}>
             <BarChartCard
               title="Modo principal (% de viajes)"
               data={toLabelValue(modeData)}
               xKey="label"
               yKey="value"
               color={groupedColor}
-              orientation="horizontal"
-              chartHeight={720}
+              orientation="vertical"
+              chartHeight={320}
+              xAxisLabel="Modo"
+              yAxisLabel="% de viajes"
             />
           </div>
 
-          <div style={{ gridColumn: "2 / 3", gridRow: "1 / 2" }}>
+          <div style={{ gridColumn: "1 / 2", gridRow: "2 / 3" }}>
             <BarChartCard
               title="Motivo de viaje (% de viajes)"
               data={toLabelValue(purposeData)}
@@ -142,10 +154,12 @@ export default function AnalysisViewsPanel({
               color={groupedColor}
               orientation="horizontal"
               chartHeight={360}
+              xAxisLabel="% de viajes"
+              yAxisLabel="Motivo"
             />
           </div>
 
-          <div style={{ gridColumn: "3 / 4", gridRow: "1 / 2" }}>
+          <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
             <BarChartCard
               title="Etapas (% de viajes)"
               data={toLabelValue(stageData)}
@@ -154,10 +168,12 @@ export default function AnalysisViewsPanel({
               color={groupedColor}
               orientation="horizontal"
               chartHeight={360}
+              xAxisLabel="% de viajes"
+              yAxisLabel="Etapas"
             />
           </div>
 
-          <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
+          <div style={{ gridColumn: "1 / 2", gridRow: "3 / 4" }}>
             <BarChartCard
               title="Motivo de no viaje (% de personas que no viajan)"
               data={toLabelValue(noTravelReasonData)}
@@ -166,9 +182,11 @@ export default function AnalysisViewsPanel({
               color={groupedColor}
               orientation="horizontal"
               chartHeight={360}
+              xAxisLabel="% de personas"
+              yAxisLabel="Motivo"
             />
           </div>
-          <div style={{ gridColumn: "3 / 4", gridRow: "2 / 3" }}>
+          <div style={{ gridColumn: "2 / 3", gridRow: "3 / 4" }}>
             <BarChartCard
               title="% de personas que sí viajan en grupos poblacionales de interés"
               data={toLabelValue(populationInterestData)}
@@ -177,6 +195,8 @@ export default function AnalysisViewsPanel({
               color={groupedColor}
               orientation="horizontal"
               chartHeight={360}
+              xAxisLabel="% de personas"
+              yAxisLabel="Grupo poblacional"
             />
           </div>
         </>
@@ -185,27 +205,27 @@ export default function AnalysisViewsPanel({
   );
 
   const vehicularCharts = (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
       {isCompareMode ? (
         <>
           {(() => {
             const t = buildComparisonSeries(vehicleTypeData, 36, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
-            return <BarChartCard title="Tipología (% de vehículos)" data={t.data} xKey="label" series={t.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} />;
+            return <BarChartCard title="Tipología (% de vehículos)" data={t.data} xKey="label" series={t.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} xAxisLabel="% de vehículos" yAxisLabel="Tipología" />;
           })()}
           {(() => {
             const vt = buildComparisonSeries(vehicleTenureData, 37, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
-            return <BarChartCard title="Cantidad (% de vehículos)" data={vt.data} xKey="label" series={vt.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} />;
+            return <BarChartCard title="Cantidad (% de vehículos)" data={vt.data} xKey="label" series={vt.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} xAxisLabel="% de vehículos" yAxisLabel="Cantidad" />;
           })()}
           {(() => {
             const m = buildComparisonSeries(vehicleModelData, 38, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
-            return <BarChartCard title="Modelo (% de vehículos)" data={m.data} xKey="label" series={m.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} />;
+            return <BarChartCard title="Modelo (% de vehículos)" data={m.data} xKey="label" series={m.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} xAxisLabel="% de vehículos" yAxisLabel="Modelo" />;
           })()}
         </>
       ) : (
         <>
-          <BarChartCard title="Tipología (% de vehículos)" data={toLabelValue(vehicleTypeData)} xKey="label" yKey="value" color={groupedColor} />
-          <BarChartCard title="Cantidad (% de vehículos)" data={toLabelValue(vehicleTenureData)} xKey="label" yKey="value" color={groupedColor} />
-          <BarChartCard title="Modelo (% de vehículos)" data={toLabelValue(vehicleModelData)} xKey="label" yKey="value" color={groupedColor} />
+          <BarChartCard title="Tipología (% de vehículos)" data={toLabelValue(vehicleTypeData)} xKey="label" yKey="value" color={groupedColor} xAxisLabel="% de vehículos" yAxisLabel="Tipología" />
+          <BarChartCard title="Cantidad (% de vehículos)" data={toLabelValue(vehicleTenureData)} xKey="label" yKey="value" color={groupedColor} xAxisLabel="% de vehículos" yAxisLabel="Cantidad" />
+          <BarChartCard title="Modelo (% de vehículos)" data={toLabelValue(vehicleModelData)} xKey="label" yKey="value" color={groupedColor} xAxisLabel="% de vehículos" yAxisLabel="Modelo" />
         </>
       )}
     </div>

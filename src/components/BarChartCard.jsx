@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   LabelList,
+  Label,
 } from "recharts";
 import ChartCard from "./ChartCard";
 
@@ -31,6 +32,8 @@ const BarChartCard = ({
   highlightColor,
   onSelect,
   isCompareMode = false,
+  xAxisLabel,
+  yAxisLabel,
 }) => {
   const extractValues = () => {
     if (!data?.length) return [];
@@ -74,7 +77,7 @@ const BarChartCard = ({
   const categoryTickStyle = {
     fontSize: "9pt",
     fill: TEXT_COLOR,
-    angle: isHorizontal ? 0 : -22,
+    angle: isHorizontal ? 0 : -20,
     textAnchor: isHorizontal ? "end" : "end",
     dy: isHorizontal ? 0 : 2,
   };
@@ -96,13 +99,12 @@ const BarChartCard = ({
     <ChartCard title={title} actions={actions}>
       <ResponsiveContainer
         width="100%"
-        height={chartHeight ?? (isHorizontal ? 360 : 320)}
-        minHeight={320}
+        height={chartHeight ?? 360}
       >
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 20, right: 40, left: isHorizontal ? 32 : 6, bottom: 8 }}
+          margin={{ top: 20, right: 20, left: isHorizontal ? 30 : 35, bottom: 20 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -118,7 +120,9 @@ const BarChartCard = ({
               axisLine={{ stroke: AXIS_COLOR }}
               tickFormatter={formatValue}
               tick={{ fontSize: "10pt", fill: TEXT_COLOR }}
-            />
+            >
+              {xAxisLabel && <Label value={xAxisLabel} position="bottom" offset={0} />}
+            </XAxis>
           ) : (
             <XAxis
               dataKey={xKey}
@@ -127,7 +131,9 @@ const BarChartCard = ({
               tick={categoryTickStyle}
               interval={0}
               height={isHorizontal ? undefined : 70}
-            />
+            >
+              {xAxisLabel && <Label value={xAxisLabel} position="bottom" offset={0} />}
+            </XAxis>
           )}
           {isHorizontal ? (
             <YAxis
@@ -137,7 +143,9 @@ const BarChartCard = ({
               tickLine={false}
               axisLine={{ stroke: AXIS_COLOR }}
               tick={categoryTickStyle}
-            />
+            >
+              {yAxisLabel && <Label value={yAxisLabel} angle={-90} position="left" offset={20} />}
+            </YAxis>
           ) : (
             <YAxis
               tickLine={false}
@@ -145,7 +153,9 @@ const BarChartCard = ({
               tickFormatter={formatValue}
               domain={numericDomain}
               tick={{ fontSize: "10pt", fill: TEXT_COLOR }}
-            />
+            >
+              {yAxisLabel && <Label value={yAxisLabel} angle={-90} position="left" offset={0} />}
+            </YAxis>
           )}
           <Tooltip
             cursor={{ fill: "rgba(148,163,184,0.15)" }}

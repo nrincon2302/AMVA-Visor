@@ -8,6 +8,7 @@ import {
   Line,
   ReferenceLine,
   Legend,
+  Label,
 } from "recharts";
 import { useEffect, useState } from "react";
 import ChartCard from "./ChartCard";
@@ -80,7 +81,7 @@ const HourlyModeChartCard = ({
       <ResponsiveContainer width="100%" height={360}>
         <LineChart
           data={activeData}
-          margin={{ top: 20, right: 24, left: 4, bottom: 32 }}
+          margin={{ top: 20, right: 24, left: 10, bottom: 32 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
 
@@ -95,8 +96,9 @@ const HourlyModeChartCard = ({
               textAnchor: "end",
             }}
             interval={0}
-            height={64}
-          />
+            height={64}>
+            <Label value="Hora de inicio del viaje" position="bottom" offset={20} />
+          </XAxis>
 
           <YAxis
             tickFormatter={formatNumber}
@@ -104,7 +106,9 @@ const HourlyModeChartCard = ({
             axisLine={{ stroke: AXIS_COLOR }}
             tick={{ fontSize: "10pt", fill: "#0f172a" }}
             allowDecimals={false}
-          />
+          >
+            <Label value="Cantidad de viajes" angle={-90} position="left" offset={0} />
+          </YAxis>
 
           <Tooltip
             contentStyle={{ borderRadius: 8, border: "none" }}

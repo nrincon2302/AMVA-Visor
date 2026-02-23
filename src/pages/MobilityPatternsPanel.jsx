@@ -65,6 +65,8 @@ export default function MobilityPatternsPanel({
               showPercent
               color={SECONDARY_GREEN}
               isCompareMode={isCompareMode}
+              xAxisLabel="Duración"
+              yAxisLabel="% de viajes"
             />
           );
         })()}
@@ -82,6 +84,8 @@ export default function MobilityPatternsPanel({
               showPercent
               color={SECONDARY_GREEN}
               isCompareMode={isCompareMode}
+              xAxisLabel="Frecuencia"
+              yAxisLabel="% de viajes"
             />
           );
         })()}
@@ -99,6 +103,8 @@ export default function MobilityPatternsPanel({
               showPercent
               orientation="vertical"
               isCompareMode={isCompareMode}
+              xAxisLabel="Estrato"
+              yAxisLabel="% de viajes"
             />
           );
         })()}
@@ -117,6 +123,8 @@ export default function MobilityPatternsPanel({
               showPercent={false}
               orientation="vertical"
               isCompareMode={isCompareMode}
+              xAxisLabel="Modo"
+              yAxisLabel="Tiempo (min)"
             />
           );
         })()}
