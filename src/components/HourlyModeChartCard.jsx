@@ -27,12 +27,32 @@ const HourlyModeChartCard = ({
   showLegend = false,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [visibleLines, setVisibleLines] = useState({});
 
   const isComparison = Array.isArray(datasets) && datasets.length > 0;
 
   useEffect(() => {
     setSelectedIndex(0);
   }, [datasets]);
+
+  useEffect(() => {
+  if (series?.length) {
+    const initialState = {};
+    series.forEach((s) => {
+      initialState[s.key] = true;
+    });
+    setVisibleLines(initialState);
+  }
+  }, [series]);
+
+  const handleLegendClick = (data) => {
+    const key = data.dataKey;
+
+    setVisibleLines((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const activeData = isComparison
     ? datasets[selectedIndex]?.data ?? []
@@ -81,7 +101,7 @@ const HourlyModeChartCard = ({
       <ResponsiveContainer width="100%" height={360}>
         <LineChart
           data={activeData}
-          margin={{ top: 20, right: 24, left: 10, bottom: 32 }}
+          margin={{ top: 20, right: 24, left: 24, bottom: 10 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
 
@@ -92,12 +112,11 @@ const HourlyModeChartCard = ({
             tick={{
               fontSize: "10pt",
               fill: "#0f172a",
-              angle: -35,
               textAnchor: "end",
             }}
             interval={0}
             height={64}>
-            <Label value="Hora de inicio del viaje" position="bottom" offset={20} />
+            <Label value="Hora de inicio del viaje" position="bottom" offset={0} />
           </XAxis>
 
           <YAxis
@@ -107,7 +126,7 @@ const HourlyModeChartCard = ({
             tick={{ fontSize: "10pt", fill: "#0f172a" }}
             allowDecimals={false}
           >
-            <Label value="Cantidad de viajes" angle={-90} position="left" offset={0} />
+            <Label value="Cantidad de viajes" angle={-90} position="left" offset={15} />
           </YAxis>
 
           <Tooltip
@@ -116,33 +135,44 @@ const HourlyModeChartCard = ({
           />
 
           <ReferenceLine y={0} stroke={AXIS_COLOR} />
-          {showLegend && <Legend verticalAlign="top" height={24} />}
+          {showLegend && (
+            <Legend
+              verticalAlign="top"
+              height={36}
+              onClick={handleLegendClick}
+              formatter={(value, entry) => {
+                const active = visibleLines[entry.dataKey];
+                return (
+                  <span style={{ opacity: active ? 1 : 0.4 }}>
+                    {value}
+                  </span>
+                );
+              }}
+            />
+          )}
 
           {series?.length ? (
-            series.map((entry) => (
-              <Line
-                key={entry.key}
-                type="monotone"
-                dataKey={entry.key}
-                name={entry.label}
-                stroke={
-                  entry.color ||
-                  lineColor ||
-                  DEFAULT_LINE_COLOR
-                }
-                strokeWidth={2.6}
-                dot={{
-                  r: 3.2,
-                  strokeWidth: 1.4,
-                  stroke:
-                    entry.color ||
-                    lineColor ||
-                    DEFAULT_LINE_COLOR,
-                  fill: "#ffffff",
-                }}
-                activeDot={{ r: 5 }}
-              />
-            ))
+            series
+              .map((entry) => {
+                const isVisible = visibleLines[entry.key];
+                return (
+                <Line
+                  key={entry.key}
+                  type="monotone"
+                  dataKey={entry.key}
+                  name={entry.label}
+                  stroke={entry.color || lineColor || DEFAULT_LINE_COLOR}
+                  strokeWidth={2.6}
+                  hide={!isVisible}
+                  dot={{
+                    r: 3.2,
+                    strokeWidth: 1.4,
+                    stroke: entry.color || lineColor || DEFAULT_LINE_COLOR,
+                    fill: "#ffffff",
+                  }}
+                  activeDot={{ r: 5 }}
+                />)
+              })
           ) : (
             <Line
               type="monotone"

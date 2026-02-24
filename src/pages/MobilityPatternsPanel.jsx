@@ -65,7 +65,7 @@ export default function MobilityPatternsPanel({
               showPercent
               color={SECONDARY_GREEN}
               isCompareMode={isCompareMode}
-              xAxisLabel="Duración"
+              xAxisLabel="Duración en minutos"
               yAxisLabel="% de viajes"
             />
           );
