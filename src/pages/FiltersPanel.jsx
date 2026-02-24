@@ -12,7 +12,6 @@ const FiltersPanel = ({
   handleThematicKeyChange,
   activeThematic,
   isAllSelected,
-  SECONDARY_GREEN,
   isCompareMode,
   onModeChange,
   localSelectedValues,
