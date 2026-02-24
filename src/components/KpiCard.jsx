@@ -7,8 +7,7 @@ const KpiCard = ({
   subLabel,
   headerColor = SECONDARY_GREEN,
   headerTextColor = "#ffffff",
-  bannerImageUrl = BANNER_IMAGE_URL,
-  contextLines = [],
+  bannerImageUrl = BANNER_IMAGE_URL
 }) => {
   const headerBackgroundStyle = bannerImageUrl
     ? {
@@ -68,21 +67,6 @@ const KpiCard = ({
             >
               {subLabel}
             </div>
-          )}
-          {contextLines.length > 0 && (
-            <ul
-              style={{
-                margin: "6px 0 0",
-                paddingLeft: 14,
-                color: "#475569",
-                fontSize: "11pt",
-                lineHeight: 1.4,
-              }}
-            >
-              {contextLines.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
           )}
         </div>
       </div>

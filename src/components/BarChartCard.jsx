@@ -1,4 +1,5 @@
-import React from "react";
+import { formateo } from "../config/constants";
+
 import {
   BarChart,
   Bar,
@@ -35,42 +36,9 @@ const BarChartCard = ({
   xAxisLabel,
   yAxisLabel,
 }) => {
-  const extractValues = () => {
-    if (!data?.length) return [];
-    if (series?.length) {
-      return data.flatMap((row) =>
-        series.map((entry) => row?.[entry.key]).filter((val) => Number.isFinite(val))
-      );
-    }
-    return data
-      .map((row) => row?.[yKey])
-      .filter((val) => Number.isFinite(val));
-  };
 
-  const numericValues = extractValues();
-  const isIntegerData =
-    !showPercent &&
-    numericValues.length > 0 &&
-    numericValues.every((val) => Number.isInteger(val));
-
-  const formatPercent = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return value;
-    const rounded = Math.round(numeric * 10) / 10;
-    const formatted = Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1);
-    return `${formatted}%`;
-  };
-
-  const formatNumber = (value) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return value;
-    if (isIntegerData) {
-      return Math.round(numeric).toLocaleString("es-CO");
-    }
-    return numeric.toLocaleString("es-CO", { maximumFractionDigits: 2 });
-  };
-
-  const formatValue = (value) => (showPercent ? formatPercent(value) : formatNumber(value));
+  const formatNumber = (value) => formateo(value);
+  const formatValue = (value) => (showPercent ? `${formatNumber(value)}%` : formatNumber(value));
 
   const isHorizontal = orientation === "horizontal";
   const resolvedHighlightColor = highlightColor || color;
