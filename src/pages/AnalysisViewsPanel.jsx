@@ -19,6 +19,7 @@ export default function AnalysisViewsPanel({
   vehicleTypeData = [],
   vehicleModelData = [],
   vehicleTenureData = [],
+  vehicleStratumData = [],
   // datos detallados del backend (para modo COMPARAR)
   detailedData,
 }) {
@@ -220,12 +221,17 @@ export default function AnalysisViewsPanel({
             const m = buildComparisonSeries(vehicleModelData, 38, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
             return <BarChartCard title="Modelo (% de vehículos)" data={m.data} xKey="label" series={m.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} xAxisLabel="% de vehículos" yAxisLabel="Modelo" />;
           })()}
+          {(() => {
+            const m = buildComparisonSeries(vehicleStratumData, 39, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+            return <BarChartCard title="Vehículos por Estrato (% de vehículos)" data={m.data} xKey="label" series={m.series} color={PRIMARY_GREEN} isCompareMode={isCompareMode} xAxisLabel="% de vehículos" yAxisLabel="Estrato" />;
+          })()}
         </>
       ) : (
         <>
           <BarChartCard title="Tipología (% de vehículos)" data={toLabelValue(vehicleTypeData)} xKey="label" yKey="value" color={groupedColor} xAxisLabel="% de vehículos" yAxisLabel="Tipología" />
           <BarChartCard title="Cantidad (% de vehículos)" data={toLabelValue(vehicleTenureData)} xKey="label" yKey="value" color={groupedColor} xAxisLabel="% de vehículos" yAxisLabel="Cantidad" />
           <BarChartCard title="Modelo (% de vehículos)" data={toLabelValue(vehicleModelData)} xKey="label" yKey="value" color={groupedColor} xAxisLabel="% de vehículos" yAxisLabel="Modelo" />
+          <BarChartCard title="Vehículos por Estrato (% de vehículos)" data={toLabelValue(vehicleStratumData)} xKey="label" yKey="value" color={groupedColor} xAxisLabel="% de vehículos" yAxisLabel="Estrato" />
         </>
       )}
     </div>

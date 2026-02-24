@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useTransition, useEffect } from "react";
 
 import LoadingOverlay from "../components/LoadingOverlay";
 import ExportActions from "../components/ExportActions";
-import { exportToExcel, exportToPdf } from "../utils/exportUtils";
+import { generatePdfReport, generateExcelReport } from "../utils/exportUtils";
 import { COMPARE_COLORS } from "../config/constants";
 import { useTravelDataFromAPI } from "../hooks/useTravelDataFromAPI";
 
@@ -12,26 +12,6 @@ import MapsPanel from "./MapsPanel";
 import AnalysisViewsPanel from "./AnalysisViewsPanel";
 import MobilityPatternsPanel from "./MobilityPatternsPanel";
 import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
-
-
-const IND = {
-  /* análisis – viajes */
-  modo:            "modo_principal",
-  motivo:          "motivo_viaje",
-  etapas:          "etapas",
-  motivoNoViaje:   "motivo_no_viaje",
-  /* análisis – vehicular */
-  tenencia:        "tenencia_vehicular",
-  tipoVehiculo:    "tipo_vehiculo",
-  modeloVehiculo:  "modelo_vehiculo",
-  /* patrones de movilidad */
-  horaria:         "distribucion_horaria",
-  duracion:        "duracion_viaje",
-  duracionModo:    "duracion_por_modo",
-  frecuencia:      "frecuencia_viaje",
-  /* mapas */
-  origenDestino:   "origen_destino"
-};
 
 export default function DashboardSection() {
   const {
@@ -128,19 +108,6 @@ export default function DashboardSection() {
   /* =====================================================
    EXTRACCIÓN DE LOS DATOS DE INDICADORES
    =================================================== */
-  const ind  = (nombre) => indicadoresData[nombre] ?? [];
-
-  const modeData               = ind(IND.modo);
-  const purposeData            = ind(IND.motivo);
-  const stageData              = ind(IND.etapas);
-  const noTravelReasonData     = ind(IND.motivoNoViaje);
-  const vehicleTenureData      = ind(IND.tenencia);
-  const vehicleTypeData        = ind(IND.tipoVehiculo);
-  const vehicleModelData       = ind(IND.modeloVehiculo);
-  const hourlyModeData         = ind(IND.horaria);
-  const durationHistogramData  = ind(IND.duracion);
-  const origenDestinoData      = ind(IND.origenDestino);
-
   const pickRange = (source, from, to) =>
     Object.fromEntries(
       Object.entries(source || {})
@@ -248,33 +215,35 @@ export default function DashboardSection() {
   /* =================================================== 
    CONFIGURACIÓN DE EXPORTABLES
    =================================================== */
-  const toLabelRows = (data, lk = "label", vk = "value") =>
-    (data || []).map((item) => ({
-      etiqueta: item[lk] ?? item.name ?? "",
-      valor:    item[vk] ?? item.value ?? 0,
-    }));
 
-  const buildSheets = () => [
-    { name: "Modo principal",          rows: toLabelRows(modeData) },
-    { name: "Motivo de viaje",         rows: toLabelRows(purposeData) },
-    { name: "Etapas",                  rows: toLabelRows(stageData) },
-    { name: "Motivo de no viaje",      rows: toLabelRows(noTravelReasonData) },
-    { name: "Tenencia vehicular",      rows: toLabelRows(vehicleTenureData) },
-    { name: "Tipo de vehículo",        rows: toLabelRows(vehicleTypeData) },
-    { name: "Modelo de vehículo",      rows: toLabelRows(vehicleModelData) },
-    { name: "Duración viajes",         rows: toLabelRows(durationHistogramData) },
-    { name: "Distribución horaria",    rows: hourlyModeData || [] },
-    { name: "Origen-Destino",          rows: toLabelRows(origenDestinoData) },
-  ];
+  const handleExportPdf = () => {
+    // Pasar datos originales sin transformar para mejor manejo en modo Comparación
+    const exportData = {
+      filters,
+      compareMode,
+      selectedValues: localSelectedValues,
+      themeName: activeThematic?.label || "N/A",
+      indicadoresData, // Pasar datos originales
+      analysisViewsData,
+      mobilityPatternsData,
+    };
+
+    generatePdfReport(exportData);
+  };
 
   const handleExportExcel = () => {
-    const d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    exportToExcel(buildSheets(), `${d}_EncuestasHogares_AMVA2025.xlsx`);
-  };
-  const handleExportPdf = () => {
-    if (!dashboardRef.current) return;
-    const d = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    exportToPdf(dashboardRef.current, `${d}_EncuestasHogares_AMVA2025`);
+    // Pasar datos originales sin transformar para mejor manejo en modo Comparación
+    const exportData = {
+      filters,
+      compareMode,
+      selectedValues: localSelectedValues,
+      themeName: activeThematic?.label || "N/A",
+      indicadoresData, // Pasar datos originales
+      analysisViewsData,
+      mobilityPatternsData,
+    };
+
+    generateExcelReport(exportData);
   };
 
 
@@ -401,6 +370,7 @@ export default function DashboardSection() {
               vehicleTypeData={analysisViewsData?.vehicleTypeData}
               vehicleModelData={analysisViewsData?.vehicleModelData}
               vehicleTenureData={analysisViewsData?.vehicleTenureData}
+              vehicleStratumData={analysisViewsData?.vehicleStratumData}
               detailedData={detailedData}
             />
           </div>

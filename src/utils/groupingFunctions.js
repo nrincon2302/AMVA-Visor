@@ -36,8 +36,8 @@ const series = selected.map((val, idx) => ({
 // ----------------------------------------------------
 if (indicatorData.grupos) {
     const data = indicatorData.grupos.map((grupoObj) => {
-    // Indicador 22 (tripsByEstratoData): agregar prefijo "Estrato "
-    const label = indicatorKey === 22 ? "Estrato " + grupoObj.grupo : grupoObj.grupo;
+    // Indicador 22 o 39: agregar prefijo "Estrato "
+    const label = (indicatorKey === 22 || indicatorKey === 39) ? "Estrato " + grupoObj.grupo : grupoObj.grupo;
     const row = { label };
 
     series.forEach((s) => {

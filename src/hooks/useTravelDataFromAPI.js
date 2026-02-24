@@ -647,7 +647,7 @@ function buildAnalysisViewsData(indicadoresData) {
   const mapAgrupadoPercent = (id) =>
     indicadoresData[id]?.tipo === "agrupado"
       ? indicadoresData[id].data.map(d => ({
-          label: d.label,
+          label: (id == 39 ? "Estrato " + d.label : d.label),
           value: d.value * 100,
         }))
       : [];
@@ -677,11 +677,12 @@ function buildAnalysisViewsData(indicadoresData) {
   }));
 
   /* =============================
-     VEHICULAR (36–38)
+     VEHICULAR (36–39)
   ============================= */
   const vehicleTypeData = mapAgrupadoPercent(36);
   const vehicleTenureData = mapAgrupadoPercent(37);
   const vehicleModelData = mapAgrupadoPercent(38);
+  const vehicleStratumData = mapAgrupadoPercent(39);
 
   return {
     modeData,
@@ -692,5 +693,6 @@ function buildAnalysisViewsData(indicadoresData) {
     vehicleTypeData,
     vehicleTenureData,
     vehicleModelData,
+    vehicleStratumData
   };
 }

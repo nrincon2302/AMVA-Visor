@@ -27,9 +27,9 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
   const viajesTotales = Math.round(getValue(1));
   const porcentajeNoViajan = 100 * getValue(2);
   const duracionPromedio = getValue(3);
-  const tamanoPromedio = getValue(4);
+  const viajesPrivados = Math.round(getValue(4));
   const viajesModoNoMotorizado = Math.round(getValue(5));
-  const viajesPorHogar = getValue(6);
+  const viajesPublicos = Math.round(getValue(6));
   const viajesPorPersona = getValue(7);
   const viajesPorViajero = getValue(8);
 
@@ -37,9 +37,9 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
   const viajesTotalesGlobal = Math.round(kpisGlobales[1]?.value ?? 0);
   const porcentajeNoViajasGlobal = 100 * (kpisGlobales[2]?.value ?? 0);
   const duracionPromedioGlobal = kpisGlobales[3]?.value ?? 0;
-  const tamanoPromedioGlobal = kpisGlobales[4]?.value ?? 0;
+  const viajesPrivadosGlobal = Math.round(kpisGlobales[4]?.value ?? 0);
   const viajesNoMotorizadoGlobal = Math.round(kpisGlobales[5]?.value ?? 0);
-  const viajesPorHogarGlobal = kpisGlobales[6]?.value ?? 0;
+  const viajesPublicosGlobal = Math.round(kpisGlobales[6]?.value ?? 0);
   const viajesPorPersonaGlobal = kpisGlobales[7]?.value ?? 0;
   const viajesPorViajeroGlobal = kpisGlobales[8]?.value ?? 0;
 
@@ -137,9 +137,9 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
 
         <KpiCard
           label={kpisData[4]?.nombre ?? "Tamaño promedio del hogar (personas de más de 5 años)"}
-          value={`${(tamanoPromedio || 0).toFixed(2)}`}
-          subLabel={tamanoPromedioGlobal ? `${globalLabel}: ${(tamanoPromedioGlobal || 0).toFixed(2)}` : undefined}
-          contextLines={tamanoPromedioGlobal ? [formatDelta(tamanoPromedio, tamanoPromedioGlobal, "personas por hogar que el Indicador AMVA")] : []}
+          value={`${(viajesPrivados || 0).toLocaleString()}`}
+          subLabel={viajesPrivadosGlobal ? `${globalLabel}: ${(viajesPrivadosGlobal || 0).toLocaleString()}` : undefined}
+          contextLines={viajesPrivadosGlobal ? [formatDelta(viajesPrivados, viajesPrivadosGlobal, "personas por hogar que el Indicador AMVA")] : []}
         />
 
         <KpiCard
@@ -151,9 +151,9 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
 
         <KpiCard
           label={kpisData[6]?.nombre ?? "Viajes diarios por hogar"}
-          value={`${(viajesPorHogar || 0).toFixed(2)}`}
-          subLabel={`${globalLabel}: ${(viajesPorHogarGlobal || 0).toFixed(2)}`}
-          contextLines={[formatDelta(viajesPorHogar, viajesPorHogarGlobal, "viajes por hogar que el Indicador AMVA")]}
+          value={`${(viajesPublicos || 0).toLocaleString()}`}
+          subLabel={`${globalLabel}: ${(viajesPublicosGlobal || 0).toLocaleString()}`}
+          contextLines={[formatDelta(viajesPublicos, viajesPublicosGlobal, "viajes por hogar que el Indicador AMVA")]}
         />
 
         <KpiCard
