@@ -2,11 +2,17 @@ import React from "react";
 import AnalysisSelector from "./AnalysisSelector";
 import SectionIndex from "../components/SectionIndex";
 
+const ZONA_OPTIONS = [
+  { value: "",        label: "Todos" },
+  { value: "Urbano",  label: "Urbano" },
+  { value: "Rural",   label: "Rural"  },
+];
+
 const FiltersPanel = ({
   municipios,
   filters,
   setMunicipio,
-  setDestinationMunicipio,
+  setZona,           // nuevo — invoca ?zona=Urbano|Rural
   thematicConfig,
   activeThematicKey,
   handleThematicKeyChange,
@@ -48,19 +54,17 @@ const FiltersPanel = ({
         <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
           Variables geográficas
         </div>
+
+        {/* Municipio origen */}
         <label style={{ fontSize: 11, fontWeight: 600 }}>
           Municipio
           <select
             value={filters.municipio}
             onChange={(e) => setMunicipio(e.target.value)}
             style={{
-              marginTop: 6,
-              width: "100%",
-              borderRadius: 10,
-              border: "1px solid #cbd5e1",
-              padding: "6px 10px",
-              background: "#fff",
-              fontSize: 11,
+              marginTop: 6, width: "100%", borderRadius: 10,
+              border: "1px solid #cbd5e1", padding: "6px 10px",
+              background: "#fff", fontSize: 11,
             }}
           >
             {municipios.map((muni) => (
@@ -68,25 +72,35 @@ const FiltersPanel = ({
             ))}
           </select>
         </label>
+
+        {/* Tipo de zona (Urbano / Rural) */}
         <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginTop: 10 }}>
-          Municipio destino
-          <select
-            value={filters.destinationMunicipio}
-            onChange={(e) => setDestinationMunicipio(e.target.value)}
-            style={{
-              marginTop: 6,
-              width: "100%",
-              borderRadius: 10,
-              border: "1px solid #cbd5e1",
-              padding: "6px 10px",
-              background: "#fff",
-              fontSize: 11,
-            }}
-          >
-            {municipios.map((muni) => (
-              <option key={muni} value={muni}>{muni}</option>
-            ))}
-          </select>
+          Tipo de zona
+          <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+            {ZONA_OPTIONS.map(({ value, label }) => {
+              const active = (filters.zona ?? "") === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => setZona?.(value)}
+                  style={{
+                    flex: 1,
+                    padding: "5px 0",
+                    borderRadius: 8,
+                    border: active ? "1.5px solid #339933" : "1px solid #cbd5e1",
+                    background: active ? "rgba(51,153,51,0.12)" : "#fff",
+                    color: active ? "#1a5c1a" : "#374151",
+                    fontSize: 11,
+                    fontWeight: active ? 700 : 500,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </label>
       </div>
 

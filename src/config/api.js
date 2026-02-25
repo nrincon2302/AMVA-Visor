@@ -9,6 +9,7 @@ export const urls = {
   metadata:     () => `${API}/metadata/`,
   municipios:   () => `${API}/metadata/municipios`,
   macrozonas:   (municipio) => `${API}/metadata/municipios/${encodeURIComponent(municipio)}/macrozonas`,
+  findMacrozona: (id) => `${API}/metadata/macrozonas/${encodeURIComponent(id)}`,
   temas:        () => `${API}/metadata/temas`,
   detalles:     (tema) => `${API}/metadata/temas/${encodeURIComponent(tema)}/detalles`,
   indicadores:  () => `${API}/metadata/indicadores`,

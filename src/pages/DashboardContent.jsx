@@ -21,7 +21,7 @@ export default function DashboardSection() {
     thematicOptions,
     filters,
     setMunicipio,
-    setDestinationMunicipio,
+    setZona,
     setTemaValues,
     setActiveTema,
     indicadoresData,
@@ -280,7 +280,7 @@ export default function DashboardSection() {
           municipios={municipios}
           filters={filters}
           setMunicipio={setMunicipio}
-          setDestinationMunicipio={setDestinationMunicipio}
+          setZona={setZona}
           thematicConfig={thematicConfig}
           activeThematicKey={activeThematicKey}
           handleThematicKeyChange={handleThematicKeyChange}
@@ -343,6 +343,7 @@ export default function DashboardSection() {
             <MapsPanel
               macroHeatData={indicadoresData?.[15] ?? { data: [] }}
               filters={filters}
+              municipios={municipios}
               isCompareMode={compareMode}
             />
           </div>
@@ -413,7 +414,7 @@ export default function DashboardSection() {
         municipios={municipios}
         filters={filters}
         setMunicipio={setMunicipio}
-        setDestinationMunicipio={setDestinationMunicipio}
+        setZona={setZona}
         thematicConfig={thematicConfig}
         activeThematicKey={activeThematicKey}
         handleThematicKeyChange={handleThematicKeyChange}

@@ -11,9 +11,6 @@ export function useTravelDataFromAPI() {
 
   // Hooks de estado para Filtros
   const [municipio, setMunicipio] = useState("AMVA General");
-  const [municipio_destino, setMunicipioDestino] = useState("AMVA General");
-  const [macrozona_origen, setMacrozonaOrigen] = useState("");
-  const [macrozona_destino, setMacrozonaDestino] = useState("");
   const [zona, setZona] = useState("");
   const [temasFiltros, setTemasFiltros] = useState({});
 
@@ -100,6 +97,7 @@ export function useTravelDataFromAPI() {
 
     const params = {
       municipio,
+      zona,
       tema: compareTema,
     };
 
@@ -110,7 +108,7 @@ export function useTravelDataFromAPI() {
     }
 
     return buildQueryParams(params);
-  }, [municipio, compareTema, temasFiltros
+  }, [municipio, zona, compareTema, temasFiltros
   ]);
 
   
@@ -215,17 +213,6 @@ export function useTravelDataFromAPI() {
             try {
               let finalQs = qs;
 
-              // CASO ESPECIAL: Indicador 15 susceptible a macrozona_origen y macrozona_destino
-              if (nombre === 15 || nombre === "15") {
-                const extraParams = {};
-
-                if (macrozona_origen) extraParams.origen = macrozona_origen;
-                if (macrozona_destino) extraParams.destino = macrozona_destino;
-
-                const extraQs = buildQueryParams(extraParams);
-                if (extraQs) finalQs = finalQs ? `${finalQs}&${extraQs}` : extraQs;
-              }
-
               const url = urlFn(nombre) + (finalQs ? `?${finalQs}` : "");
               const response = await fetchJSON(url);
 
@@ -258,17 +245,12 @@ export function useTravelDataFromAPI() {
         setIsLoading(false);
       }
     })();
-  }, [metadataLoaded, indicadorIds, qs, compareMode, compareTema, macrozona_origen, macrozona_destino]);
+  }, [metadataLoaded, indicadorIds, qs, compareMode, compareTema]);
 
 
   /* =============================================================
     Herramientas y callbacks de apoyo
   ============================================================= */
-  // Setters de filtro
-  const setDestinationMunicipio = useCallback(
-    (val) => setMunicipioDestino(val), []
-  );
-
   // Cambiar los valores seleccionados de un tema
   const setTemaValues = useCallback((temaId, valores) => {
     setTemasFiltros((prev) => ({ ...prev, [temaId]: valores }));
@@ -290,11 +272,10 @@ export function useTravelDataFromAPI() {
 
   const filters = useMemo(() => ({
     municipio,
-    destinationMunicipio: municipio_destino,
-    municipio_destino,
+    zona,
     thematicFilters: temasFiltros,
     temasFiltros,
-  }), [municipio, municipio_destino, temasFiltros]);
+  }), [municipio, zona, temasFiltros]);
 
 
   /* =============================================================
@@ -388,8 +369,7 @@ export function useTravelDataFromAPI() {
     filters,
     municipio,
     setMunicipio,
-    municipio_destino,
-    setDestinationMunicipio,
+    setZona,
     temasFiltros,
     setTemaValues,
     setActiveTema,

@@ -23,6 +23,9 @@ export const COMPARE_COLORS = [
   "#EC4899", // rosa
 ];
 
+export const MAP_GREEN_MIN = "#c8e6c9";  // verde muy pálido
+export const MAP_GREEN_MAX = "#1b5e20";  // verde bosque oscuro
+
 export const BANNER_IMAGE_URL = BannerImage;
 
 export const formateo = (valor) => {
