@@ -7,7 +7,7 @@ const KpiCard = ({
   subLabel,
   headerColor = SECONDARY_GREEN,
   headerTextColor = "#ffffff",
-  bannerImageUrl = BANNER_IMAGE_URL
+  bannerImageUrl = BANNER_IMAGE_URL,
 }) => {
   const headerBackgroundStyle = bannerImageUrl
     ? {
@@ -30,45 +30,42 @@ const KpiCard = ({
         flexDirection: "column",
       }}
     >
+      {/* Header con título — font-size controlado por CSS .kpi-label */}
       <div
+        className="kpi-label"
         style={{
           ...headerBackgroundStyle,
           color: headerTextColor,
-          padding: "8px 14px",
-          fontWeight: 700,
-          fontSize: 14,
-          letterSpacing: 0.2,
-          height: 48,
-          display: "flex",
-          alignItems: "center",
+          padding: "6px 14px",
         }}
       >
         {label}
       </div>
-      <div style={{ padding: "14px 16px" }}>
-        <div style={{ flex: 1 }}>
+
+      {/* Valor y sublabel */}
+      <div style={{ padding: "12px 16px" }}>
+        <div
+          className="kpi-value"
+          style={{
+            fontSize: 30,
+            fontWeight: 800,
+            color: headerColor,
+            lineHeight: 1.1,
+          }}
+        >
+          {value}
+        </div>
+        {subLabel && (
           <div
             style={{
-              fontSize: 30,
-              fontWeight: 800,
-              color: headerColor,
-              lineHeight: 1.1,
+              fontSize: "9pt",
+              color: "#6b7280",
+              marginTop: 4,
             }}
           >
-            {value}
+            {subLabel}
           </div>
-          {subLabel && (
-            <div
-              style={{
-                fontSize: "9pt",
-                color: "#6b7280",
-                marginTop: 4,
-              }}
-            >
-              {subLabel}
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

@@ -140,6 +140,7 @@ const HourlyModeChartCard = ({
               verticalAlign="top"
               height={36}
               onClick={handleLegendClick}
+              wrapperStyle={{cursor: "pointer"}}
               formatter={(value, entry) => {
                 const active = visibleLines[entry.dataKey];
                 return (

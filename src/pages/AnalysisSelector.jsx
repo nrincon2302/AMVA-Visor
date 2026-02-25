@@ -10,7 +10,11 @@ const AnalysisSelector = ({
   localSelectedValues,
   toggleThematicValue,
   selectedColorMap,
+  onSelectAll,
 }) => {
+  const allOptions = activeThematic?.options || [];
+  const isAllSelected = localSelectedValues.length === 0 || localSelectedValues.length === allOptions.length;
+
   return (
     <>
       <div>
@@ -86,31 +90,50 @@ const AnalysisSelector = ({
               border: "1px solid #e2e8f0",
               padding: "10px 12px",
               background: "#ffffff",
-              maxHeight: 140,
+              maxHeight: 180,
               overflowY: "auto",
               display: "grid",
               gap: 6,
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
-              {activeThematic?.label}
-            </div>
-            
-            {isCompareMode && (
-              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>
-                Las comparaciones se encuentran habilitadas para máximo 3 valores en simultáneo
+            {/* Cabecera de la lista con label y botón "Todos" */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                {activeThematic?.label}
               </div>
-            )}
+              <button
+                type="button"
+                onClick={onSelectAll}
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: "3px 9px",
+                  borderRadius: 9999,
+                  border: isAllSelected ? `1px solid ${PRIMARY_GREEN}` : "1px solid #cbd5e1",
+                  background: isAllSelected ? "#e8f5d6" : "#f8fafc",
+                  color: isAllSelected ? "#339933" : "#64748b",
+                  cursor: "pointer",
+                  transition: "all 120ms ease",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Todos
+              </button>
+            </div>
 
-            {(activeThematic?.options || []).map((option) => {
-              const isChecked = localSelectedValues.includes(option);
+            {allOptions.map((option) => {
+              const isChecked = localSelectedValues.length === 0 || localSelectedValues.includes(option);
               const highlightColor = selectedColorMap.get(option);
-              const canSelect = !isCompareMode || isChecked || localSelectedValues.length < 3;
+              // Solo bloquear deselección si es el único seleccionado
+              const isLastSelected =
+                localSelectedValues.length === 1 && localSelectedValues.includes(option);
 
               return (
                 <label
                   key={option}
-                  onClick={() => canSelect && toggleThematicValue(option)}
+                  onClick={() => {
+                    if (!isLastSelected) toggleThematicValue(option);
+                  }}
                   style={{
                     display: "flex",
                     gap: 8,
@@ -122,27 +145,38 @@ const AnalysisSelector = ({
                     borderRadius: 6,
                     background: isChecked
                       ? isCompareMode && highlightColor
-                        ? `${highlightColor}20` // 20% opacidad
-                        : "#e6f7e0" // Verde muy claro
+                        ? `${highlightColor}20`
+                        : "#e6f7e0"
                       : "transparent",
-                    cursor: canSelect ? "pointer" : "not-allowed",
-                    opacity: canSelect ? 1 : 0.5,
+                    cursor: isLastSelected ? "not-allowed" : "pointer",
+                    opacity: isLastSelected ? 0.5 : 1,
                     transition: "background 0.15s ease",
+                    userSelect: "none",
                   }}
+                  title={isLastSelected ? "Debe haber al menos un detalle seleccionado" : undefined}
                 >
                   <span
                     style={{
                       width: 16,
                       height: 16,
                       borderRadius: 4,
-                      border: "2px solid #cbd5e1",
-                      background: "#ffffff",
+                      border: isChecked
+                        ? isCompareMode && highlightColor
+                          ? `2px solid ${highlightColor}`
+                          : "2px solid #22c55e"
+                        : "2px solid #cbd5e1",
+                      background: isChecked
+                        ? isCompareMode && highlightColor
+                          ? highlightColor
+                          : "#22c55e"
+                        : "#ffffff",
                       flexShrink: 0,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 10,
-                      fontWeight: 700,
+                      fontSize: 9,
+                      fontWeight: 800,
+                      color: "#ffffff",
                     }}
                   >
                     {isChecked ? "✓" : ""}

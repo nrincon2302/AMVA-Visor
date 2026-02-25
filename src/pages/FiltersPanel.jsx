@@ -11,12 +11,12 @@ const FiltersPanel = ({
   activeThematicKey,
   handleThematicKeyChange,
   activeThematic,
-  isAllSelected,
   isCompareMode,
   onModeChange,
   localSelectedValues,
   toggleThematicValue,
   selectedColorMap,
+  onSelectAll,
   sectionOptions,
   activeSection,
   onSectionChange,
@@ -24,10 +24,8 @@ const FiltersPanel = ({
 }) => {
   return (
     <aside
+      className="dashboard-sidebar"
       style={{
-        position: "sticky",
-        top: 24,
-        alignSelf: "start",
         borderRadius: 16,
         border: "1px solid #e5e7eb",
         background: "#f8fafc",
@@ -43,7 +41,6 @@ const FiltersPanel = ({
         onSectionChange={onSectionChange}
       />
 
-      {/* Línea divisoria */}
       <div style={{ height: 1, background: "#e2e8f0" }} />
 
       {/* Variables geográficas */}
@@ -67,9 +64,7 @@ const FiltersPanel = ({
             }}
           >
             {municipios.map((muni) => (
-              <option key={muni} value={muni}>
-                {muni}
-              </option>
+              <option key={muni} value={muni}>{muni}</option>
             ))}
           </select>
         </label>
@@ -89,15 +84,12 @@ const FiltersPanel = ({
             }}
           >
             {municipios.map((muni) => (
-              <option key={muni} value={muni}>
-                {muni}
-              </option>
+              <option key={muni} value={muni}>{muni}</option>
             ))}
           </select>
         </label>
       </div>
 
-      {/* Línea divisoria */}
       <div style={{ height: 1, background: "#e2e8f0" }} />
 
       <AnalysisSelector
@@ -105,15 +97,14 @@ const FiltersPanel = ({
         activeThematicKey={activeThematicKey}
         handleThematicKeyChange={handleThematicKeyChange}
         activeThematic={activeThematic}
-        isAllSelected={isAllSelected}
         isCompareMode={isCompareMode}
         onModeChange={onModeChange}
         localSelectedValues={localSelectedValues}
         toggleThematicValue={toggleThematicValue}
         selectedColorMap={selectedColorMap}
+        onSelectAll={onSelectAll}
       />
 
-      {/* Línea divisoria */}
       <div style={{ height: 1, background: "#e2e8f0" }} />
 
       {/* Exportaciones */}

@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useTransition, useEffect } from "react";
 
-import LoadingOverlay from "../components/LoadingOverlay";
+import FilterVeil from "../components/FilterVeil";
+import FilterDrawer from "../components/FilterDrawer";
 import ExportActions from "../components/ExportActions";
 import { generatePdfReport, generateExcelReport } from "../utils/exportUtils";
 import { COMPARE_COLORS } from "../config/constants";
@@ -31,6 +32,7 @@ export default function DashboardSection() {
     detailedData,
     compareMode,
     setCompareMode,
+    metadataLoaded,
     isLoading,
   } = useTravelDataFromAPI();
 
@@ -40,8 +42,51 @@ export default function DashboardSection() {
    ======================================================== */
   const [activeThematicKey,  setActiveThematicKey]  = useState(null);
   const [localSelectedValues, setLocalSelectedValues] = useState([]);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [activeSection, setActiveSection] = useState("stats");
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // useState so flag change triggers re-render
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  useEffect(() => {
+    if (metadataLoaded && !isLoading && !initialLoadDone) {
+      setInitialLoadDone(true);
+    }
+  }, [metadataLoaded, isLoading, initialLoadDone]);
+
+  // Velo opaco para la carga inicial (sin datos previos)
+  const showInitialVeil = !initialLoadDone && isLoading;
+
+  // Velo translúcido: solo cuando isLoading es true después de la carga inicial.
+  // No usamos isPending — se activa antes de que React pinte el checkbox.
+  const showFilterVeil = initialLoadDone && isLoading;
+
+  // Velo opaco para cambio de modo COMPARAR ↔ AGRUPAR
+  // Estrategia: trackeamos la transición isLoading false→true→false
+  // usando el valor anterior de isLoading, no el actual.
+  const [showModeVeil, setShowModeVeil] = useState(false);
+  const prevIsLoadingRef  = useRef(false);
+  const modeVeilActiveRef = useRef(false);  // true mientras el veil de modo está activo
+
+  const triggerModeVeil = () => {
+    modeVeilActiveRef.current  = true;
+    prevIsLoadingRef.current   = false;  // reset — isLoading todavía no subió
+    setShowModeVeil(true);
+  };
+
+  useEffect(() => {
+    const prev = prevIsLoadingRef.current;
+    prevIsLoadingRef.current = isLoading;
+
+    if (!modeVeilActiveRef.current) return;
+
+    // Detectar transición true→false (ciclo de carga completado)
+    if (prev === true && isLoading === false) {
+      modeVeilActiveRef.current = false;
+      setShowModeVeil(false);
+    }
+  }, [isLoading]);
 
   const dashboardRef         = useRef(null);
   const statsSectionRef      = useRef(null);
@@ -51,7 +96,6 @@ export default function DashboardSection() {
   const viajesSectionRef     = useRef(null);
   const vehicularSectionRef  = useRef(null);
 
-  // Mapeo para desplazamiento sobre la página con los botones del índice
   const sectionOptions = [
     { key: "stats",      label: "Estadísticas generales" },
     { key: "indicators", label: "Indicadores de motorización" },
@@ -71,16 +115,12 @@ export default function DashboardSection() {
     sectionRefs[key]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // thematicConfig construido desde temas del API
   const thematicConfig = useMemo(
-    () => {
-      const config = temas.map(({ id, nombre }) => ({
-        key:     id,
-        label:   nombre,
-        options: thematicOptions[id] || [],
-      }));
-      return config; 
-    },
+    () => temas.map(({ id, nombre }) => ({
+      key:     id,
+      label:   nombre,
+      options: thematicOptions[id] || [],
+    })),
     [temas, thematicOptions]
   );
 
@@ -89,14 +129,12 @@ export default function DashboardSection() {
     if (thematicConfig.length && !activeThematicKey) {
       const first = thematicConfig[0];
       setActiveThematicKey(first.key);
-      setLocalSelectedValues(first.options);  // UI muestra todos seleccionados
-      // IMPORTANTE: también actualizar el tema activo en el hook
+      setLocalSelectedValues(first.options);
       setActiveTema(first.key);
       setTemaValues(first.key, []);
     }
   }, [thematicConfig, activeThematicKey, setActiveTema, setTemaValues]);
 
-  // Sincronizar opciones cuando cambie el tema activo -> Actualiza Metadata
   const activeThematic = thematicConfig.find((t) => t.key === activeThematicKey);
   useEffect(() => {
     if (activeThematic?.options?.length && !compareMode) {
@@ -111,36 +149,23 @@ export default function DashboardSection() {
   const pickRange = (source, from, to) =>
     Object.fromEntries(
       Object.entries(source || {})
-        .filter(([key]) => {
-          const n = Number(key);
-          return n >= from && n <= to;
-        })
+        .filter(([key]) => { const n = Number(key); return n >= from && n <= to; })
     );
 
-  const kpisGenerales = useMemo(() => {
-    return pickRange(indicadoresData, 1, 8);
-  }, [indicadoresData]);
-  const kpisGlobales = useMemo(() => {
-    return pickRange(indicadoresGlobales, 1, 8);
-  }, [indicadoresGlobales]);
+  const kpisGenerales         = useMemo(() => pickRange(indicadoresData, 1, 8),        [indicadoresData]);
+  const kpisGlobales          = useMemo(() => pickRange(indicadoresGlobales, 1, 8),     [indicadoresGlobales]);
+  const kpisMotorizacion      = useMemo(() => pickRange(indicadoresData, 9, 14),        [indicadoresData]);
+  const kpisMotorizacionGlobales = useMemo(() => pickRange(indicadoresGlobales, 9, 14), [indicadoresGlobales]);
 
-  const kpisMotorizacion = useMemo(() => {
-    return pickRange(indicadoresData, 9, 14);
-  }, [indicadoresData]);
-  const kpisMotorizacionGlobales = useMemo(() => {
-    return pickRange(indicadoresGlobales, 9, 14);
-  }, [indicadoresGlobales]);
 
   /* ========================================================
    FUNCIONES DE APOYO
    ======================================================= */
-  const isAllSelected =
-    (activeThematic?.options || []).length === (localSelectedValues || []).length;
-
+  // Mapa de colores sin límite de cantidad
   const selectedColorMap = useMemo(
     () =>
       new Map(
-        (localSelectedValues || []).slice(0, 3).map((v, i) => [v, COMPARE_COLORS[i]])
+        (localSelectedValues || []).map((v, i) => [v, COMPARE_COLORS[i % COMPARE_COLORS.length]])
       ),
     [localSelectedValues]
   );
@@ -151,63 +176,66 @@ export default function DashboardSection() {
     const allOptions = t?.options || [];
 
     setActiveThematicKey(newKey);
-    setLocalSelectedValues(allOptions);  // UI muestra todos seleccionados
+    setLocalSelectedValues(allOptions);
 
     startTransition(() => {
-      // Actualizar el tema activo en el backend y en la query
       setActiveTema(newKey);
-
-      // Solo se enviarán detalles cuando el usuario haga toggle de valores
       setTemaValues(newKey, []);
-      
-      // Si estábamos en modo comparar, salir (volver a modo AGRUPAR)
       if (compareMode) setCompareMode(false);
     });
   };
 
   // Conmutador entre modos AGRUPAR y COMPARAR
+  // Siempre reinicia a todos los filtros seleccionados y pide datos sin filtrar
   const handleModeChange = (enterCompare) => {
-    if (enterCompare) {
-      // Entrar a modo COMPARAR
-      const current = localSelectedValues || [];
-      
-      // Si no hay valores seleccionados (todos), tomar los primeros 3 de las opciones
-      let opciones;
-      if (current.length === 0) {
-        opciones = (activeThematic?.options || []).slice(0, 3);
-      } else {
-        // Limitar a máximo 3 valores si hay más
-        opciones = current.length > 3 ? current.slice(0, 3) : current;
-      }
-      
-      setLocalSelectedValues(opciones);
-      
-      startTransition(() => {
-        // Cambiar el modo -> Altera el endpoint de consulta
+    const allOptions = activeThematic?.options || [];
+
+    // Siempre volver a "todos" al cambiar de modo
+    setLocalSelectedValues(allOptions);
+
+    // Velo opaco para el cambio de modo (descarga datos nuevos)
+    triggerModeVeil();
+
+    startTransition(() => {
+      if (enterCompare) {
         setCompareMode(true);
-        // Actualizar los filtros con los valores seleccionados
-        setTemaValues(activeThematicKey, opciones);
-      });
-    } else {
-      // Salir a modo AGRUPAR y mantener los valores seleccionados como están
-      startTransition(() => {
+        // [] = sin filtrar por detalles → el backend devuelve todos
+        setTemaValues(activeThematicKey, []);
+      } else {
         setCompareMode(false);
-      });
-    }
+        setTemaValues(activeThematicKey, []);
+      }
+    });
   };
 
-  // Toggle individual de valor temático
+  // Toggle individual — siempre deja mínimo 1 seleccionado
   const toggleThematicValue = (value) => {
     const current = localSelectedValues || [];
-    const next    = current.includes(value)
+    const exists  = current.includes(value);
+
+    // Impedir deseleccionar si es el último
+    if (exists && current.length === 1) return;
+
+    const next = exists
       ? current.filter((x) => x !== value)
       : [...current, value];
 
     setLocalSelectedValues(next);
-    
-    // Actualizar los filtros del backend para el endpoint en uso
+
     startTransition(() => {
       setTemaValues(activeThematicKey, next);
+    });
+  };
+
+  // Seleccionar todos — conserva el modo actual (AGRUPAR o COMPARAR)
+  const handleSelectAll = () => {
+    const allOptions = activeThematic?.options || [];
+    setLocalSelectedValues(allOptions);
+
+    startTransition(() => {
+      // [] significa "todos" para el backend (sin filtrar por detalles)
+      setTemaValues(activeThematicKey, []);
+      // NO cambiamos compareMode — el usuario permanece en el modo que eligió
     });
   };
 
@@ -215,35 +243,28 @@ export default function DashboardSection() {
   /* =================================================== 
    CONFIGURACIÓN DE EXPORTABLES
    =================================================== */
-
   const handleExportPdf = () => {
-    // Pasar datos originales sin transformar para mejor manejo en modo Comparación
-    const exportData = {
+    generatePdfReport({
       filters,
       compareMode,
       selectedValues: localSelectedValues,
       themeName: activeThematic?.label || "N/A",
-      indicadoresData, // Pasar datos originales
+      indicadoresData,
       analysisViewsData,
       mobilityPatternsData,
-    };
-
-    generatePdfReport(exportData);
+    });
   };
 
   const handleExportExcel = () => {
-    // Pasar datos originales sin transformar para mejor manejo en modo Comparación
-    const exportData = {
+    generateExcelReport({
       filters,
       compareMode,
       selectedValues: localSelectedValues,
       themeName: activeThematic?.label || "N/A",
-      indicadoresData, // Pasar datos originales
+      indicadoresData,
       analysisViewsData,
       mobilityPatternsData,
-    };
-
-    generateExcelReport(exportData);
+    });
   };
 
 
@@ -251,8 +272,8 @@ export default function DashboardSection() {
    RETORNO - RENDERIZACIÓN DEL COMPONENTE
    ======================================================= */
   return (
-    <main style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
+    <main className="dashboard-main" style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+      <div className="dashboard-grid">
 
         {/* Panel de filtros */}
         <FiltersPanel
@@ -264,12 +285,12 @@ export default function DashboardSection() {
           activeThematicKey={activeThematicKey}
           handleThematicKeyChange={handleThematicKeyChange}
           activeThematic={activeThematic}
-          isAllSelected={isAllSelected}
           isCompareMode={compareMode}
           onModeChange={handleModeChange}
           localSelectedValues={localSelectedValues}
           toggleThematicValue={toggleThematicValue}
           selectedColorMap={selectedColorMap}
+          onSelectAll={handleSelectAll}
           sectionOptions={sectionOptions}
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
@@ -277,26 +298,34 @@ export default function DashboardSection() {
             <ExportActions
               onExportPdf={handleExportPdf}
               onExportExcel={handleExportExcel}
-              isDisabled={isLoading || isPending}
+              isDisabled={isLoading}
             />
           }
         />
 
         {/* Contenido principal */}
-        <div style={{ position: "relative" }} ref={dashboardRef}>
-          <LoadingOverlay
-            visible={isPending || isLoading}
-            label={isLoading ? "Cargando datos…" : "Actualizando visualizaciones…"}
+        <div
+          ref={dashboardRef}
+          style={{ position: "relative" }}
+        >
+          {/* Velo de carga unificado
+               - opaco: carga inicial o cambio de modo COMPARAR/AGRUPAR
+               - translúcido: cambio de filtros de detalle              */}
+          <FilterVeil
+            visible={showInitialVeil || showModeVeil || showFilterVeil}
+            opaque={showInitialVeil || showModeVeil}
           />
 
           {/* KPIs generales */}
-          <KpisPanel 
-            kpisData={kpisGenerales} 
-            kpisGlobales={kpisGlobales}
-            isCompareMode={compareMode}
-            localSelectedValues={localSelectedValues}
-            selectedColorMap={selectedColorMap}
-          />
+          <div ref={statsSectionRef}>
+            <KpisPanel
+              kpisData={kpisGenerales}
+              kpisGlobales={kpisGlobales}
+              isCompareMode={compareMode}
+              localSelectedValues={localSelectedValues}
+              selectedColorMap={selectedColorMap}
+            />
+          </div>
 
           {/* Indicadores de motorización */}
           <div ref={indicatorsSectionRef}>
@@ -376,6 +405,59 @@ export default function DashboardSection() {
           </div>
         </div>
       </div>
+
+      {/* ── MÓVIL: Drawer deslizante (reemplaza sidebar) ── */}
+      <FilterDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        municipios={municipios}
+        filters={filters}
+        setMunicipio={setMunicipio}
+        setDestinationMunicipio={setDestinationMunicipio}
+        thematicConfig={thematicConfig}
+        activeThematicKey={activeThematicKey}
+        handleThematicKeyChange={handleThematicKeyChange}
+        activeThematic={activeThematic}
+        isCompareMode={compareMode}
+        onModeChange={handleModeChange}
+        localSelectedValues={localSelectedValues}
+        toggleThematicValue={toggleThematicValue}
+        selectedColorMap={selectedColorMap}
+        onSelectAll={handleSelectAll}
+        sectionOptions={sectionOptions}
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+        exportActions={
+          <ExportActions
+            onExportPdf={handleExportPdf}
+            onExportExcel={handleExportExcel}
+            isDisabled={isLoading}
+          />
+        }
+      />
+
+      {/* ── MÓVIL: Botón flotante hamburger ── */}
+      <button
+        className={`filters-fab${isDrawerOpen ? " is-open" : ""}`}
+        onClick={() => setIsDrawerOpen((prev) => !prev)}
+        aria-label={isDrawerOpen ? "Cerrar filtros" : "Abrir filtros"}
+        aria-expanded={isDrawerOpen}
+      >
+        {isDrawerOpen ? (
+          /* X cuando está abierto */
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="4" y1="4" x2="16" y2="16" />
+            <line x1="16" y1="4" x2="4" y2="16" />
+          </svg>
+        ) : (
+          /* Hamburger cuando está cerrado */
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="3" y1="5"  x2="17" y2="5"  />
+            <line x1="3" y1="10" x2="17" y2="10" />
+            <line x1="3" y1="15" x2="17" y2="15" />
+          </svg>
+        )}
+      </button>
     </main>
   );
 }

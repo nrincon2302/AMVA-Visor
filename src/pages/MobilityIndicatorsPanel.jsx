@@ -8,34 +8,28 @@ export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales, isComp
   const getValue = (id) => {
     const item = kpisData[id];
     if (!item) return 0;
-
     if (isCompareMode && item.tipo === "comparativo_simple") {
       return item.comparativo[activeComparisonIndex]?.value ?? 0;
     }
-
     return item?.value ?? 0;
   };
 
-  // Valores dinámicos
-  //console.log("Datos en panel de KPIS", kpisData)
-  const totalVehicles = Math.round(getValue(9));
-  const avgVehiclesPerHousehold = getValue(10);
-  const cleanVehiclesPct = 100*getValue(11);
-  const autos = getValue(12);
-  const motos = getValue(13);
-  const bicicletas = getValue(14);
+  const totalVehicles            = Math.round(getValue(9));
+  const avgVehiclesPerHousehold  = getValue(10);
+  const cleanVehiclesPct         = 100 * getValue(11);
+  const autos                    = getValue(12);
+  const motos                    = getValue(13);
+  const bicicletas               = getValue(14);
 
-  // Si se proporcionan valores globales para comparación, usarlos
-  const totalVehiclesGlobal = Math.round(kpisGlobales[9]?.value ?? 0);
+  const totalVehiclesGlobal           = Math.round(kpisGlobales[9]?.value ?? 0);
   const avgVehiclesPerHouseholdGlobal = kpisGlobales[10]?.value ?? 0;
-  const cleanVehiclesPctGlobal = 100*(kpisGlobales[11]?.value ?? 0);
-  const autosGlobal = kpisGlobales[12]?.value ?? 0;
-  const motosGlobal = kpisGlobales[13]?.value ?? 0;  
-  const bicicletasGlobal = kpisGlobales[14]?.value ?? 0;
+  const cleanVehiclesPctGlobal        = 100 * (kpisGlobales[11]?.value ?? 0);
+  const autosGlobal                   = kpisGlobales[12]?.value ?? 0;
+  const motosGlobal                   = kpisGlobales[13]?.value ?? 0;
+  const bicicletasGlobal              = kpisGlobales[14]?.value ?? 0;
 
   const globalLabel = "Estadística global para el Valle de Aburrá";
-
-  const hasValue = (v) => v !== undefined && v !== null; // Maneja cuando vale 0 REAL
+  const hasValue = (v) => v !== undefined && v !== null;
 
   return (
     <section
@@ -51,15 +45,9 @@ export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales, isComp
       <h3 style={{ marginTop: 0 }}>Indicadores de motorización</h3>
 
       {isCompareMode && localSelectedValues?.length > 0 && (
-        <div style={{
-          display: "flex",
-          gap: 12,
-          marginBottom: 16,
-          flexWrap: "wrap"
-        }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           {localSelectedValues.map((value, index) => {
             const isActive = index === activeComparisonIndex;
-
             return (
               <button
                 key={value}
@@ -74,62 +62,46 @@ export default function MobilityIndicatorsPanel({ kpisData, kpisGlobales, isComp
                   background: isActive ? "#f1f5f9" : "#ffffff",
                   cursor: "pointer",
                   fontWeight: isActive ? 600 : 500,
-                  transition: "all 0.2s ease"
-                }}
-              >
-                <div
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: selectedColorMap?.get(value) || "#999"
-                  }}
-                />
-                {value}
+                  transition: "all 0.2s ease",
+                }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: selectedColorMap?.get(value) || "#999" }} />
+              {value}
               </button>
             );
           })}
         </div>
       )}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(180px,1fr))",
-          gap: 12,
-        }}
-      ></div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(180px, 1fr))", gap: 12 }}>
-        <KpiCard
-          label={kpisData[9]?.nombre ?? "Número total de vehículos propios (toda tipología)"}
-          value={formateo(totalVehicles || 0)}
-          subLabel={hasValue(totalVehicles) ? `${globalLabel}: ${formateo(totalVehiclesGlobal || 0)}` : undefined}
+      <div className="kpi-grid-3">
+        <KpiCard 
+          label={kpisData[9]?.nombre ?? "Cantidad total de vehículos propios"} 
+          value={formateo(totalVehicles || 0)} 
+          subLabel={hasValue(totalVehicles) ? `${globalLabel}: ${formateo(totalVehiclesGlobal || 0)}` : undefined} 
         />
-        <KpiCard
-          label={kpisData[10]?.nombre ?? "Número promedio de vehículos por hogar"}
-          value={`${formateo(avgVehiclesPerHousehold || 0)}`}
-          subLabel={hasValue(avgVehiclesPerHousehold) ? `${globalLabel}: ${formateo(avgVehiclesPerHouseholdGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[10]?.nombre ?? "Cantidad promedio de vehículos por hogar"} 
+          value={`${formateo(avgVehiclesPerHousehold || 0)}`} 
+          subLabel={hasValue(avgVehiclesPerHousehold) ? `${globalLabel}: ${formateo(avgVehiclesPerHouseholdGlobal || 0)}` : undefined} 
         />
-        <KpiCard
-          label={kpisData[11]?.nombre ?? "% de vehículos que operan con tecnologías limpias"}
-          value={`${formateo(cleanVehiclesPct || 0)}%`}
-          subLabel={hasValue(cleanVehiclesPct) ? `${globalLabel}: ${formateo(cleanVehiclesPctGlobal || 0)}%` : undefined}
+        <KpiCard 
+          label={kpisData[11]?.nombre ?? "% de vehículos con tecnologías limpias"} 
+          value={`${formateo(cleanVehiclesPct || 0)}%`} 
+          subLabel={hasValue(cleanVehiclesPct) ? `${globalLabel}: ${formateo(cleanVehiclesPctGlobal || 0)}%` : undefined} 
         />
-        <KpiCard
-          label={kpisData[12]?.nombre ?? "Autos por 1000 habitantes"}
-          value={formateo(autos || 0)}
-          subLabel={hasValue(autos) ? `${globalLabel}: ${formateo(autosGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[12]?.nombre ?? "Autos por 1000 habitantes"} 
+          value={formateo(autos || 0)} 
+          subLabel={hasValue(autos) ? `${globalLabel}: ${formateo(autosGlobal || 0)}` : undefined} 
         />
-        <KpiCard
-          label={kpisData[13]?.nombre ?? "Motocicletas por 1000 habitantes"}
-          value={formateo(motos || 0)}
-          subLabel={hasValue(motos) ? `${globalLabel}: ${formateo(motosGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[13]?.nombre ?? "Motocicletas por 1000 habitantes"} 
+          value={formateo(motos || 0)} 
+          subLabel={hasValue(motos) ? `${globalLabel}: ${formateo(motosGlobal || 0)}` : undefined} 
         />
-        <KpiCard
-          label={kpisData[14]?.nombre ?? "Bicicletas por 1000 habitantes"}
-          value={formateo(bicicletas || 0)}
-          subLabel={hasValue(bicicletas) ? `${globalLabel}: ${formateo(bicicletasGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[14]?.nombre ?? "Bicicletas por 1000 habitantes"} 
+          value={formateo(bicicletas || 0)} 
+          subLabel={hasValue(bicicletas) ? `${globalLabel}: ${formateo(bicicletasGlobal || 0)}` : undefined} 
         />
       </div>
     </section>

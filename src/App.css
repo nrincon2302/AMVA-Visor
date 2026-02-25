@@ -1,46 +1,31 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* ============================================================
+   BASE
+   ============================================================ */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: "Segoe UI", "Segoe UI Semibold", "Segoe UI Bold",
+    "Segoe UI Bold Italic", sans-serif;
+  font-size: 10pt;
+  background: #ffffff;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+* { box-sizing: border-box; }
+
+/* Recharts focus reset */
+.chart-card :focus,
+.chart-card :focus-visible,
+.recharts-wrapper:focus,
+.recharts-surface:focus,
+.chart-card *:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
+/* ============================================================
+   SPINNER
+   ============================================================ */
 .amva-loading-spinner {
   width: 36px;
   height: 36px;
@@ -49,7 +34,6 @@
   border-top-color: #ffffff;
   animation: amva-spin 1s linear infinite;
 }
-
 .amva-loading-spinner--overlay {
   position: absolute;
   top: 50%;
@@ -60,16 +44,14 @@
   border-width: 5px;
   pointer-events: none;
 }
-
 @keyframes amva-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
+/* ============================================================
+   MACRO TABLE
+   ============================================================ */
 .macro-table-body {
   max-height: 240px;
   height: 240px;
@@ -77,40 +59,463 @@
   scrollbar-gutter: stable;
   width: 100%;
   box-sizing: border-box;
-  padding-right: 0;
 }
-
 .macro-table-body table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
-.dashboard-layout {
+/* ============================================================
+   CONTENT DIMMING (filter loading — no overlay)
+   ============================================================ */
+.content-dimming {
+  transition: opacity 0.3s ease;
+}
+.content-dimming.is-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ============================================================
+   BOTÓN EXPANDIR MAPA
+   Visible por defecto; se oculta en móvil portrait via media query
+   ============================================================ */
+.map-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ============================================================
+   DASHBOARD GRID — sidebar lateral siempre visible en ≥640px
+   ============================================================ */
+.dashboard-grid {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
 
-@media (max-width: 1024px) {
-  .dashboard-layout {
-    grid-template-columns: 1fr;
+.dashboard-sidebar {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.dashboard-sidebar::-webkit-scrollbar       { width: 4px; }
+.dashboard-sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+/* ============================================================
+   KPI GRIDS
+   ============================================================ */
+.kpi-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.kpi-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+/* ============================================================
+   CHART GRIDS — 2 columnas por defecto
+   ============================================================ */
+.chart-grid-2,
+.chart-grid-2-mobility {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ============================================================
+   MAP GRIDS
+   ============================================================ */
+.map-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ============================================================
+   ANALYSIS GRIDS
+   ============================================================ */
+.analysis-grid-viajes,
+.analysis-grid-vehicular {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ============================================================
+   TABLETA MEDIANA ≤ 1100px
+   Sidebar más estrecho, KPIs en 2 col, gráficas 2 col
+   ============================================================ */
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 16px;
   }
 
-  .dashboard-sidebar {
-    position: static !important;
+  .kpi-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 768px) {
-  .dashboard-main {
-    padding: 16px 16px 32px !important;
+/* ============================================================
+   TABLETA PEQUEÑA ≤ 820px
+   Sidebar muy estrecho; gráficas siguen en 2 col
+   ============================================================ */
+@media (max-width: 820px) {
+  .dashboard-grid {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 12px;
   }
 
-  .kpi-grid,
-  .map-grid,
-  .analysis-grid {
+  .kpi-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpi-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ============================================================
+   MÓVIL PORTRAIT ≤ 640px
+   Sidebar pasa arriba. Grids de gráficas a 1 col.
+   Botón expandir mapa oculto.
+   ============================================================ */
+@media (max-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .dashboard-sidebar {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .dashboard-main {
+    padding: 8px !important;
+  }
+
+  /* Gráficas: 1 columna */
+  .chart-grid-2,
+  .chart-grid-2-mobility,
+  .map-grid-2,
+  .analysis-grid-viajes,
+  .analysis-grid-vehicular {
     grid-template-columns: 1fr !important;
+  }
+
+  /* Reset explícito de gridColumn inline en hijos directos */
+  .analysis-grid-viajes > *,
+  .chart-grid-2-mobility > * {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+  }
+
+  /* KPIs: 2 col todavía caben en móvil */
+  .kpi-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Ocultar botón de expandir mapa */
+  .map-expand-btn {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   MÓVIL MUY PEQUEÑO ≤ 400px
+   ============================================================ */
+@media (max-width: 400px) {
+  .kpi-grid-4,
+  .kpi-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+
+/* ============================================================
+   KPI CARD — título adaptable según columnas del grid
+   ============================================================ */
+.kpi-label {
+  font-weight: 700;
+  font-size: 14px;        /* escritorio: 4 col, espacio amplio */
+  letter-spacing: 0.2px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  color: inherit;
+  line-height: 1.25;
+}
+
+/* Tableta: sidebar lateral + 2 col de KPIs → letra más pequeña */
+@media (max-width: 1100px) {
+  .kpi-label {
+    font-size: 11px;
+    height: 44px;
+  }
+}
+
+/* Tableta pequeña */
+@media (max-width: 820px) {
+  .kpi-label {
+    font-size: 10px;
+    height: 40px;
+  }
+}
+
+/* Móvil portrait: 2 col sin sidebar → espacios más angostos */
+@media (max-width: 640px) {
+  .kpi-label {
+    font-size: 10px;
+    height: 38px;
+  }
+}
+
+/* Móvil muy pequeño: 1 col → puede permitirse más */
+@media (max-width: 400px) {
+  .kpi-label {
+    font-size: 11px;
+    height: auto;
+    min-height: 36px;
+  }
+}
+
+/* ============================================================
+   FILTER VEIL — animaciones del velo de carga de filtros
+   ============================================================ */
+
+/* Shimmer diagonal que recorre el velo de izquierda a derecha */
+@keyframes filter-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+/* Barra de progreso que va y vuelve */
+@keyframes filter-progress {
+  0%   { transform: scaleX(0);   opacity: 1; }
+  50%  { transform: scaleX(0.7); opacity: 1; }
+  90%  { transform: scaleX(1);   opacity: 0.6; }
+  100% { transform: scaleX(1);   opacity: 0; }
+}
+
+/* Animación de entrada suave para cuando aparecen nuevos datos */
+@keyframes panel-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel-refresh {
+  animation: panel-fade-in 0.35s ease forwards;
+}
+
+/* ============================================================
+   MOBILE FILTERS DRAWER
+   ============================================================ */
+
+/* FAB hamburger — oculto en desktop/tablet, visible en móvil portrait */
+.filters-fab {
+  display: none;
+}
+
+/* Sidebar oculto en móvil portrait (reemplazado por el drawer) */
+@media (max-width: 640px) {
+  .dashboard-sidebar {
+    display: none !important;
+  }
+
+  .filters-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 24px;
+    right: 20px;
+    z-index: 500;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(135deg, rgba(124,185,40,1) 0%, #339933 100%);
+    box-shadow: 0 6px 20px rgba(51,153,51,0.45), 0 2px 6px rgba(0,0,0,0.15);
+    color: #ffffff;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .filters-fab:active {
+    transform: scale(0.93);
+    box-shadow: 0 3px 10px rgba(51,153,51,0.35);
+  }
+  .filters-fab.is-open {
+    background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+    box-shadow: 0 6px 20px rgba(30,41,59,0.4);
+  }
+}
+
+/* Backdrop */
+.drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.drawer-backdrop.is-visible {
+  display: block;
+  opacity: 1;
+}
+
+/* Drawer panel */
+.filters-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 700;
+  width: min(82vw, 320px);
+  background: #f8fafc;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 6px 0 32px rgba(15,23,42,0.18);
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.filters-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* Drawer header bar */
+.filters-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(124,185,40,1) 0%, #339933 100%);
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.filters-drawer-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.drawer-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.15s ease;
+}
+.drawer-close-btn:active {
+  background: rgba(255,255,255,0.35);
+}
+
+/* Drawer body */
+.filters-drawer-body {
+  flex: 1;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+/* ============================================================
+   MÓVIL LANDSCAPE — debe ir AL FINAL para ganar la cascada
+   sobre el query de portrait ≤640px que pone display:none.
+   Aplica a teléfonos girados (ancho ≤ 900px en landscape).
+   Tabletas en landscape tienen >900px y no entran aquí.
+   ============================================================ */
+@media (max-width: 900px) and (orientation: landscape) {
+
+  /* Sidebar lateral: visible y compacto.
+     display:block !important deshace el display:none del portrait */
+  .dashboard-sidebar {
+    display: block !important;
+    position: sticky;
+    top: 8px;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 160px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .dashboard-main {
+    padding: 8px !important;
+  }
+
+  /* KPIs en 2 columnas */
+  .kpi-grid-4,
+  .kpi-grid-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Gráficas en 2 columnas */
+  .chart-grid-2,
+  .chart-grid-2-mobility,
+  .map-grid-2,
+  .analysis-grid-viajes,
+  .analysis-grid-vehicular {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Deshacer override portrait que fuerza a 1 col */
+  .analysis-grid-viajes > *,
+  .chart-grid-2-mobility > * {
+    grid-column: unset !important;
+    grid-row: unset !important;
+  }
+
+  /* kpi-label compacto para 2 col */
+  .kpi-label {
+    font-size: 10px !important;
+    height: 38px !important;
+  }
+
+  /* FAB oculto — el sidebar es visible en landscape */
+  .filters-fab {
+    display: none !important;
+  }
+
+  /* Botón expandir mapa oculto */
+  .map-expand-btn {
+    display: none !important;
   }
 }

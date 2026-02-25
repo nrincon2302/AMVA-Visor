@@ -4,10 +4,10 @@ import { SECONDARY_GREEN, TERTIARY_BLUE, TERTIARY_ORANGE, TERTIARY_PINK } from "
 import { buildComparisonSeries, buildTransportationComparisonSeries } from "../utils/groupingFunctions";
 
 const HOURLY_SERIES = [
-  { key: "informal", label: "Viajes en transporte informal", color: SECONDARY_GREEN },
-  { key: "public", label: "Viajes en transporte público", color: TERTIARY_BLUE },
-  { key: "private", label: "Viajes en transporte privado", color: TERTIARY_ORANGE },
-  { key: "nonMotorized", label: "Viajes en modos no motorizados", color: TERTIARY_PINK },
+  { key: "informal",     label: "Viajes en transporte informal",      color: SECONDARY_GREEN },
+  { key: "public",       label: "Viajes en transporte público",       color: TERTIARY_BLUE },
+  { key: "private",      label: "Viajes en transporte privado",       color: TERTIARY_ORANGE },
+  { key: "nonMotorized", label: "Viajes en modos no motorizados",     color: TERTIARY_PINK },
 ];
 
 export default function MobilityPatternsPanel({
@@ -23,8 +23,6 @@ export default function MobilityPatternsPanel({
   tripsByEstratoData = [],
   tripFrequencyData = [],
 }) {
-
-  
   return (
     <section
       style={{
@@ -37,25 +35,23 @@ export default function MobilityPatternsPanel({
       }}
     >
       <h3 style={{ marginTop: 0, marginBottom: 16 }}>Patrones de Movilidad</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div style={{ gridColumn: "1 / -1" }}>
-        {(() => {
-          return (
-            <HourlyModeChartCard
-              title="Distribución de viajes en un día (según hora de inicio)"
-              data={hourlyModeData}
-              datasets={hourlyModeDatasets}
-              series={HOURLY_SERIES}
-              showLegend
-            />
-          );
-        })()}
 
+      <div className="chart-grid-2-mobility">
+        {/* Gráfico horario — ocupa todo el ancho */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <HourlyModeChartCard
+            title="Distribución de viajes en un día (según hora de inicio)"
+            data={hourlyModeData}
+            datasets={hourlyModeDatasets}
+            series={HOURLY_SERIES}
+            showLegend
+          />
         </div>
+
         {(() => {
           const t = buildComparisonSeries(durationHistogramData, 20, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
-          return ( 
-              <BarChartCard
+          return (
+            <BarChartCard
               title="Distribución de los viajes según su duración (% de viajes)"
               data={isCompareMode ? t.data : durationHistogramData}
               series={isCompareMode ? t.series : undefined}
@@ -110,7 +106,6 @@ export default function MobilityPatternsPanel({
         })()}
 
         {(() => {
-          // CASO ESPECIAL: Compendio de indicadores
           const n = buildTransportationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
           return (
             <BarChartCard
@@ -128,7 +123,6 @@ export default function MobilityPatternsPanel({
             />
           );
         })()}
-
       </div>
     </section>
   );

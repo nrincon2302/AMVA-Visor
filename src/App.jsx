@@ -1,3 +1,4 @@
+import "./App.css";
 import Header from "./layout/Header";
 import Footer from "./layout/Footer";
 import DashboardSection from "./pages/DashboardContent";

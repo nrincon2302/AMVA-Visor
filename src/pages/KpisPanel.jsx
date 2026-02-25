@@ -6,47 +6,38 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
   const [activeComparisonIndex, setActiveComparisonIndex] = useState(0);
 
   useEffect(() => {
-    if (!localSelectedValues?.length) {
-      setActiveComparisonIndex(0);
-    } else {
-      setActiveComparisonIndex(0);
-    }
+    setActiveComparisonIndex(0);
   }, [localSelectedValues, isCompareMode]);
 
   const getValue = (id) => {
     const item = kpisData[id];
     if (!item) return 0;
-
     if (isCompareMode && item.tipo === "comparativo_simple") {
       return item.comparativo[activeComparisonIndex]?.value ?? 0;
     }
-
     return item?.value ?? 0;
   };
 
-  // Valores dinámicos
-  const viajesTotales = Math.round(getValue(1));
-  const porcentajeNoViajan = 100 * getValue(2);
-  const duracionPromedio = getValue(3);
-  const viajesPrivados = Math.round(getValue(4));
+  const viajesTotales          = Math.round(getValue(1));
+  const porcentajeNoViajan     = 100 * getValue(2);
+  const duracionPromedio       = getValue(3);
+  const viajesPrivados         = Math.round(getValue(4));
   const viajesModoNoMotorizado = Math.round(getValue(5));
-  const viajesPublicos = Math.round(getValue(6));
-  const viajesPorPersona = getValue(7);
-  const viajesPorViajero = getValue(8);
+  const viajesPublicos         = Math.round(getValue(6));
+  const viajesPorPersona       = getValue(7);
+  const viajesPorViajero       = getValue(8);
 
-  // Globales (no cambian por comparación)
-  const viajesTotalesGlobal = Math.round(kpisGlobales[1]?.value ?? 0);
-  const porcentajeNoViajasGlobal = 100 * (kpisGlobales[2]?.value ?? 0);
-  const duracionPromedioGlobal = kpisGlobales[3]?.value ?? 0;
-  const viajesPrivadosGlobal = Math.round(kpisGlobales[4]?.value ?? 0);
-  const viajesNoMotorizadoGlobal = Math.round(kpisGlobales[5]?.value ?? 0);
-  const viajesPublicosGlobal = Math.round(kpisGlobales[6]?.value ?? 0);
-  const viajesPorPersonaGlobal = kpisGlobales[7]?.value ?? 0;
-  const viajesPorViajeroGlobal = kpisGlobales[8]?.value ?? 0;
+  const viajesTotalesGlobal        = Math.round(kpisGlobales[1]?.value ?? 0);
+  const porcentajeNoViajasGlobal   = 100 * (kpisGlobales[2]?.value ?? 0);
+  const duracionPromedioGlobal     = kpisGlobales[3]?.value ?? 0;
+  const viajesPrivadosGlobal       = Math.round(kpisGlobales[4]?.value ?? 0);
+  const viajesNoMotorizadoGlobal   = Math.round(kpisGlobales[5]?.value ?? 0);
+  const viajesPublicosGlobal       = Math.round(kpisGlobales[6]?.value ?? 0);
+  const viajesPorPersonaGlobal     = kpisGlobales[7]?.value ?? 0;
+  const viajesPorViajeroGlobal     = kpisGlobales[8]?.value ?? 0;
 
   const globalLabel = "Estadística para el Valle de Aburrá";
-
-  const hasValue = (v) => v !== undefined && v !== null; // Maneja cuando vale 0 REAL
+  const hasValue = (v) => v !== undefined && v !== null;
 
   return (
     <section
@@ -62,15 +53,9 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
       <h3 style={{ marginTop: 0 }}>Estadísticas generales</h3>
 
       {isCompareMode && localSelectedValues?.length > 0 && (
-        <div style={{
-          display: "flex",
-          gap: 12,
-          marginBottom: 16,
-          flexWrap: "wrap"
-        }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
           {localSelectedValues.map((value, index) => {
             const isActive = index === activeComparisonIndex;
-
             return (
               <button
                 key={value}
@@ -85,17 +70,10 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
                   background: isActive ? "#f1f5f9" : "#ffffff",
                   cursor: "pointer",
                   fontWeight: isActive ? 600 : 500,
-                  transition: "all 0.2s ease"
+                  transition: "all 0.2s ease",
                 }}
               >
-                <div
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: selectedColorMap?.get(value) || "#999"
-                  }}
-                />
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: selectedColorMap?.get(value) || "#999" }} />
                 {value}
               </button>
             );
@@ -103,59 +81,46 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
         </div>
       )}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(180px,1fr))",
-          gap: 12,
-        }}
-      >
-        <KpiCard
-          label={kpisData[1]?.nombre ?? "Viajes totales diarios"}
-          value={formateo(viajesTotales || 0)}
-          subLabel={hasValue(viajesTotales) ? `${globalLabel}: ${formateo(viajesTotalesGlobal || 0)}` : undefined}
+      <div className="kpi-grid-4">
+        <KpiCard 
+          label={kpisData[1]?.nombre ?? "Viajes totales diarios"} 
+          value={formateo(viajesTotales || 0)} 
+          subLabel={hasValue(viajesTotales) ? `${globalLabel}: ${formateo(viajesTotalesGlobal || 0)}` : undefined} 
         />
-
-        <KpiCard
-          label={kpisData[2]?.nombre ?? "% de personas que no viajan"}
-          value={`${formateo(porcentajeNoViajan || 0)}%`}
-          subLabel={hasValue(porcentajeNoViajasGlobal) ? `${globalLabel}: ${formateo(porcentajeNoViajasGlobal || 0)}%` : undefined}
+        <KpiCard 
+          label={kpisData[2]?.nombre ?? "% de personas que no viajan"} 
+          value={`${formateo(porcentajeNoViajan || 0)}%`} 
+          subLabel={hasValue(porcentajeNoViajasGlobal) ? `${globalLabel}: ${formateo(porcentajeNoViajasGlobal || 0)}%` : undefined} 
         />
-
-        <KpiCard
-          label={kpisData[3]?.nombre ?? "Tiempo promedio de viaje (min)"}
-          value={`${formateo(duracionPromedio || 0)} min`}
-          subLabel={hasValue(duracionPromedioGlobal) ? `${globalLabel}: ${formateo(duracionPromedioGlobal || 0)} min` : undefined}
+        <KpiCard 
+          label={kpisData[3]?.nombre ?? "Tiempo promedio de viaje (min)"} 
+          value={`${formateo(duracionPromedio || 0)} min`} 
+          subLabel={hasValue(duracionPromedioGlobal) ? `${globalLabel}: ${formateo(duracionPromedioGlobal || 0)} min` : undefined} 
         />
-
-        <KpiCard
-          label={kpisData[4]?.nombre ?? "Tamaño promedio del hogar (personas de más de 5 años)"}
-          value={`${formateo(viajesPrivados || 0)}`}
-          subLabel={hasValue(viajesPrivadosGlobal) ? `${globalLabel}: ${formateo(viajesPrivadosGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[4]?.nombre ?? "Tamaño promedio del hogar"} 
+          value={`${formateo(viajesPrivados || 0)}`} 
+          subLabel={hasValue(viajesPrivadosGlobal) ? `${globalLabel}: ${formateo(viajesPrivadosGlobal || 0)}` : undefined} 
         />
-
-        <KpiCard
-          label={kpisData[5]?.nombre ?? "Viajes diarios en modos no motorizados"}
-          value={formateo(viajesModoNoMotorizado || 0)}
-          subLabel={hasValue(viajesNoMotorizadoGlobal) ? `${globalLabel}: ${formateo(viajesNoMotorizadoGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[5]?.nombre ?? "Viajes diarios en modos no motorizados"} 
+          value={formateo(viajesModoNoMotorizado || 0)} 
+          subLabel={hasValue(viajesNoMotorizadoGlobal) ? `${globalLabel}: ${formateo(viajesNoMotorizadoGlobal || 0)}` : undefined} 
         />
-
-        <KpiCard
-          label={kpisData[6]?.nombre ?? "Viajes diarios por hogar"}
-          value={`${formateo(viajesPublicos || 0)}`}
-          subLabel={hasValue(viajesPublicos) ? `${globalLabel}: ${formateo(viajesPublicosGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[6]?.nombre ?? "Viajes diarios por hogar"} 
+          value={`${formateo(viajesPublicos || 0)}`} 
+          subLabel={hasValue(viajesPublicos) ? `${globalLabel}: ${formateo(viajesPublicosGlobal || 0)}` : undefined} 
         />
-
-        <KpiCard
-          label={kpisData[7]?.nombre ?? "Viajes diarios promedio por persona"}
-          value={`${formateo(viajesPorPersona || 0)}`}
-          subLabel={hasValue(viajesPorPersona) ? `${globalLabel}: ${formateo(viajesPorPersonaGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[7]?.nombre ?? "Viajes diarios promedio por persona"} 
+          value={`${formateo(viajesPorPersona || 0)}`} 
+          subLabel={hasValue(viajesPorPersona) ? `${globalLabel}: ${formateo(viajesPorPersonaGlobal || 0)}` : undefined} 
         />
-
-        <KpiCard
-          label={kpisData[8]?.nombre ?? "Viajes diarios promedio por personas que realizan viajes"}
-          value={`${formateo(viajesPorViajero || 0)}`}
-          subLabel={hasValue(viajesPorViajero) ? `${globalLabel}: ${formateo(viajesPorViajeroGlobal || 0)}` : undefined}
+        <KpiCard 
+          label={kpisData[8]?.nombre ?? "Viajes diarios promedio por personas que realizan viajes"} 
+          value={`${formateo(viajesPorViajero || 0)}`} 
+          subLabel={hasValue(viajesPorViajero) ? `${globalLabel}: ${formateo(viajesPorViajeroGlobal || 0)}` : undefined} 
         />
       </div>
     </section>
