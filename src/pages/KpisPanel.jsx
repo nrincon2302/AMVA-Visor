@@ -98,7 +98,7 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
           subLabel={hasValue(duracionPromedioGlobal) ? `${globalLabel}: ${formateo(duracionPromedioGlobal || 0)} min` : undefined} 
         />
         <KpiCard 
-          label={kpisData[4]?.nombre ?? "Tamaño promedio del hogar"} 
+          label={kpisData[4]?.nombre ?? "Viajes diarios en modos privados"} 
           value={`${formateo(viajesPrivados || 0)}`} 
           subLabel={hasValue(viajesPrivadosGlobal) ? `${globalLabel}: ${formateo(viajesPrivadosGlobal || 0)}` : undefined} 
         />
@@ -108,7 +108,7 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
           subLabel={hasValue(viajesNoMotorizadoGlobal) ? `${globalLabel}: ${formateo(viajesNoMotorizadoGlobal || 0)}` : undefined} 
         />
         <KpiCard 
-          label={kpisData[6]?.nombre ?? "Viajes diarios por hogar"} 
+          label={kpisData[6]?.nombre ?? "Viajes diarios en modos públicos"} 
           value={`${formateo(viajesPublicos || 0)}`} 
           subLabel={hasValue(viajesPublicos) ? `${globalLabel}: ${formateo(viajesPublicosGlobal || 0)}` : undefined} 
         />

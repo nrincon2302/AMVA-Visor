@@ -41,7 +41,7 @@ export default function DashboardSection() {
   /* ========================================================
    CONSTRUCCIÓN DE LA INTERFAZ Y SU COMPORTAMIENTO
    ======================================================== */
-  const [activeThematicKey,  setActiveThematicKey]  = useState(null);
+  const [activeThematicKey,  setActiveThematicKey]  = useState("");
   const [localSelectedValues, setLocalSelectedValues] = useState([]);
   const [, startTransition] = useTransition();
   const [activeSection, setActiveSection] = useState("stats");

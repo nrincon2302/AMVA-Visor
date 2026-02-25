@@ -14,7 +14,6 @@ export default function AnalysisViewsPanel({
   modeData = [],
   purposeData = [],
   stageData = [],
-  noTravelReasonData = [],
   populationInterestData = [],
   vehicleTypeData = [],
   vehicleModelData = [],
@@ -29,7 +28,7 @@ export default function AnalysisViewsPanel({
     <div className="analysis-grid-viajes">
       {isCompareMode ? (
         <>
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div>
             {(() => {
               const m = buildComparisonSeries(modeData, 27, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return <BarChartCard 
@@ -38,8 +37,8 @@ export default function AnalysisViewsPanel({
                 xKey="label" 
                 series={m.series} 
                 color={PRIMARY_GREEN} 
-                orientation="vertical" 
-                chartHeight={320} 
+                orientation="horizontal" 
+                chartHeight={360} 
                 isCompareMode={isCompareMode} 
                 xAxisLabel="Modo" 
                 yAxisLabel="% de viajes" 
@@ -85,24 +84,6 @@ export default function AnalysisViewsPanel({
 
           <div>
             {(() => {
-              const n = buildComparisonSeries(noTravelReasonData, 30, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
-              return <BarChartCard 
-                title="Motivo de no viaje (% de personas que no viajan)" 
-                data={n.data} 
-                xKey="label" 
-                series={n.series} 
-                color={PRIMARY_GREEN} 
-                orientation="horizontal" 
-                chartHeight={360} 
-                isCompareMode={isCompareMode} 
-                xAxisLabel="% de personas" 
-                yAxisLabel="Motivo" 
-              />;
-            })()}
-          </div>
-
-          <div>
-            {(() => {
               const pop = buildPopulationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
               return <BarChartCard 
                 title="% de personas que sí viajan en grupos poblacionales de interés" 
@@ -121,15 +102,15 @@ export default function AnalysisViewsPanel({
         </>
       ) : (
         <>
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div>
             <BarChartCard 
               title="Modo principal (% de viajes)" 
               data={toLabelValue(modeData)} 
               xKey="label" 
               yKey="value" 
               color={groupedColor} 
-              orientation="vertical" 
-              chartHeight={320} 
+              orientation="horizontal" 
+              chartHeight={360} 
               xAxisLabel="Modo" 
               yAxisLabel="% de viajes" 
             />
@@ -155,17 +136,6 @@ export default function AnalysisViewsPanel({
             chartHeight={360} 
             xAxisLabel="% de viajes" 
             yAxisLabel="Etapas" 
-          />
-          <BarChartCard 
-            title="Motivo de no viaje (% de personas que no viajan)" 
-            data={toLabelValue(noTravelReasonData)} 
-            xKey="label" 
-            yKey="value" 
-            color={groupedColor} 
-            orientation="horizontal" 
-            chartHeight={360} 
-            xAxisLabel="% de personas" 
-            yAxisLabel="Motivo" 
           />
           <BarChartCard 
             title="% de personas que sí viajan en grupos poblacionales de interés" 

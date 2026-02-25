@@ -641,7 +641,6 @@ function buildAnalysisViewsData(indicadoresData) {
   const modeData = mapAgrupadoPercent(27);
   const purposeData = mapAgrupadoPercent(28);
   const stageData = mapAgrupadoPercent(29);
-  const noTravelReasonData = mapAgrupadoPercent(30);
 
   // 31–35 simples (%)
   const populationLabels = [
@@ -671,7 +670,6 @@ function buildAnalysisViewsData(indicadoresData) {
     modeData,
     purposeData,
     stageData,
-    noTravelReasonData,
     populationInterestData,
     vehicleTypeData,
     vehicleTenureData,

@@ -18,7 +18,7 @@ const FilterVeil = ({ visible, opaque = false }) => {
           transition: "opacity 0.28s ease",
 
           /* Carga inicial: blanco opaco */
-          background: opaque
+          backgroundColor: opaque
             ? "rgba(255, 255, 255, 0.97)"
             : "rgba(124, 185, 40, 0.055)",
 

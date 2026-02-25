@@ -146,7 +146,7 @@ export default function MacrozoneTable({
       {/* Selector de municipio destino o mensaje de que el filtro viene del panel en origenes */}
       {!isOrigin ? (
         <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 4 }}>
-          <text style={{ marginRight: 4, fontSize: 11 }}>Ver municipio:</text>
+          <p style={{ marginRight: 4, fontSize: 11 }}>Ver municipio:</p>
           <div>
             <select
               value={filters?.destinationMunicipio || ""}

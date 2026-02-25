@@ -25,7 +25,8 @@ const AnalysisSelector = ({
           <label style={{ fontSize: 12, fontWeight: 600 }}>
             Selecciona variable
             <select
-              value={activeThematicKey}
+              value={activeThematicKey ?? ""}
+              disabled={!thematicConfig?.length}
               onChange={(e) => handleThematicKeyChange(e.target.value)}
               style={{
                 marginTop: 6,
