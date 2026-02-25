@@ -113,10 +113,11 @@ const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false
       {
         type: "map",
         mapData: mapGeoJSON || mapDataSource,
-        data: (data || []).map((item) => ({
-          ...item,
-          selected: selectedMacrozone ? item.name === selectedMacrozone : false,
-        })),
+        data: (data || []).map(item => 
+          selectedMacrozone && item.id !== selectedMacrozone 
+            ? { ...item, value: null } 
+            : item
+        ),
         
         // Configuraciones para forzar polígonos
         joinBy: ["name", "name"], 
@@ -135,7 +136,7 @@ const HighchartsMapCard = ({ title, data, palette = "green", hideBaseMap = false
         name: "Viajes",
           borderColor: "#808080", // Gris 50% para delimitar el croquis
           borderWidth: 1,
-          nullColor: "rgba(191, 191, 191, 0.2)", // Gris 75% con opacidad para zonas sin datos
+          nullColor: "rgba(191, 191, 191, 0.1)", // Gris muy tenue para zonas no seleccionadas
           opacity: 0.85,
         
         states: {

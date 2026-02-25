@@ -5,21 +5,12 @@ import MacrozoneTable from "../components/MacrozoneTable";
 import { SECONDARY_GREEN, TERTIARY_ORANGE } from "../config/constants";
 import { getMacroInfo, getMacroDisplayName } from "../config/geoLookup";
 
-/**
- * MapsPanel
- *
- * Las macrozonas se identifican por ID numérico en todo el flujo:
- *   - agrupa_mz_origen / agrupa_mz_destino en la matriz son IDs numéricos
- *   - selectedOrigin / selectedDestination almacenan IDs (number | null)
- *   - Los filtros por municipio se resuelven desde el ID con getMacroInfo()
- *
- * Esto resuelve el problema donde nombres iguales en distintos municipios
- * (p.ej. "Rural 01" en Envigado) causaban confusión en la lógica previa.
- */
 export default function MapsPanel({
   macroHeatData = {},
   filters = {},
   isCompareMode,
+  municipios = [],
+  onDestinationMunicipiChange,
 }) {
   const [selectedOrigin,      setSelectedOrigin]      = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
@@ -166,6 +157,9 @@ export default function MapsPanel({
           onSelectId={handleOriginSelect}
           highlightedIds={highlightedOrigins}
           headerColor={SECONDARY_GREEN}
+          municipios={municipios}
+          filters={filters}
+          onDestinationMunicipiChange={onDestinationMunicipiChange}
         />
         <MacrozoneTable
           data={filteredDestinationByMunicipio}
@@ -174,6 +168,9 @@ export default function MapsPanel({
           onSelectId={handleDestinationSelect}
           highlightedIds={highlightedDestinations}
           headerColor={TERTIARY_ORANGE}
+          municipios={municipios}
+          filters={filters}
+          onDestinationMunicipiChange={onDestinationMunicipiChange}
         />
       </div>
 

@@ -12,6 +12,7 @@ export function useTravelDataFromAPI() {
   // Hooks de estado para Filtros
   const [municipio, setMunicipio] = useState("AMVA General");
   const [zona, setZona] = useState("");
+  const [destinationMunicipio, setDestinationMunicipio] = useState("AMVA General");
   const [temasFiltros, setTemasFiltros] = useState({});
 
   // Hooks de estado para Indicadores
@@ -273,9 +274,10 @@ export function useTravelDataFromAPI() {
   const filters = useMemo(() => ({
     municipio,
     zona,
+    destinationMunicipio,
     thematicFilters: temasFiltros,
     temasFiltros,
-  }), [municipio, zona, temasFiltros]);
+  }), [municipio, zona, destinationMunicipio, temasFiltros]);
 
 
   /* =============================================================
@@ -370,6 +372,7 @@ export function useTravelDataFromAPI() {
     municipio,
     setMunicipio,
     setZona,
+    setDestinationMunicipio,
     temasFiltros,
     setTemaValues,
     setActiveTema,

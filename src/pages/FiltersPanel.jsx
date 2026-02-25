@@ -13,6 +13,7 @@ const FiltersPanel = ({
   filters,
   setMunicipio,
   setZona,           // nuevo — invoca ?zona=Urbano|Rural
+  setDestinationMunicipio,
   thematicConfig,
   activeThematicKey,
   handleThematicKeyChange,

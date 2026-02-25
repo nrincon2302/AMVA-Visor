@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { formateo } from "../config/constants";
+import { SECONDARY_GREEN } from "../config/constants";
 
 const ORIGIN_SELECTED_BG     = "rgba(51, 153, 51, 0.15)";
 const ORIGIN_SELECTED_BORDER = "rgba(51, 153, 51, 0.55)";
@@ -9,10 +10,7 @@ const DEST_SELECTED_BG     = "rgba(255, 144, 0, 0.14)";
 const DEST_SELECTED_BORDER = "rgba(255, 144, 0, 0.55)";
 const DEST_HIGHLIGHT_BG    = "rgba(255, 144, 0, 0.07)";
 
-const fmtPct = (v) =>
-  v >= 10
-    ? `${Math.round(v)} %`
-    : `${v.toFixed(1)} %`;
+const fmtPct = (v) => `${formateo(v)} %`;
 
 export default function MacrozoneTable({
   data = [],
@@ -20,7 +18,10 @@ export default function MacrozoneTable({
   selectedId = null,
   onSelectId,
   highlightedIds = [],
-  headerColor = "#339933",
+  headerColor = SECONDARY_GREEN,
+  municipios = [],
+  filters = {},
+  onDestinationMunicipioChange,
 }) {
   const isOrigin = type === "origin";
 
@@ -28,20 +29,86 @@ export default function MacrozoneTable({
   const selectedBorder = isOrigin ? ORIGIN_SELECTED_BORDER : DEST_SELECTED_BORDER;
   const highlightBg    = isOrigin ? ORIGIN_HIGHLIGHT_BG    : DEST_HIGHLIGHT_BG;
 
-  // Total y valor de la fila seleccionada (para escalar porcentajes)
-  const { totalTrips, selectedTrips } = useMemo(() => {
-    const total = data.reduce((s, d) => s + d.trips, 0) || 1;
-    const sel   = selectedId !== null
-      ? (data.find((d) => d.id === selectedId)?.trips ?? total)
-      : total;
-    return { totalTrips: total, selectedTrips: sel };
-  }, [data, selectedId]);
+  const [showInfo, setShowInfo] = useState(false);
+  const containerRef = useRef(null);
+  const timeoutRef = useRef(null);
+
+  const handleMouseEnter = () => {
+    setShowInfo(true);
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    timeoutRef.current = setTimeout(() => {
+      setShowInfo(false);
+      }, 5000); // se oculta después de 5s
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setShowInfo(false);
+  };
+
+  const showWithTimeout = () => {
+    setShowInfo(true);
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    timeoutRef.current = setTimeout(() => {
+      setShowInfo(false);
+    }, 5000);
+  };
+
+  const handleClick = (e) => {
+    // Para móvil (o cualquier dispositivo sin hover)
+    if (!window.matchMedia("(hover: hover)").matches) {
+      e.stopPropagation();
+      if (showInfo) {
+        setShowInfo(false);
+      } else {
+        showWithTimeout();
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setShowInfo(false);
+      }
+    };
+
+    if (showInfo) {
+      document.addEventListener("click", handleOutsideClick);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleOutsideClick);
+    };
+  }, [showInfo]);
 
   // Ordenar por viajes desc
-  const sorted = useMemo(
-    () => [...data].sort((a, b) => b.trips - a.trips),
-    [data]
-  );
+  const sorted = useMemo(() => {
+    const arr = [...data].sort((a, b) => b.trips - a.trips);
+    // Si hay selección, mostrar solo la fila seleccionada
+    if (selectedId !== null) {
+      return arr.filter(row => row.id === selectedId);
+    }
+    return arr;
+  }, [data, selectedId]);
+
+  // Porcentaje: relativo al seleccionado si hay selección, si no al total
+  const dataForPercent = useMemo(() => {
+    if (selectedId !== null) {
+      // Cuando hay selección, la fila seleccionada es 100%
+      return selectedId !== null
+        ? (data.find((d) => d.id === selectedId)?.trips ?? 1)
+        : 1;
+    }
+    return data.reduce((s, d) => s + d.trips, 0) || 1;
+  }, [data, selectedId]);
 
   if (!data.length) {
     return (
@@ -72,10 +139,66 @@ export default function MacrozoneTable({
       {/* Encabezado de color */}
       <div style={{
         padding: "10px 14px", background: headerColor, color: "#fff",
-        fontWeight: 700, fontSize: 13,
+        fontWeight: 700, fontSize: 14,
         display: "flex", justifyContent: "space-between", alignItems: "center",
       }}>
-        <span>{isOrigin ? "Macrozonas de origen" : "Macrozonas de destino"}</span>
+      <span>{isOrigin ? "Macrozonas de origen" : "Macrozonas de destino"}</span>
+      {/* Selector de municipio destino o mensaje de que el filtro viene del panel en origenes */}
+      {!isOrigin ? (
+        <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <text style={{ marginRight: 4, fontSize: 11 }}>Ver municipio:</text>
+          <div>
+            <select
+              value={filters?.destinationMunicipio || ""}
+              onChange={(e) => onDestinationMunicipioChange?.(e.target.value)}
+              style={{width: "100%", borderRadius: 8,
+                border: "1px solid #cbd5e1", padding: "4px 8px",
+                background: "#fff", fontSize: 11,
+              }}
+            >
+              {municipios?.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      ) : (
+        <div
+          ref={containerRef}
+          style={{ position: "relative", display: "inline-block" }}
+          onMouseEnter={handleMouseEnter} 
+          onMouseLeave={handleMouseLeave} 
+          onClick={handleClick}
+        >
+          <span
+            style={{display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: 20, height: 20, borderRadius: "50%", background: "#fff",
+              color: headerColor, fontSize: 13, fontWeight: "bold", cursor: "pointer",
+            }}>i</span>
+
+          {showInfo && (
+            <div
+              style={{
+                position: "absolute",
+                top: "130%",
+                left: "50%",
+                transform: "translateX(-100%)",
+                width: 215,
+                backgroundColor: "#fff",
+                color: "#111",
+                border: `1px solid ${headerColor}`,
+                borderRadius: 8,
+                padding: "10px 10px",
+                fontSize: 11,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 10,
+              }}>
+              Se muestran las macrozonas de origen asociadas al municipio seleccionado
+              en el panel de filtros
+            </div>
+          )}
+        </div>
+      )}
       </div>
 
       {/* Rótulos de columna */}
@@ -89,7 +212,7 @@ export default function MacrozoneTable({
       }}>
         <span style={{ flex: 1 }}>Municipio — Macrozona</span>
         <span style={{ flexShrink: 0, minWidth: 80, textAlign: "right" }}>
-          {selectedId !== null ? "% relativo" : "% del total"}
+          % del total
         </span>
       </div>
 
@@ -99,10 +222,10 @@ export default function MacrozoneTable({
           const isSelected    = row.id === selectedId;
           const isHighlighted = !isSelected && highlightedIds.includes(row.id);
 
-          // Porcentaje: relativo al seleccionado si hay selección, si no al total
+          // Cuando hay selección, la fila seleccionada es 100%
           const pct = selectedId !== null
-            ? (row.trips / selectedTrips) * 100   // seleccionada = 100%
-            : (row.trips / totalTrips) * 100;
+            ? 100  // Si hay selección, mostrar 100%
+            : (row.trips / dataForPercent) * 100;
 
           const barPct = Math.min(pct, 100);
 
@@ -137,11 +260,11 @@ export default function MacrozoneTable({
                   fontWeight: isSelected ? 700 : 500,
                   color: isSelected ? "#1a3a12" : "#1e293b",
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                  fontSize: 12, lineHeight: 1.3,
+                  fontSize: 13, lineHeight: 1.3,
                 }}>
                   {row.macrozona}
                 </div>
-                <div style={{ fontSize: 10, color: "#6b7280", marginTop: 1 }}>
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>
                   {row.municipio}
                 </div>
               </div>
@@ -154,14 +277,14 @@ export default function MacrozoneTable({
                 }}>
                   <div style={{
                     height: "100%", borderRadius: 3,
-                    width: `${formateo(barPct)}%`,
+                    width: `${barPct}%`,
                     background: isSelected ? selectedBorder : headerColor,
                     opacity: isSelected ? 1 : 0.55,
                     transition: "width 0.3s ease",
                   }} />
                 </div>
                 <span style={{
-                  fontSize: 11, fontWeight: 600,
+                  fontSize: 13, fontWeight: 600,
                   color: isSelected ? "#1a3a12" : "#374151",
                   minWidth: 42, textAlign: "right",
                 }}>
