@@ -1,19 +1,23 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import AnalysisSelector from "./AnalysisSelector";
 import SectionIndex from "../components/SectionIndex";
 
 const ZONA_OPTIONS = [
-  { value: "",        label: "Todos" },
-  { value: "Urbano",  label: "Urbano" },
-  { value: "Rural",   label: "Rural"  },
+  { value: "",       label: "Todos"  },
+  { value: "Urbano", label: "Urbano" },
+  { value: "Rural",  label: "Rural"  },
 ];
 
-const FiltersPanel = ({
+/* ============================================================
+   FilterContent — contenido compartido entre sidebar y drawer
+   ============================================================ */
+const FilterContent = ({
   municipios,
+  macrozonas,
   filters,
   setMunicipio,
-  setZona,           // nuevo — invoca ?zona=Urbano|Rural
-  setDestinationMunicipio,
+  setZona,
+  setMacrozona,
   thematicConfig,
   activeThematicKey,
   handleThematicKeyChange,
@@ -29,19 +33,18 @@ const FiltersPanel = ({
   onSectionChange,
   exportActions,
 }) => {
+  const selectStyle = {
+    marginTop: 6,
+    width: "100%",
+    borderRadius: 10,
+    border: "1px solid #cbd5e1",
+    padding: "6px 10px",
+    background: "#fff",
+    fontSize: 11,
+  };
+
   return (
-    <aside
-      className="dashboard-sidebar"
-      style={{
-        borderRadius: 16,
-        border: "1px solid #e5e7eb",
-        background: "#f8fafc",
-        padding: 12,
-        boxShadow: "0 12px 24px rgba(15,23,42,0.08)",
-        display: "grid",
-        gap: 12,
-      }}
-    >
+    <>
       <SectionIndex
         sectionOptions={sectionOptions}
         activeSection={activeSection}
@@ -50,23 +53,19 @@ const FiltersPanel = ({
 
       <div style={{ height: 1, background: "#e2e8f0" }} />
 
-      {/* Variables geográficas */}
+      {/* ── Variables geográficas ── */}
       <div>
         <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
           Variables geográficas
         </div>
 
-        {/* Municipio origen */}
+        {/* Municipio */}
         <label style={{ fontSize: 11, fontWeight: 600 }}>
           Municipio
           <select
             value={filters.municipio}
             onChange={(e) => setMunicipio(e.target.value)}
-            style={{
-              marginTop: 6, width: "100%", borderRadius: 10,
-              border: "1px solid #cbd5e1", padding: "6px 10px",
-              background: "#fff", fontSize: 11,
-            }}
+            style={selectStyle}
           >
             {municipios.map((muni) => (
               <option key={muni} value={muni}>{muni}</option>
@@ -74,7 +73,28 @@ const FiltersPanel = ({
           </select>
         </label>
 
-        {/* Tipo de zona (Urbano / Rural) */}
+        {/* Macrozona — visible solo cuando hay municipio específico */}
+        {filters.municipio !== "AMVA General" && macrozonas.length > 0 && (
+          <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginTop: 10 }}>
+            Macrozona
+            <select
+              value={filters.macrozona ?? ""}
+              onChange={(e) => {
+                // Convertir a número si es un ID numérico, o mantener string
+                const raw = e.target.value;
+                setMacrozona(raw === "" ? "" : (isNaN(Number(raw)) ? raw : Number(raw)));
+              }}
+              style={selectStyle}
+            >
+              <option value="">Todas</option>
+              {macrozonas.map(({ id, nombre }) => (
+                <option key={id} value={id}>{nombre}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {/* Tipo de zona */}
         <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginTop: 10 }}>
           Tipo de zona
           <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
@@ -83,6 +103,7 @@ const FiltersPanel = ({
               return (
                 <button
                   key={value}
+                  type="button"
                   onClick={() => setZona?.(value)}
                   style={{
                     flex: 1,
@@ -122,14 +143,111 @@ const FiltersPanel = ({
 
       <div style={{ height: 1, background: "#e2e8f0" }} />
 
-      {/* Exportaciones */}
       <div>
         <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 8 }}>
           Exportaciones
         </div>
         {exportActions}
       </div>
-    </aside>
+    </>
+  );
+};
+
+/* ============================================================
+   FiltersPanel — unifica sidebar desktop + drawer + FAB móvil
+   ============================================================ */
+const FiltersPanel = (props) => {
+  const { onSectionChange } = props;
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = isDrawerOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isDrawerOpen]);
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") setIsDrawerOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
+  const handleSectionChange = (key) => {
+    onSectionChange?.(key);
+    setIsDrawerOpen(false);
+  };
+
+  const contentProps = { ...props, onSectionChange: handleSectionChange };
+
+  return (
+    <>
+      {/* ── DESKTOP: sidebar lateral ── */}
+      <aside
+        className="dashboard-sidebar"
+        style={{
+          borderRadius: 16,
+          border: "1px solid #e5e7eb",
+          background: "#f8fafc",
+          padding: 12,
+          boxShadow: "0 12px 24px rgba(15,23,42,0.08)",
+          display: "grid",
+          gap: 12,
+        }}
+      >
+        <FilterContent {...contentProps} />
+      </aside>
+
+      {/* ── MÓVIL: FAB ── */}
+      <button
+        className={`filters-fab${isDrawerOpen ? " is-open" : ""}`}
+        onClick={() => setIsDrawerOpen((prev) => !prev)}
+        aria-label={isDrawerOpen ? "Cerrar filtros" : "Abrir filtros"}
+        aria-expanded={isDrawerOpen}
+      >
+        {isDrawerOpen ? (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+               stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="4" y1="4"  x2="16" y2="16" />
+            <line x1="16" y1="4" x2="4"  y2="16" />
+          </svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
+               stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <line x1="3" y1="5"  x2="17" y2="5"  />
+            <line x1="3" y1="10" x2="17" y2="10" />
+            <line x1="3" y1="15" x2="17" y2="15" />
+          </svg>
+        )}
+      </button>
+
+      {/* ── MÓVIL: backdrop ── */}
+      <div
+        className={`drawer-backdrop${isDrawerOpen ? " is-visible" : ""}`}
+        onClick={() => setIsDrawerOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* ── MÓVIL: drawer ── */}
+      <div
+        className={`filters-drawer${isDrawerOpen ? " is-open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Panel de filtros"
+      >
+        <div className="filters-drawer-header">
+          <h2>Filtros y opciones</h2>
+          <button
+            className="drawer-close-btn"
+            onClick={() => setIsDrawerOpen(false)}
+            aria-label="Cerrar filtros"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="filters-drawer-body">
+          <FilterContent {...contentProps} />
+        </div>
+      </div>
+    </>
   );
 };
 

@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState, useTransition, useEffect } from "react";
 
 import FilterVeil from "../components/FilterVeil";
-import FilterDrawer from "../components/FilterDrawer";
 import ExportActions from "../components/ExportActions";
 import { generatePdfReport, generateExcelReport } from "../utils/exportUtils";
 import { COMPARE_COLORS } from "../config/constants";
@@ -22,7 +21,8 @@ export default function DashboardSection() {
     filters,
     setMunicipio,
     setZona,
-    setDestinationMunicipio,
+    setMacrozona,
+    macrozonas,
     setTemaValues,
     setActiveTema,
     indicadoresData,
@@ -39,15 +39,13 @@ export default function DashboardSection() {
 
 
   /* ========================================================
-   CONSTRUCCIÓN DE LA INTERFAZ Y SU COMPORTAMIENTO
+   ESTADO DE LA INTERFAZ
    ======================================================== */
-  const [activeThematicKey,  setActiveThematicKey]  = useState("");
+  const [activeThematicKey,   setActiveThematicKey]  = useState("");
   const [localSelectedValues, setLocalSelectedValues] = useState([]);
   const [, startTransition] = useTransition();
   const [activeSection, setActiveSection] = useState("stats");
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // useState so flag change triggers re-render
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => {
@@ -56,23 +54,16 @@ export default function DashboardSection() {
     }
   }, [metadataLoaded, isLoading, initialLoadDone]);
 
-  // Velo opaco para la carga inicial (sin datos previos)
   const showInitialVeil = !initialLoadDone && isLoading;
+  const showFilterVeil  = initialLoadDone && isLoading;
 
-  // Velo translúcido: solo cuando isLoading es true después de la carga inicial.
-  // No usamos isPending — se activa antes de que React pinte el checkbox.
-  const showFilterVeil = initialLoadDone && isLoading;
-
-  // Velo opaco para cambio de modo COMPARAR ↔ AGRUPAR
-  // Estrategia: trackeamos la transición isLoading false→true→false
-  // usando el valor anterior de isLoading, no el actual.
   const [showModeVeil, setShowModeVeil] = useState(false);
   const prevIsLoadingRef  = useRef(false);
-  const modeVeilActiveRef = useRef(false);  // true mientras el veil de modo está activo
+  const modeVeilActiveRef = useRef(false);
 
   const triggerModeVeil = () => {
-    modeVeilActiveRef.current  = true;
-    prevIsLoadingRef.current   = false;  // reset — isLoading todavía no subió
+    modeVeilActiveRef.current = true;
+    prevIsLoadingRef.current  = false;
     setShowModeVeil(true);
   };
 
@@ -81,14 +72,13 @@ export default function DashboardSection() {
     prevIsLoadingRef.current = isLoading;
 
     if (!modeVeilActiveRef.current) return;
-
-    // Detectar transición true→false (ciclo de carga completado)
     if (prev === true && isLoading === false) {
       modeVeilActiveRef.current = false;
       setShowModeVeil(false);
     }
   }, [isLoading]);
 
+  /* ── Refs de secciones para scroll ── */
   const dashboardRef         = useRef(null);
   const statsSectionRef      = useRef(null);
   const indicatorsSectionRef = useRef(null);
@@ -98,17 +88,21 @@ export default function DashboardSection() {
   const vehicularSectionRef  = useRef(null);
 
   const sectionOptions = [
-    { key: "stats",      label: "Estadísticas generales" },
+    { key: "stats",      label: "Estadísticas generales"     },
     { key: "indicators", label: "Indicadores de motorización" },
-    { key: "maps",       label: "Distribución geográfica" },
-    { key: "mobility",   label: "Patrones de Movilidad" },
+    { key: "maps",       label: "Distribución geográfica"     },
+    { key: "mobility",   label: "Patrones de Movilidad"       },
     { key: "viajes",     label: "Características de los viajes" },
-    { key: "vehicular",  label: "Vehículos por hogar" },
+    { key: "vehicular",  label: "Vehículos por hogar"         },
   ];
+
   const sectionRefs = {
-    stats: statsSectionRef, indicators: indicatorsSectionRef,
-    maps: mapsSectionRef,   mobility: mobilitySectionRef,
-    viajes: viajesSectionRef, vehicular: vehicularSectionRef,
+    stats:      statsSectionRef,
+    indicators: indicatorsSectionRef,
+    maps:       mapsSectionRef,
+    mobility:   mobilitySectionRef,
+    viajes:     viajesSectionRef,
+    vehicular:  vehicularSectionRef,
   };
 
   const handleSectionChange = (key) => {
@@ -116,6 +110,7 @@ export default function DashboardSection() {
     sectionRefs[key]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  /* ── Configuración temática ── */
   const thematicConfig = useMemo(
     () => temas.map(({ id, nombre }) => ({
       key:     id,
@@ -125,7 +120,6 @@ export default function DashboardSection() {
     [temas, thematicOptions]
   );
 
-  // Inicializar activeThematicKey cuando temas llega del backend
   useEffect(() => {
     if (thematicConfig.length && !activeThematicKey) {
       const first = thematicConfig[0];
@@ -137,6 +131,7 @@ export default function DashboardSection() {
   }, [thematicConfig, activeThematicKey, setActiveTema, setTemaValues]);
 
   const activeThematic = thematicConfig.find((t) => t.key === activeThematicKey);
+
   useEffect(() => {
     if (activeThematic?.options?.length && !compareMode) {
       setLocalSelectedValues(activeThematic.options);
@@ -144,34 +139,28 @@ export default function DashboardSection() {
   }, [activeThematic, compareMode]);
 
 
-  /* =====================================================
-   EXTRACCIÓN DE LOS DATOS DE INDICADORES
-   =================================================== */
+  /* ── Extracción de rangos de indicadores ── */
   const pickRange = (source, from, to) =>
     Object.fromEntries(
       Object.entries(source || {})
         .filter(([key]) => { const n = Number(key); return n >= from && n <= to; })
     );
 
-  const kpisGenerales         = useMemo(() => pickRange(indicadoresData, 1, 8),        [indicadoresData]);
-  const kpisGlobales          = useMemo(() => pickRange(indicadoresGlobales, 1, 8),     [indicadoresGlobales]);
-  const kpisMotorizacion      = useMemo(() => pickRange(indicadoresData, 9, 14),        [indicadoresData]);
-  const kpisMotorizacionGlobales = useMemo(() => pickRange(indicadoresGlobales, 9, 14), [indicadoresGlobales]);
+  const kpisGenerales            = useMemo(() => pickRange(indicadoresData, 1, 8),        [indicadoresData]);
+  const kpisGlobales             = useMemo(() => pickRange(indicadoresGlobales, 1, 8),     [indicadoresGlobales]);
+  const kpisMotorizacion         = useMemo(() => pickRange(indicadoresData, 9, 14),        [indicadoresData]);
+  const kpisMotorizacionGlobales = useMemo(() => pickRange(indicadoresGlobales, 9, 14),    [indicadoresGlobales]);
 
 
-  /* ========================================================
-   FUNCIONES DE APOYO
-   ======================================================= */
-  // Mapa de colores sin límite de cantidad
+  /* ── Mapa de colores ── */
   const selectedColorMap = useMemo(
-    () =>
-      new Map(
-        (localSelectedValues || []).map((v, i) => [v, COMPARE_COLORS[i % COMPARE_COLORS.length]])
-      ),
+    () => new Map(
+      (localSelectedValues || []).map((v, i) => [v, COMPARE_COLORS[i % COMPARE_COLORS.length]])
+    ),
     [localSelectedValues]
   );
 
-  // Cambio de tema temático
+  /* ── Cambio de tema temático ── */
   const handleThematicKeyChange = (newKey) => {
     const t = thematicConfig.find((c) => c.key === newKey);
     const allOptions = t?.options || [];
@@ -186,35 +175,22 @@ export default function DashboardSection() {
     });
   };
 
-  // Conmutador entre modos AGRUPAR y COMPARAR
-  // Siempre reinicia a todos los filtros seleccionados y pide datos sin filtrar
+  /* ── Cambio de modo AGRUPAR / COMPARAR ── */
   const handleModeChange = (enterCompare) => {
     const allOptions = activeThematic?.options || [];
-
-    // Siempre volver a "todos" al cambiar de modo
     setLocalSelectedValues(allOptions);
-
-    // Velo opaco para el cambio de modo (descarga datos nuevos)
     triggerModeVeil();
 
     startTransition(() => {
-      if (enterCompare) {
-        setCompareMode(true);
-        // [] = sin filtrar por detalles → el backend devuelve todos
-        setTemaValues(activeThematicKey, []);
-      } else {
-        setCompareMode(false);
-        setTemaValues(activeThematicKey, []);
-      }
+      setCompareMode(enterCompare);
+      setTemaValues(activeThematicKey, []);
     });
   };
 
-  // Toggle individual — siempre deja mínimo 1 seleccionado
+  /* ── Toggle individual de valor temático ── */
   const toggleThematicValue = (value) => {
     const current = localSelectedValues || [];
     const exists  = current.includes(value);
-
-    // Impedir deseleccionar si es el último
     if (exists && current.length === 1) return;
 
     const next = exists
@@ -228,22 +204,18 @@ export default function DashboardSection() {
     });
   };
 
-  // Seleccionar todos — conserva el modo actual (AGRUPAR o COMPARAR)
+  /* ── Seleccionar todos ── */
   const handleSelectAll = () => {
     const allOptions = activeThematic?.options || [];
     setLocalSelectedValues(allOptions);
 
     startTransition(() => {
-      // [] significa "todos" para el backend (sin filtrar por detalles)
       setTemaValues(activeThematicKey, []);
-      // NO cambiamos compareMode — el usuario permanece en el modo que eligió
     });
   };
 
 
-  /* =================================================== 
-   CONFIGURACIÓN DE EXPORTABLES
-   =================================================== */
+  /* ── Exportaciones ── */
   const handleExportPdf = () => {
     generatePdfReport({
       filters,
@@ -269,20 +241,22 @@ export default function DashboardSection() {
   };
 
 
-  /* =======================================================
-   RETORNO - RENDERIZACIÓN DEL COMPONENTE
-   ======================================================= */
+  /* ── Render ── */
   return (
-    <main className="dashboard-main" style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+    <main
+      className="dashboard-main"
+      style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}
+    >
       <div className="dashboard-grid">
 
-        {/* Panel de filtros */}
+        {/* Panel de filtros unificado (sidebar + drawer + FAB) */}
         <FiltersPanel
           municipios={municipios}
+          macrozonas={macrozonas}
           filters={filters}
           setMunicipio={setMunicipio}
           setZona={setZona}
-          setDestinationMunicipio={setDestinationMunicipio}
+          setMacrozona={setMacrozona}
           thematicConfig={thematicConfig}
           activeThematicKey={activeThematicKey}
           handleThematicKeyChange={handleThematicKeyChange}
@@ -306,19 +280,12 @@ export default function DashboardSection() {
         />
 
         {/* Contenido principal */}
-        <div
-          ref={dashboardRef}
-          style={{ position: "relative" }}
-        >
-          {/* Velo de carga unificado
-               - opaco: carga inicial o cambio de modo COMPARAR/AGRUPAR
-               - translúcido: cambio de filtros de detalle              */}
+        <div ref={dashboardRef} style={{ position: "relative" }}>
           <FilterVeil
             visible={showInitialVeil || showModeVeil || showFilterVeil}
             opaque={showInitialVeil || showModeVeil}
           />
 
-          {/* KPIs generales */}
           <div ref={statsSectionRef}>
             <KpisPanel
               kpisData={kpisGenerales}
@@ -329,7 +296,6 @@ export default function DashboardSection() {
             />
           </div>
 
-          {/* Indicadores de motorización */}
           <div ref={indicatorsSectionRef}>
             <MobilityIndicatorsPanel
               kpisData={kpisMotorizacion}
@@ -340,18 +306,14 @@ export default function DashboardSection() {
             />
           </div>
 
-          {/* Mapas */}
           <div ref={mapsSectionRef}>
             <MapsPanel
               macroHeatData={indicadoresData?.[15] ?? { data: [] }}
-              filters={filters}
               municipios={municipios}
               isCompareMode={compareMode}
-              onDestinationMunicipiChange={setDestinationMunicipio}
             />
           </div>
 
-          {/* Patrones de movilidad */}
           <div ref={mobilitySectionRef}>
             <MobilityPatternsPanel
               isCompareMode={compareMode}
@@ -368,7 +330,6 @@ export default function DashboardSection() {
             />
           </div>
 
-          {/* Análisis – viajes */}
           <div ref={viajesSectionRef}>
             <AnalysisViewsPanel
               analysisView="viajes"
@@ -379,7 +340,6 @@ export default function DashboardSection() {
               modeData={analysisViewsData?.modeData}
               purposeData={analysisViewsData?.purposeData}
               stageData={analysisViewsData?.stageData}
-              noTravelReasonData={analysisViewsData?.noTravelReasonData}
               populationInterestData={analysisViewsData?.populationInterestData}
               vehicleTypeData={analysisViewsData?.vehicleTypeData}
               vehicleModelData={analysisViewsData?.vehicleModelData}
@@ -388,7 +348,6 @@ export default function DashboardSection() {
             />
           </div>
 
-          {/* Análisis – vehicular */}
           <div ref={vehicularSectionRef}>
             <AnalysisViewsPanel
               analysisView="vehicular"
@@ -399,7 +358,6 @@ export default function DashboardSection() {
               modeData={analysisViewsData?.modeData}
               purposeData={analysisViewsData?.purposeData}
               stageData={analysisViewsData?.stageData}
-              noTravelReasonData={analysisViewsData?.noTravelReasonData}
               vehicleTypeData={analysisViewsData?.vehicleTypeData}
               vehicleModelData={analysisViewsData?.vehicleModelData}
               vehicleTenureData={analysisViewsData?.vehicleTenureData}
@@ -409,60 +367,6 @@ export default function DashboardSection() {
           </div>
         </div>
       </div>
-
-      {/* ── MÓVIL: Drawer deslizante (reemplaza sidebar) ── */}
-      <FilterDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        municipios={municipios}
-        filters={filters}
-        setMunicipio={setMunicipio}
-        setZona={setZona}
-        setDestinationMunicipio={setDestinationMunicipio}
-        thematicConfig={thematicConfig}
-        activeThematicKey={activeThematicKey}
-        handleThematicKeyChange={handleThematicKeyChange}
-        activeThematic={activeThematic}
-        isCompareMode={compareMode}
-        onModeChange={handleModeChange}
-        localSelectedValues={localSelectedValues}
-        toggleThematicValue={toggleThematicValue}
-        selectedColorMap={selectedColorMap}
-        onSelectAll={handleSelectAll}
-        sectionOptions={sectionOptions}
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
-        exportActions={
-          <ExportActions
-            onExportPdf={handleExportPdf}
-            onExportExcel={handleExportExcel}
-            isDisabled={isLoading}
-          />
-        }
-      />
-
-      {/* ── MÓVIL: Botón flotante hamburger ── */}
-      <button
-        className={`filters-fab${isDrawerOpen ? " is-open" : ""}`}
-        onClick={() => setIsDrawerOpen((prev) => !prev)}
-        aria-label={isDrawerOpen ? "Cerrar filtros" : "Abrir filtros"}
-        aria-expanded={isDrawerOpen}
-      >
-        {isDrawerOpen ? (
-          /* X cuando está abierto */
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <line x1="4" y1="4" x2="16" y2="16" />
-            <line x1="16" y1="4" x2="4" y2="16" />
-          </svg>
-        ) : (
-          /* Hamburger cuando está cerrado */
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <line x1="3" y1="5"  x2="17" y2="5"  />
-            <line x1="3" y1="10" x2="17" y2="10" />
-            <line x1="3" y1="15" x2="17" y2="15" />
-          </svg>
-        )}
-      </button>
     </main>
   );
 }

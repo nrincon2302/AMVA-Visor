@@ -22,13 +22,14 @@ export const urls = {
 // ============================================
 // Construcción de los Queries según filtros aplicados
 // ============================================
-export function buildQueryParams({municipio, origen, destino, tema, zona, detalles} = {}) {
+export function buildQueryParams({municipio, macrozona, origen, destino, tema, zona, detalles} = {}) {
   const p = new URLSearchParams();
 
   // Adjuntar el municipio, la zona y las macrozonas
   if (municipio && municipio !== "AMVA General") p.append("municipio", municipio);
-  if (origen) p.append("macrozona_origen", origen);
-  if (destino) p.append("macrozona_destino", destino);
+  if (macrozona) p.append("macrozona", macrozona);
+  if (origen) p.append("origen", origen);
+  if (destino) p.append("destino", destino);
   if (zona) p.append("zona", zona);
 
   // Adjuntar el tema y los detalles

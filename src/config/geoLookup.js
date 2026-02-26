@@ -67,17 +67,33 @@ export const MACROZONA_BY_ID = {
   66: { municipio: "Caldas",      macrozona: "Rural Caldas",                           tipo: "Rural"  },
 };
 
-/**
- * Devuelve { municipio, macrozona, tipo } para un ID dado.
- * Si el ID no existe retorna defaults seguros.
- */
+/** { municipio, macrozona, tipo } para un ID dado. */
 export const getMacroInfo = (id) =>
   MACROZONA_BY_ID[id] ?? { municipio: "Desconocido", macrozona: `ID ${id}`, tipo: "Urbano" };
 
-/**
- * Devuelve el nombre para mostrar: "Municipio - Macrozona"
- */
+/** "Municipio - Macrozona" para mostrar en UI. */
 export const getMacroDisplayName = (id) => {
   const { municipio, macrozona } = getMacroInfo(id);
   return `${municipio} - ${macrozona}`;
 };
+
+/**
+ * Reverse lookup: dado municipio + nombre de macrozona → ID numérico.
+ * Devuelve null si no se encuentra.
+ */
+export const getMacrozoneId = (municipio, macrozonaNombre) => {
+  const entry = Object.entries(MACROZONA_BY_ID).find(
+    ([, v]) => v.municipio === municipio && v.macrozona === macrozonaNombre
+  );
+  return entry ? Number(entry[0]) : null;
+};
+
+/**
+ * Lista de macrozonas de un municipio con su ID numérico.
+ * Devuelve [{ id, nombre }] ordenado por ID.
+ */
+export const getMacrozonesByMunicipio = (municipio) =>
+  Object.entries(MACROZONA_BY_ID)
+    .filter(([, v]) => v.municipio === municipio)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([id, v]) => ({ id: Number(id), nombre: v.macrozona }));

@@ -68,7 +68,6 @@ const AnalysisSelector = ({
             <button
               type="button"
               onClick={() => onModeChange(true)}
-              title="La comparación por variables temáticas se aplica solamente en las secciones de Análisis de Viajes y Vehículos por Hogar"
               style={{
                 flex: 1,
                 border: "1px solid #d1d5db",
@@ -118,7 +117,7 @@ const AnalysisSelector = ({
                   whiteSpace: "nowrap",
                 }}
               >
-                Todos
+                Reiniciar filtros
               </button>
             </div>
 

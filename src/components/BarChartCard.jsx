@@ -51,16 +51,20 @@ const BarChartCard = ({
   };
 
   const numericDomain = showPercent
-    ? [0, 100]
-    : [
-        (dataMin) => {
-          const pad = Math.abs(dataMin) * 0.05 || 1;
-          return dataMin - pad;
-        },
+    ? [
+        0,
         (dataMax) => {
           const pad = Math.abs(dataMax) * 0.05 || 1;
-          return dataMax + pad;
-        },
+          const max = Math.round(dataMax + pad)
+          return max < 100 ? max : 100;
+        }
+      ]
+    : [
+        0,
+        (dataMax) => {
+          const pad = Math.abs(dataMax) * 0.05 || 1;
+          return Math.round(dataMax + pad);
+        }
       ];
 
   return (
@@ -72,7 +76,7 @@ const BarChartCard = ({
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
-          margin={{ top: 20, right: 20, left: isHorizontal ? 30 : 35, bottom: 20 }}
+          margin={{ top: 20, right: 40, left: isHorizontal ? 30 : 35, bottom: 20 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -184,7 +188,7 @@ const BarChartCard = ({
               <LabelList
                 dataKey={yKey}
                 position={isHorizontal ? "right" : "top"}
-                style={{ fontSize: "10pt", fill: "#0f172a" }}
+                style={{ fontSize: "9pt", fontWeight: "bold", fill: "#0f172a" }}
                 formatter={formatValue}
               />
             </Bar>

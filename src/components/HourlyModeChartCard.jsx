@@ -20,8 +20,8 @@ const DOT_STROKE = "#339933";
 
 const HourlyModeChartCard = ({
   title,
-  data = [],          // modo simple
-  datasets = null,    // modo comparar [{ nombre, data }]
+  data = [],
+  datasets = null,
   series,
   lineColor,
   showLegend = false,
@@ -116,7 +116,7 @@ const HourlyModeChartCard = ({
             }}
             interval={0}
             height={64}>
-            <Label value="Hora de inicio del viaje" position="bottom" offset={0} />
+            <Label value="Hora de inicio del viaje" position="bottom" offset={-10} />
           </XAxis>
 
           <YAxis
