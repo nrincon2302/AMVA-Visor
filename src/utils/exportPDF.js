@@ -270,7 +270,7 @@ function renderBarChart(doc, cursor, data) {
       [{ values, color: C.gr1, name: "Valor" }], unit);
   } else {
     if (!series.length) return;
-    const head = [["Categoría", ...series.map((s, si) =>
+    const head = [["Categoría", ...series.map((s) =>
       `${s.name}${unit ? " (" + unit + ")" : ""}` )]];
     const body = categories.map((cat, i) => [
       cat, ...series.map((s) => s.values[i] ?? 0),
@@ -332,7 +332,6 @@ function renderTimeTable(doc, cursor, data) {
         didParseCell(data) {
           if (data.section !== "head") return;
           if (data.column.index === 0) return;
-          const totalCols = series.length * nDet;
           const ci = data.column.index - 1;
           const si = Math.floor(ci / nDet);
           const rgb = hex2rgb(series[si]?.color || "#2563EB");
@@ -380,7 +379,7 @@ async function drawCoverPage(doc, ctx) {
   }
 
   // Texto del título
-  text(doc, "VISOR DE MOVILIDAD", PAGE_W / 2, 32, { bold:true, sz:28, color:C.white, align:"center" });
+  text(doc, "Encuestas Origen - Destino 2025", PAGE_W / 2, 32, { bold:true, sz:28, color:C.white, align:"center" });
   text(doc, "Área Metropolitana del Valle de Aburrá", PAGE_W / 2, 48,
        { sz:14, color:C.lgr, align:"center" });
   text(doc, "Informe de Indicadores de Movilidad", PAGE_W / 2, 62,

@@ -103,7 +103,7 @@ function buildMultiIdBarSection({ ids, labels, indicadoresData, compareMode, sel
   };
 }
 
-function buildKpiSection({ ids, unitMap, indicadoresData, compareMode, selectedValues }) {
+function buildKpiSection({ ids, unitMap, indicadoresData, compareMode }) {
   return {
     type: "kpi_table",
     kpis: ids.map((id) => {
