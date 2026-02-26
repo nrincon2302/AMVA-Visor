@@ -29,24 +29,45 @@ const hex2rgb = (hex) => {
   return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
 };
 
+// Todos los colores derivados de COLORS (importado de exportConfig → constants.js)
 const C = {
-  hdr:    hex2rgb(COLORS.headerBg),       // [27, 58, 45]
-  gr1:    hex2rgb(COLORS.primaryGreen),   // [27,122, 62]
+  hdr:    hex2rgb(COLORS.headerBg),
+  gr1:    hex2rgb(COLORS.primaryGreen),
   gr2:    hex2rgb(COLORS.secondaryGreen),
   blue:   hex2rgb(COLORS.tertiaryBlue),
   orange: hex2rgb(COLORS.tertiaryOrange),
   pink:   hex2rgb(COLORS.tertiaryPink),
   lgr:    hex2rgb(COLORS.lightGreen),
-  lblue:  hex2rgb(COLORS.lightBlue),
-  text:   [30, 41, 59],
-  muted:  [100,116,139],
+  lblue:  hex2rgb(COLORS.lightBlue  || "#DBEAFE"),
+  lorange:hex2rgb(COLORS.lightOrange || "#FED7AA"),
+  text:   hex2rgb(COLORS.darkText   || "#1E293B"),
+  muted:  hex2rgb(COLORS.grayText   || "#64748B"),
   white:  [255,255,255],
   alt:    hex2rgb(COLORS.rowAlt),
-  border: [226,232,240],
-  row:    [248,250,252],
+  border: hex2rgb(COLORS.borderColor || "#E2E8F0"),
+  row:    hex2rgb(COLORS.rowOdd      || "#F8FAFC"),
 };
 
 const COMPARE_RGB = (COLORS.compareColors || []).map(hex2rgb);
+
+/** Formato numérico es-CO: enteros sin decimal, % y min con 1 decimal.
+ *  Separador de miles → punto, decimal → coma (es-CO locale). */
+/** Formatea un número con máx 2 decimales en todo modo (agrupar y comparar).
+ *  - Si es entero exacto: sin decimales.  Ej: 1234 → "1.234"
+ *  - Si tiene decimales: hasta 2.         Ej: 45.678 → "45,68"
+ *  Separador de miles: punto, decimal: coma  (locale es-CO).
+ */
+const fmtVal = (v, unit = "") => {
+  if (typeof v !== "number" || !Number.isFinite(v)) return String(v ?? "--");
+  // Redondear a máximo 2 decimales
+  const n = parseFloat(v.toFixed(2));
+  const isInt = Number.isInteger(n);
+  const str = n.toLocaleString("es-CO", {
+    minimumFractionDigits: isInt ? 0 : undefined,
+    maximumFractionDigits: 2,
+  });
+  return str + (unit === "%" ? " %" : unit === "min" ? " min" : "");
+};
 
 // ─── Utilidades de dibujo ─────────────────────────────────────────────────────
 const rf  = (doc, x, y, w, h, rgb) => { doc.setFillColor(...rgb); doc.rect(x, y, w, h, "F"); };
@@ -112,11 +133,18 @@ function drawSectionHeading(doc, cursor, label, index) {
 // ─── Mini bar chart ───────────────────────────────────────────────────────────
 function drawMiniBarChart(doc, cursor, categories, seriesArr, unit) {
   if (!categories || !categories.length) return;
-  const n      = categories.length;
-  const nSer   = seriesArr.length;
-  const barH   = Math.max(2, Math.min(4.5, (40 / n)));
-  const blockH = barH * nSer + 2;
-  const chartH = 12 + n * blockH + (nSer > 1 ? 10 : 4);
+  const n    = categories.length;
+  const nSer = seriesArr.length;
+
+  // Modo comparar: barras más compactas con espacio extra entre categorías
+  const barH   = nSer > 1
+    ? Math.max(1.8, Math.min(3.2, 30 / n))
+    : Math.max(2,   Math.min(4.5, 40 / n));
+  const serGap = 0.7;                        // separación entre barras de la misma categoría
+  const catGap = nSer > 1 ? 4.5 : 2;        // espacio extra entre categorías distintas
+  const blockH = barH * nSer + serGap * (nSer - 1) + catGap;
+  const legendH = nSer > 1 ? 14 : 4;
+  const chartH  = 10 + n * blockH + legendH;
 
   cursor.checkBreak(chartH + 4);
   const y0 = cursor.y;
@@ -124,7 +152,7 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit) {
   // Fondo
   rfs(doc, ML, y0, CW, chartH, C.row, C.border);
 
-  const padL = 58, padR = 14, padT = 6, padB = nSer > 1 ? 12 : 5;
+  const padL = 58, padR = 14, padT = 6, padB = legendH;
   const zone = CW - padL - padR;
 
   const allVals = seriesArr.flatMap((s) => (s.values || []).map(Number).filter(Number.isFinite));
@@ -133,44 +161,58 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit) {
   categories.forEach((cat, ci) => {
     const yBase = y0 + padT + ci * blockH;
 
-    // Etiqueta
-    doc.setFont("helvetica","normal");
+    // Etiqueta de categoría
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(6.2);
     doc.setTextColor(...C.muted);
-    const lbl = String(cat).slice(0, 30);
-    doc.text(lbl, ML + 2, yBase + blockH / 2, { maxWidth: padL - 4, baseline:"middle" });
+    doc.text(String(cat).slice(0, 30), ML + 2, yBase + (barH * nSer) / 2,
+             { maxWidth: padL - 4, baseline: "middle" });
 
+    // Barras de cada serie
     seriesArr.forEach((s, si) => {
       const val  = Number((s.values || [])[ci]) || 0;
       const barW = Math.max(0.8, (val / maxV) * zone);
-      const yBar = yBase + si * (barH + 0.5);
+      const yBar = yBase + si * (barH + serGap);
 
       doc.setFillColor(...(s.color || C.gr1));
-      doc.roundedRect(ML + padL, yBar, barW, barH, 0.8, 0.8, "F");
+      doc.roundedRect(ML + padL, yBar, barW, barH, 0.5, 0.5, "F");
 
-      // Valor
-      doc.setFont("helvetica","normal");
-      doc.setFontSize(5.2);
+      // Valor al extremo derecho de la barra
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(5.0);
       doc.setTextColor(...C.muted);
-      const lv = `${val % 1 === 0 ? val : val.toFixed(1)}${unit === "%" ? "%" : unit === "min" ? " min" : ""}`;
-      doc.text(lv, ML + padL + barW + 1.5, yBar + barH / 2, { baseline:"middle" });
+      doc.text(fmtVal(val, unit), ML + padL + barW + 1.5, yBar + barH / 2,
+               { baseline: "middle" });
     });
+
+    // Línea punteada divisoria entre categorías (solo modo comparar)
+    if (nSer > 1 && ci < n - 1) {
+      const divY = yBase + blockH - catGap / 2;
+      doc.setDrawColor(200, 212, 220);
+      doc.setLineDashPattern([1, 2], 0);
+      doc.setLineWidth(0.18);
+      doc.line(ML + padL - 3, divY, ML + padL + zone + 8, divY);
+      doc.setLineDashPattern([], 0);
+      doc.setLineWidth(0.2);
+    }
   });
 
-  // Leyenda multi-serie
+  // Leyenda (en 2 columnas si hay muchas series)
   if (nSer > 1) {
-    let lx = ML + padL;
-    const ly = y0 + chartH - padB / 2 + 2;
-    seriesArr.forEach((s) => {
+    const legCols = nSer > 5 ? 2 : 1;
+    const legColW = zone / legCols;
+    const ly0     = y0 + chartH - legendH + 2;
+    seriesArr.forEach((s, si) => {
+      const col = si % legCols;
+      const row = Math.floor(si / legCols);
+      const lx  = ML + padL + col * legColW;
+      const ly  = ly0 + row * 6;
       doc.setFillColor(...(s.color || C.gr1));
-      doc.roundedRect(lx, ly - 2.5, 5, 2.5, 0.5, 0.5, "F");
-      doc.setFont("helvetica","normal");
+      doc.roundedRect(lx, ly - 2, 4, 3, 0.4, 0.4, "F");
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(5.5);
       doc.setTextColor(...C.text);
-      const nm = String(s.name || "").slice(0,22);
-      doc.text(nm, lx + 6.5, ly - 0.5, { baseline:"middle" });
-      lx += doc.getTextWidth(nm) + 14;
-      if (lx > ML + CW - 20) lx = ML + padL; // wrap leyenda
+      doc.text(String(s.name || "").slice(0, 30), lx + 5.5, ly - 0.3, { baseline: "middle" });
     });
   }
 
@@ -181,7 +223,9 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit) {
 function drawTable(doc, cursor, head, body, opts = {}) {
   const { accentRgb = C.gr1 } = opts;
 
-  autoTable(doc, {
+  // Construir opciones: extraConfig se fusiona sin permitir que undefined sobreescriba claves
+  const extra = opts.extraConfig || {};
+  const tableOpts = {
     head,
     body,
     startY:    cursor.y,
@@ -206,8 +250,10 @@ function drawTable(doc, cursor, head, body, opts = {}) {
     alternateRowStyles: { fillColor: C.alt },
     bodyStyles:          { fillColor: C.row },
     columnStyles:        { 0: { cellWidth: 55, fontStyle:"bold" } },
-    ...(opts.extraConfig || {}),
-  });
+  };
+  // Mezclar extraConfig omitiendo valores undefined (evita crashear autoTable)
+  Object.entries(extra).forEach(([k, v]) => { if (v !== undefined) tableOpts[k] = v; });
+  autoTable(doc, tableOpts);
 
   cursor.y = doc.lastAutoTable.finalY + 5;
 }
@@ -278,7 +324,6 @@ function renderBarChart(doc, cursor, data) {
     drawTable(doc, cursor, head, body, {
       accentRgb: C.blue,
       extraConfig: {
-        headStyles: undefined,
         didParseCell(data) {
           if (data.section === "head" && data.column.index > 0) {
             const si = data.column.index - 1;
@@ -316,31 +361,32 @@ function renderTimeTable(doc, cursor, data) {
       },
     });
   } else {
-    const detalles = series[0]?.subSeries?.map((ss) => ss.detalle) || [];
-    const nDet = detalles.length || 1;
-
-    // Construimos una tabla plana con dos filas de cabecera
-    const row1 = ["Hora", ...series.flatMap((s) => [s.name, ...Array(nDet - 1).fill("")])];
-    const row2 = ["",     ...series.flatMap(() => detalles)];
-    const body = timeAxis.map((h, i) => [
-      h, ...series.flatMap((s) => (s.subSeries || []).map((ss) => ss.values[i] ?? 0)),
+    // Modo comparar: 4 columnas (una por serie de transporte).
+    // Dentro de cada celda se lista "Detalle: valor" por línea → legible sin sub-columnas.
+    const head = [["Hora", ...series.map((s) => s.name)]];
+    const body = timeAxis.map((hour, hi) => [
+      hour,
+      ...series.map((s) => {
+        const lines = (s.subSeries || []).map((ss) => {
+          const v = fmtVal(ss.values[hi] ?? 0, "");
+          return `${ss.detalle}: ${v}`;
+        });
+        return lines.join("\n");
+      }),
     ]);
 
-    drawTable(doc, cursor, [row1, row2], body, {
-      accentRgb: C.blue,
+    drawTable(doc, cursor, head, body, {
+      accentRgb: C.gr2,
       extraConfig: {
+        styles:      { fontSize: 7, cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 14, fontStyle: "bold", halign: "center" },
+        },
         didParseCell(data) {
-          if (data.section !== "head") return;
-          if (data.column.index === 0) return;
-          const ci = data.column.index - 1;
-          const si = Math.floor(ci / nDet);
-          const rgb = hex2rgb(series[si]?.color || "#2563EB");
-          // Fila 0: color completo; fila 1: tono ligeramente más claro
-          if (data.row.index === 0) {
+          if (data.section === "head" && data.column.index > 0) {
+            const si  = data.column.index - 1;
+            const rgb = hex2rgb(series[si]?.color || "#339933");
             data.cell.styles.fillColor = rgb;
-          } else {
-            const lighter = rgb.map((v) => Math.min(255, v + 40));
-            data.cell.styles.fillColor = lighter;
           }
         },
       },
@@ -357,32 +403,34 @@ async function drawCoverPage(doc, ctx) {
   rf(doc, 0, 80, PAGE_W, 4,  C.gr1);
   rf(doc, 0, 83, PAGE_W, 2,  C.lgr);
 
-  // Intento de logo
-  const logoCandidates = ["/assets/logo.png","/assets/logo.svg","/logo.png"];
-  for (const path of logoCandidates) {
+  // Logo centrado, cuadrado (28×28 mm), encima del título
+  const { logoUrl } = ctx;
+  if (logoUrl) {
     try {
-      const resp = await fetch(path);
-      if (!resp.ok) continue;
-      const blob = await resp.blob();
-      const b64 = await new Promise((res) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result);
-        r.onerror = () => res(null);
-        r.readAsDataURL(blob);
-      });
-      if (b64) {
-        const ext = path.endsWith(".svg") ? "SVG" : "PNG";
-        doc.addImage(b64, ext, PAGE_W - MR - 35, 8, 32, 32);
+      const resp = await fetch(logoUrl);
+      if (resp.ok) {
+        const blob  = await resp.blob();
+        const dataUrl = await new Promise((res) => {
+          const rd = new FileReader();
+          rd.onload  = () => res(rd.result);
+          rd.onerror = () => res(null);
+          rd.readAsDataURL(blob);
+        });
+        if (dataUrl) {
+          const ext   = logoUrl.match(/\.svg(\?|$)/i) ? "SVG" : "PNG";
+          const side  = 28;                          // cuadrado 28×28 mm
+          const logoX = (PAGE_W - side) / 2;         // centrado horizontal
+          doc.addImage(dataUrl, ext, logoX, 7, side, side);
+        }
       }
-      break;
-    } catch { /* sin logo */ }
+    } catch { /* sin logo, continuar */ }
   }
 
-  // Texto del título
-  text(doc, "Encuestas Origen - Destino 2025", PAGE_W / 2, 32, { bold:true, sz:28, color:C.white, align:"center" });
-  text(doc, "Área Metropolitana del Valle de Aburrá", PAGE_W / 2, 48,
+  // Título debajo del logo
+  text(doc, "Encuestas Origen - Destino 2025", PAGE_W / 2, 44, { bold:true, sz:24, color:C.white, align:"center" });
+  text(doc, "Área Metropolitana del Valle de Aburrá", PAGE_W / 2, 56,
        { sz:14, color:C.lgr, align:"center" });
-  text(doc, "Informe de Indicadores de Movilidad", PAGE_W / 2, 62,
+  text(doc, "Informe de Indicadores de Movilidad", PAGE_W / 2, 67,
        { italic:true, sz:10, color:C.lgr, align:"center" });
 
   // Fecha

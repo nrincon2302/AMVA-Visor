@@ -22,10 +22,9 @@
  */
 
 // ── Paleta de colores del proyecto ──────────────────────────────────────────
-import { PRIMARY_GREEN, SECONDARY_GREEN, TERTIARY_BLUE, TERTIARY_ORANGE, TERTIARY_PINK, COMPARE_COLORS } from "../config/constants";
-
+// Edita aquí si cambias los colores en constants.js
 export const COLORS = {
-  primaryGreen:   "rgba(124, 185, 40, 1)",
+  primaryGreen:   "#1B7A3E",
   secondaryGreen: "#339933",
   tertiaryBlue:   "#2563EB",
   tertiaryOrange: "#EA580C",
