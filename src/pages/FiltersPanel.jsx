@@ -61,7 +61,7 @@ const FilterContent = ({
 
         {/* Municipio */}
         <label style={{ fontSize: 11, fontWeight: 600 }}>
-          Municipio
+          Municipio de residencia
           <select
             value={filters.municipio}
             onChange={(e) => setMunicipio(e.target.value)}
@@ -76,7 +76,7 @@ const FilterContent = ({
         {/* Macrozona — visible solo cuando hay municipio específico */}
         {filters.municipio !== "AMVA General" && macrozonas.length > 0 && (
           <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginTop: 10 }}>
-            Macrozona
+            Macrozona de residencia
             <select
               value={filters.macrozona ?? ""}
               onChange={(e) => {
@@ -96,7 +96,7 @@ const FilterContent = ({
 
         {/* Tipo de zona */}
         <label style={{ fontSize: 11, fontWeight: 600, display: "block", marginTop: 10 }}>
-          Tipo de zona
+          Tipo de zona de residencia
           <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
             {ZONA_OPTIONS.map(({ value, label }) => {
               const active = (filters.zona ?? "") === value;

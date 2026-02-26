@@ -313,13 +313,15 @@ export default function DashboardSection() {
             </div>
           )}
 
-          <div ref={mapsSectionRef}>
-            <MapsPanel
-              macroHeatData={indicadoresData?.[15] ?? { data: [] }}
-              municipios={municipios}
-              isCompareMode={compareMode}
-            />
-          </div>
+          {!compareMode && (
+            <div ref={mapsSectionRef}>
+              <MapsPanel
+                macroHeatData={indicadoresData?.[15] ?? { data: [] }}
+                municipios={municipios}
+                isCompareMode={compareMode}
+              />
+            </div>
+          )}
 
           <div ref={mobilitySectionRef}>
             <MobilityPatternsPanel
