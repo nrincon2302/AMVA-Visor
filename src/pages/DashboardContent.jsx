@@ -289,7 +289,7 @@ export default function DashboardSection() {
             opaque={showInitialVeil || showModeVeil}
           />
 
-          {!compareMode && (
+          {!compareMode ? (
             <div ref={statsSectionRef}>
               <KpisPanel
                 kpisData={kpisGenerales}
@@ -299,9 +299,9 @@ export default function DashboardSection() {
                 selectedColorMap={selectedColorMap}
               />
             </div>
-          )}
+          ) : undefined}
 
-          {!compareMode && (
+          {!compareMode ? (
             <div ref={indicatorsSectionRef}>
               <MobilityIndicatorsPanel
                 kpisData={kpisMotorizacion}
@@ -311,9 +311,9 @@ export default function DashboardSection() {
                 selectedColorMap={selectedColorMap}
               />
             </div>
-          )}
+          ) : undefined}
 
-          {!compareMode && (
+          {!compareMode ? (
             <div ref={mapsSectionRef}>
               <MapsPanel
                 macroHeatData={indicadoresData?.[15] ?? { data: [] }}
@@ -321,7 +321,7 @@ export default function DashboardSection() {
                 isCompareMode={compareMode}
               />
             </div>
-          )}
+          ) : undefined}
 
           <div ref={mobilitySectionRef}>
             <MobilityPatternsPanel

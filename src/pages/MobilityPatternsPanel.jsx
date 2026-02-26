@@ -38,15 +38,17 @@ export default function MobilityPatternsPanel({
 
       <div className="chart-grid-2-mobility">
         {/* Gráfico horario — ocupa todo el ancho */}
-        <div style={{ gridColumn: "1 / -1" }}>
-          <HourlyModeChartCard
-            title="Distribución de viajes en un día (según hora de inicio)"
-            data={hourlyModeData}
-            datasets={hourlyModeDatasets}
-            series={HOURLY_SERIES}
-            showLegend
-          />
-        </div>
+        {!isCompareMode ? (
+          <div style={{ gridColumn: "1 / -1" }}>
+            <HourlyModeChartCard
+              title="Distribución de viajes en un día (según hora de inicio)"
+              data={hourlyModeData}
+              datasets={hourlyModeDatasets}
+              series={HOURLY_SERIES}
+              showLegend
+            />
+          </div>
+        ) : undefined}
 
         {(() => {
           const t = buildComparisonSeries(durationHistogramData, 20, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);

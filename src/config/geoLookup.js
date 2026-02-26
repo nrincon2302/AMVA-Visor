@@ -90,10 +90,10 @@ export const getMacrozoneId = (municipio, macrozonaNombre) => {
 
 /**
  * Lista de macrozonas de un municipio con su ID numérico.
- * Devuelve [{ id, nombre }] ordenado por ID.
+ * Devuelve [{ id, nombre }] ordenado por nombre alfabéticamente.
  */
 export const getMacrozonesByMunicipio = (municipio) =>
   Object.entries(MACROZONA_BY_ID)
     .filter(([, v]) => v.municipio === municipio)
-    .sort(([a], [b]) => Number(a) - Number(b))
+    .sort(([, a], [, b]) => a.macrozona.localeCompare(b.macrozona))
     .map(([id, v]) => ({ id: Number(id), nombre: v.macrozona }));
