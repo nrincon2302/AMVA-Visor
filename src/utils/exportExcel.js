@@ -11,18 +11,21 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { EXPORT_SECTIONS, COLORS, HOURLY_SERIES_META } from "./exportConfig";
 
-// ─── Paleta en formato ARGB (ExcelJS) ────────────────────────────────────────
+// ─── Paleta en formato ARGB (ExcelJS) — derivada de COLORS (exportConfig.js) ─
+const hex2argb = (hex) => "FF" + hex.replace("#","").toUpperCase().padStart(6,"0");
+
+// Todos los colores vienen de COLORS (que a su vez viene de constants.js)
 const P = {
-  headerDark:   "FF1B3A2D",  // verde muy oscuro
-  primaryGreen: "FF1B7A3E",
-  secGreen:     "FF339933",
-  blue:         "FF2563EB",
-  orange:       "FFEA580C",
-  pink:         "FFDB2777",
-  lightGreen:   "FFD1FAE5",
-  lightBlue:    "FFDBEAFE",
-  lightOrange:  "FFFED7AA",
-  rowAlt:       "FFF0FDF4",
+  headerDark:   hex2argb(COLORS.headerBg),
+  primaryGreen: hex2argb(COLORS.primaryGreen),
+  secGreen:     hex2argb(COLORS.secondaryGreen),
+  blue:         hex2argb(COLORS.tertiaryBlue),
+  orange:       hex2argb(COLORS.tertiaryOrange),
+  pink:         hex2argb(COLORS.tertiaryPink),
+  lightGreen:   hex2argb(COLORS.lightGreen),
+  lightBlue:    hex2argb(COLORS.lightBlue    || "#DBEAFE"),
+  lightOrange:  hex2argb(COLORS.lightOrange  || "#FED7AA"),
+  rowAlt:       hex2argb(COLORS.rowAlt),
   white:        "FFFFFFFF",
   grayText:     "FF64748B",
   darkText:     "FF1E293B",
@@ -30,13 +33,46 @@ const P = {
   rowOdd:       "FFF8FAFC",
 };
 
-// Colores de comparación (ARGB)
-const COMPARE_ARGB = [
-  "FF2563EB","FFEA580C","FFDB2777","FF7C3AED","FF0891B2",
-  "FF65A30D","FFD97706","FFBE185D","FF4F46E5","FF0F766E",
-];
+// Colores de comparación derivados de COLORS.compareColors
+const COMPARE_ARGB = (COLORS.compareColors || [
+  "#2563EB","#EA580C","#DB2777","#7C3AED","#0891B2",
+  "#65A30D","#D97706","#BE185D","#4F46E5","#0F766E",
+]).map(hex2argb);
 
-const hex2argb = (hex) => "FF" + hex.replace("#","").toUpperCase().padStart(6,"0");
+// ─── Formateo de números ──────────────────────────────────────────────────────
+/**
+ * Formatea un número para celdas Excel (valor real, sin unidad).
+ * - Porcentajes y promedios: máx 2 decimales
+ * - Enteros: sin decimales
+ * - Separador de miles: punto  (es-CO)
+ * - Separador decimal:  coma   (es-CO)
+ */
+function fmtNum(v, unit) {
+  if (typeof v !== "number" || !Number.isFinite(v)) return v;
+  if (unit === "%") {
+    // Ya viene escalado (ej. 45.67) — 1 decimal
+    return parseFloat(v.toFixed(1));
+  }
+  if (unit === "min") {
+    // Promedio en minutos — 1 decimal
+    return parseFloat(v.toFixed(1));
+  }
+  // Conteos / cantidades — entero estricto
+  return Math.round(v);
+}
+
+/**
+ * String para mostrar con formato es-CO (solo para celdas de texto/portada).
+ * Celdas de dato usan fmtNum() directamente para que Excel reconozca el número.
+ */
+function fmtStr(v, unit) {
+  const n = fmtNum(v, unit);
+  if (typeof n !== "number") return String(n);
+  return n.toLocaleString("es-CO", {
+    minimumFractionDigits: unit === "%" || unit === "min" ? 1 : 0,
+    maximumFractionDigits: 2,
+  }) + (unit === "%" ? " %" : unit === "min" ? " min" : "");
+}
 
 // ─── Helpers de estilo ─────────────────────────────────────────────────────────
 const THIN_BORDER = {
@@ -81,7 +117,13 @@ function style(cell, opts = {}) {
     cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb: bg } };
   }
 
-  cell.border = border || THIN_BORDER;
+  const rawBorder = border || THIN_BORDER;
+  const cleanBorder = {};
+  for (const side of ["top","bottom","left","right"]) {
+    const s = rawBorder[side];
+    if (s && typeof s.style === "string" && s.style !== "none") cleanBorder[side] = s;
+  }
+  cell.border = Object.keys(cleanBorder).length ? cleanBorder : THIN_BORDER;
 
   cell.alignment = {
     wrapText:   wrap !== undefined ? wrap : true,
@@ -93,16 +135,10 @@ function style(cell, opts = {}) {
 /** Celda de título de sección */
 function sectionTitle(cell, text, colorArgb = P.headerDark) {
   cell.value = text;
-  style(cell, {
-    bold: true, sz: 13, bg: P.lightGreen, color: colorArgb,
-    border: {
-      bottom: { style:"medium", color:{ argb: P.primaryGreen } },
-      top:    { style:"none"  },
-      left:   { style:"none"  },
-      right:  { style:"none"  },
-    },
-    wrap: false,
-  });
+  cell.font      = { name: "Calibri", size: 13, bold: true, color: { argb: colorArgb } };
+  cell.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: P.lightGreen } };
+  cell.border    = { bottom: { style: "medium", color: { argb: P.primaryGreen } } };
+  cell.alignment = { wrapText: false, vertical: "middle", horizontal: "left" };
 }
 
 /** Celda de encabezado de columna */
@@ -149,7 +185,7 @@ function setWidths(ws, widths) {
 }
 
 // ─── Hoja: Portada ─────────────────────────────────────────────────────────────
-async function buildCoverSheet(wb, ctx) {
+async function buildCoverSheet(wb, ctx, logo) {
   const ws = wb.addWorksheet("Portada");
   const { filters, compareMode, themeName, selectedValues } = ctx;
   const now = new Date().toLocaleString("es-CO", { dateStyle:"long", timeStyle:"short" });
@@ -179,6 +215,15 @@ async function buildCoverSheet(wb, ctx) {
   subCell.font  = { name:"Calibri", size:12, italic:true, color:{ argb: P.lightGreen } };
   subCell.alignment = { horizontal:"left", vertical:"middle" };
   ws.mergeCells("B4:D4");
+
+  // ── Logo (cuadrado, esquina superior derecha) ────────────────────────────
+  if (logo) {
+    try {
+      const imgId = wb.addImage({ base64: logo.b64, extension: logo.ext });
+      // 55px × 55px → ratio cuadrado. tl = top-left en coords de celda (col, row)
+      ws.addImage(imgId, { tl: { col: 3.1, row: 0.2 }, ext: { width: 100, height: 100 } });
+    } catch (e) { console.warn("Error al agregar logo al Excel:", e);}
+  }
 
   // Logo: omitido por ahora (complejidad con ExcelJS)
   // Se puede agregar un logo embebido en base64 en una versión futura
@@ -258,7 +303,7 @@ async function buildCoverSheet(wb, ctx) {
     style(nameCell, { sz:10, bg: isAlt ? P.rowAlt : P.rowOdd });
   });
 
-  ws.views = [{ state:"frozen", xSplit:0, ySplit:0, topLeftCell:"A1" }];
+  ws.views = [{ showGridLines: false }];
 }
 
 // ─── Hoja: Filtros ─────────────────────────────────────────────────────────────
@@ -321,7 +366,7 @@ function renderKpiTable(ws, data, startRow) {
       ws.getRow(r).height = 18;
       labelCell(ws.getCell(r, 2), kpi.label, i % 2 === 0);
       const vc = ws.getCell(r, 3);
-      vc.value = kpi.value;
+      vc.value = kpi.value;  // ya es string formateado desde exportConfig.fmtKpi
       style(vc, { sz:11, bg: i % 2 === 0 ? P.rowAlt : P.rowOdd, halign:"right", bold:true,
                   color: P.darkText });
       r++;
@@ -365,7 +410,7 @@ function renderBarChart(ws, data, startRow) {
       ws.getRow(r).height = 17;
       labelCell(ws.getCell(r, 2), cat, i % 2 === 0);
       const vc = ws.getCell(r, 3);
-      vc.value = values[i] ?? 0;
+      vc.value = fmtNum(values[i] ?? 0, data.unit);
       style(vc, { sz:10, bg: i % 2 === 0 ? P.rowAlt : P.rowOdd, halign:"right" });
       r++;
     });
@@ -382,7 +427,7 @@ function renderBarChart(ws, data, startRow) {
       labelCell(ws.getCell(r, 2), cat, i % 2 === 0);
       (series || []).forEach((s, ci) => {
         const vc = ws.getCell(r, 3 + ci);
-        vc.value = s.values[i] ?? 0;
+        vc.value = fmtNum(s.values[i] ?? 0, data.unit);
         style(vc, { sz:10, bg: i % 2 === 0 ? P.rowAlt : P.rowOdd, halign:"right" });
       });
       r++;
@@ -410,7 +455,7 @@ function renderTimeTable(ws, data, startRow) {
       labelCell(ws.getCell(r, 2), hour, i % 2 === 0);
       series.forEach((s, ci) => {
         const vc = ws.getCell(r, 3 + ci);
-        vc.value = s.values[i] ?? 0;
+        vc.value = fmtNum(s.values[i] ?? 0, "");
         style(vc, { sz:10, bg: i % 2 === 0 ? P.rowAlt : P.rowOdd, halign:"right" });
       });
       r++;
@@ -455,7 +500,7 @@ function renderTimeTable(ws, data, startRow) {
       series.forEach((s, si) => {
         (s.subSeries || []).forEach((ss, di) => {
           const vc = ws.getCell(r, 3 + si * nDet + di);
-          vc.value = ss.values[i] ?? 0;
+          vc.value = fmtNum(ss.values[i] ?? 0, "");
           style(vc, { sz:10, bg: i % 2 === 0 ? P.rowAlt : P.rowOdd, halign:"right" });
         });
       });
@@ -515,15 +560,28 @@ function buildSectionSheet(wb, section, ctx) {
   ws.getRow(nextRow).height = 8;
 
   // Vista: congelar las 3 primeras filas
-  ws.views = [{ state:"frozen", xSplit:0, ySplit:3, topLeftCell:"B4" }];
+  ws.views = [{ state:"frozen", ySplit:3, topLeftCell:"A4" }];
 }
 
 // ─── Carga del logo ───────────────────────────────────────────────────────────
-async function loadLogoBase64() {
-  // La carga de logo desde URL remota es compleja en ExcelJS
-  // Por ahora, retornamos null y el logo no se inserta
-  // En una implementación futura, se puede usar un logo embebido en base64
-  return null;
+// logoUrl debe pasarse en ctx; en DashboardContent.jsx:
+//   import logoUrl from "../assets/logo-area.png";   (Vite resuelve la URL)
+async function loadLogo(logoUrl) {
+  if (!logoUrl) return null;
+  try {
+    const resp = await fetch(logoUrl);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    const b64 = await new Promise((res) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result.split(",")[1]);
+      reader.onerror = () => res(null);
+      reader.readAsDataURL(blob);
+    });
+    if (!b64) return null;
+    const ext = logoUrl.match(/\.svg(\?|$)/i) ? "svg" : "png";
+    return { b64, ext };
+  } catch { return null; }
 }
 
 // ─── API pública ──────────────────────────────────────────────────────────────
@@ -539,9 +597,9 @@ export async function generateExcelReport(ctx) {
   wb.created  = new Date();
   wb.modified = new Date();
 
-  // Portada (intentar cargar logo en paralelo con el resto)
-  const logoBase64 = await loadLogoBase64();
-  await buildCoverSheet(wb, ctx, logoBase64);
+  // Cargar logo usando la URL que pasa DashboardContent (import de Vite)
+  const logo = await loadLogo(ctx.logoUrl);
+  await buildCoverSheet(wb, ctx, logo);
   buildFiltersSheet(wb, ctx);
 
   // Hojas de indicadores

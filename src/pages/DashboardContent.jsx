@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, useTransition, useEffect } from "react";
+import logoUrl from "../assets/logo-area.png";
 
 import FilterVeil from "../components/FilterVeil";
 import ExportActions from "../components/ExportActions";
@@ -220,8 +221,7 @@ export default function DashboardSection() {
 
 
   /* ── Exportaciones ── */
-  const handleExportPdf = () => {
-    generatePdfReport({
+  const handleExportPdf = () => generatePdfReport({
       filters,
       compareMode,
       selectedValues: localSelectedValues,
@@ -229,11 +229,10 @@ export default function DashboardSection() {
       indicadoresData,
       analysisViewsData,
       mobilityPatternsData,
-    });
-  };
+      logoUrl,
+  });
 
-  const handleExportExcel = () => {
-    generateExcelReport({
+  const handleExportExcel = () => generateExcelReport({
       filters,
       compareMode,
       selectedValues: localSelectedValues,
@@ -241,8 +240,8 @@ export default function DashboardSection() {
       indicadoresData,
       analysisViewsData,
       mobilityPatternsData,
-    });
-  };
+      logoUrl,
+  });
 
 
   /* ── Render ── */
@@ -290,25 +289,29 @@ export default function DashboardSection() {
             opaque={showInitialVeil || showModeVeil}
           />
 
-          <div ref={statsSectionRef}>
-            <KpisPanel
-              kpisData={kpisGenerales}
-              kpisGlobales={kpisGlobales}
-              isCompareMode={compareMode}
-              localSelectedValues={localSelectedValues}
-              selectedColorMap={selectedColorMap}
-            />
-          </div>
+          {!compareMode && (
+            <div ref={statsSectionRef}>
+              <KpisPanel
+                kpisData={kpisGenerales}
+                kpisGlobales={kpisGlobales}
+                isCompareMode={compareMode}
+                localSelectedValues={localSelectedValues}
+                selectedColorMap={selectedColorMap}
+              />
+            </div>
+          )}
 
-          <div ref={indicatorsSectionRef}>
-            <MobilityIndicatorsPanel
-              kpisData={kpisMotorizacion}
-              kpisGlobales={kpisMotorizacionGlobales}
-              isCompareMode={compareMode}
-              localSelectedValues={localSelectedValues}
-              selectedColorMap={selectedColorMap}
-            />
-          </div>
+          {!compareMode && (
+            <div ref={indicatorsSectionRef}>
+              <MobilityIndicatorsPanel
+                kpisData={kpisMotorizacion}
+                kpisGlobales={kpisMotorizacionGlobales}
+                isCompareMode={compareMode}
+                localSelectedValues={localSelectedValues}
+                selectedColorMap={selectedColorMap}
+              />
+            </div>
+          )}
 
           <div ref={mapsSectionRef}>
             <MapsPanel
