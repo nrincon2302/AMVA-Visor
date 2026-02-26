@@ -147,7 +147,8 @@ html, body, #root {
    ANALYSIS GRIDS
    ============================================================ */
 .analysis-grid-viajes,
-.analysis-grid-vehicular {
+.analysis-grid-vehicular,
+.analysis-grid-sociodemographic {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
@@ -213,7 +214,8 @@ html, body, #root {
   .chart-grid-2-mobility,
   .map-grid-2,
   .analysis-grid-viajes,
-  .analysis-grid-vehicular {
+  .analysis-grid-vehicular,
+  .analysis-grid-sociodemographic {
     grid-template-columns: 1fr !important;
   }
 
@@ -492,7 +494,8 @@ html, body, #root {
   .chart-grid-2-mobility,
   .map-grid-2,
   .analysis-grid-viajes,
-  .analysis-grid-vehicular {
+  .analysis-grid-vehicular,
+  .analysis-grid-sociodemographic {
     grid-template-columns: 1fr 1fr !important;
   }
 

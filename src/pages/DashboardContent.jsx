@@ -12,6 +12,7 @@ import MapsPanel from "./MapsPanel";
 import AnalysisViewsPanel from "./AnalysisViewsPanel";
 import MobilityPatternsPanel from "./MobilityPatternsPanel";
 import MobilityIndicatorsPanel from "./MobilityIndicatorsPanel";
+import SociodemographicPanel from "./SociodemographicPanel";
 
 export default function DashboardSection() {
   const {
@@ -86,6 +87,7 @@ export default function DashboardSection() {
   const mobilitySectionRef   = useRef(null);
   const viajesSectionRef     = useRef(null);
   const vehicularSectionRef  = useRef(null);
+  const sociodemographicSectionRef = useRef(null);
 
   const sectionOptions = [
     { key: "stats",      label: "Estadísticas generales"     },
@@ -94,6 +96,7 @@ export default function DashboardSection() {
     { key: "mobility",   label: "Patrones de Movilidad"       },
     { key: "viajes",     label: "Características de los viajes" },
     { key: "vehicular",  label: "Vehículos por hogar"         },
+    { key: "sociodemographic", label: "Caracterización socioeconómica" },
   ];
 
   const sectionRefs = {
@@ -103,6 +106,7 @@ export default function DashboardSection() {
     mobility:   mobilitySectionRef,
     viajes:     viajesSectionRef,
     vehicular:  vehicularSectionRef,
+    sociodemographic: sociodemographicSectionRef,
   };
 
   const handleSectionChange = (key) => {
@@ -362,6 +366,20 @@ export default function DashboardSection() {
               vehicleModelData={analysisViewsData?.vehicleModelData}
               vehicleTenureData={analysisViewsData?.vehicleTenureData}
               vehicleStratumData={analysisViewsData?.vehicleStratumData}
+              detailedData={detailedData}
+            />
+          </div>
+
+          <div ref={sociodemographicSectionRef}>
+            <SociodemographicPanel
+              isCompareMode={compareMode}
+              localSelectedValues={localSelectedValues}
+              selectedColorMap={selectedColorMap}
+              activeThematicKey={activeThematicKey}
+              socioData1={analysisViewsData?.socioData1}
+              socioData2={analysisViewsData?.socioData2}
+              socioData3={analysisViewsData?.socioData3}
+              socioData4={analysisViewsData?.socioData4}
               detailedData={detailedData}
             />
           </div>

@@ -282,7 +282,7 @@ export function useTravelDataFromAPI() {
     setCompareMode, 
     compareTema, 
     setCompareTema,
-    
+
     indicadoresData: compareMode ? indicadoresData : normalizedIndicadores,
     indicadoresGlobales, detailedData,
     mobilityPatternsData,
@@ -390,5 +390,9 @@ function buildAnalysisViewsData(indicadoresData) {
     vehicleTenureData: mapAgrupadoPercent(37),
     vehicleModelData: mapAgrupadoPercent(38),
     vehicleStratumData: mapAgrupadoPercent(39),
+    socioData1: mapAgrupadoPercent(42),
+    socioData2: mapAgrupadoPercent(43),
+    socioData3: mapAgrupadoPercent(44),
+    socioData4: mapAgrupadoPercent(45),
   };
 }
