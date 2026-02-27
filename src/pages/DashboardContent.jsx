@@ -5,6 +5,7 @@ import FilterVeil from "../components/FilterVeil";
 import ExportActions from "../components/ExportActions";
 import { generatePdfReport, generateExcelReport } from "../utils/exportUtils";
 import { COMPARE_COLORS } from "../config/constants";
+import { getMacroInfo } from "../config/geoLookup";
 import { useTravelDataFromAPI } from "../hooks/useTravelDataFromAPI";
 
 import FiltersPanel from "./FiltersPanel";
@@ -156,6 +157,34 @@ export default function DashboardSection() {
   const kpisMotorizacion         = useMemo(() => pickRange(indicadoresData, 9, 14),        [indicadoresData]);
   const kpisMotorizacionGlobales = useMemo(() => pickRange(indicadoresGlobales, 9, 14),    [indicadoresGlobales]);
 
+  /* ── Datos de macrozonas para exportación ── */
+  const macrozoneExportData = useMemo(() => {
+    const matriz = indicadoresData?.[15]?.data || [];
+    if (!matriz.length) return { origin: [], destination: [] };
+
+    const originMap      = new Map();
+    const destinationMap = new Map();
+
+    matriz.forEach(({ agrupa_mz_origen, agrupa_mz_destino, valor }) => {
+      const oid = Number(agrupa_mz_origen);
+      const did = Number(agrupa_mz_destino);
+      originMap.set(oid,      (originMap.get(oid)      || 0) + valor);
+      destinationMap.set(did, (destinationMap.get(did) || 0) + valor);
+    });
+
+    const toArr = (map) => {
+      const arr = Array.from(map.entries())
+        .map(([id, value]) => {
+          const { municipio, macrozona } = getMacroInfo(id);
+          return { id, municipio, macrozona, trips: Math.round(value) };
+        })
+        .sort((a, b) => b.trips - a.trips);
+      return arr;
+    };
+
+    return { origin: toArr(originMap), destination: toArr(destinationMap) };
+  }, [indicadoresData]);
+
 
   /* ── Mapa de colores ── */
   const selectedColorMap = useMemo(
@@ -221,27 +250,20 @@ export default function DashboardSection() {
 
 
   /* ── Exportaciones ── */
-  const handleExportPdf = () => generatePdfReport({
-      filters,
-      compareMode,
-      selectedValues: localSelectedValues,
-      themeName: activeThematic?.label || "N/A",
-      indicadoresData,
-      analysisViewsData,
-      mobilityPatternsData,
-      logoUrl,
-  });
+  const exportCtx = {
+    filters,
+    compareMode,
+    selectedValues: localSelectedValues,
+    themeName: activeThematic?.label || "N/A",
+    indicadoresData,
+    analysisViewsData,
+    mobilityPatternsData,
+    macrozoneData: macrozoneExportData,
+    logoUrl,
+  };
 
-  const handleExportExcel = () => generateExcelReport({
-      filters,
-      compareMode,
-      selectedValues: localSelectedValues,
-      themeName: activeThematic?.label || "N/A",
-      indicadoresData,
-      analysisViewsData,
-      mobilityPatternsData,
-      logoUrl,
-  });
+  const handleExportPdf   = () => generatePdfReport(exportCtx);
+  const handleExportExcel = () => generateExcelReport(exportCtx);
 
 
   /* ── Render ── */

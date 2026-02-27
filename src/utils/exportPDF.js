@@ -2,34 +2,33 @@
  * exportPDF.js  — Visor de Movilidad AMVA
  * ─────────────────────────────────────────────────────────────────────────────
  * Genera PDF con portada, tabla de contenido, secciones formateadas y gráficas.
- * npm install jspdf jspdf-autotable
+ *
+ * COLORES: se usan únicamente desde COLORS (exportConfig.js → constants.js).
+ *          No se define ningún color localmente aquí.
  *
  * Para agregar/quitar indicadores: edita SOLO exportConfig.js → EXPORT_SECTIONS.
- *
- * IMPORTANTE: importar autoTable como función separada y llamar autoTable(doc, opts)
- * en lugar de doc.autoTable(opts) para compatibilidad con versiones recientes.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { EXPORT_SECTIONS, COLORS, HOURLY_SERIES_META } from "./exportConfig";
+import { EXPORT_SECTIONS, COLORS, HOURLY_SERIES_META, fmtExport } from "./exportConfig";
 
 // ─── Constantes de layout ─────────────────────────────────────────────────────
-const PAGE_W   = 210;
-const PAGE_H   = 297;
-const ML       = 18;   // margen izquierdo
-const MR       = 18;   // margen derecho
-const MT       = 22;   // margen superior (debajo del header)
-const MB       = 20;   // margen inferior (encima del footer)
-const CW       = PAGE_W - ML - MR;
+const PAGE_W = 210;
+const PAGE_H = 297;
+const ML     = 16;   // margen izquierdo
+const MR     = 16;   // margen derecho
+const MT     = 22;   // margen superior (debajo del header)
+const MB     = 18;   // margen inferior
+const CW     = PAGE_W - ML - MR;
 
-// ─── Paleta RGB ───────────────────────────────────────────────────────────────
+// ─── Conversión hex → RGB (derivada de COLORS, sin colores locales) ───────────
 const hex2rgb = (hex) => {
-  const h = hex.replace("#","");
+  const h = (hex || "#000000").replace("#", "");
   return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
 };
 
-// Todos los colores derivados de COLORS (importado de exportConfig → constants.js)
+// Todos los colores vienen de COLORS
 const C = {
   hdr:    hex2rgb(COLORS.headerBg),
   gr1:    hex2rgb(COLORS.primaryGreen),
@@ -38,36 +37,17 @@ const C = {
   orange: hex2rgb(COLORS.tertiaryOrange),
   pink:   hex2rgb(COLORS.tertiaryPink),
   lgr:    hex2rgb(COLORS.lightGreen),
-  lblue:  hex2rgb(COLORS.lightBlue  || "#DBEAFE"),
-  lorange:hex2rgb(COLORS.lightOrange || "#FED7AA"),
-  text:   hex2rgb(COLORS.darkText   || "#1E293B"),
-  muted:  hex2rgb(COLORS.grayText   || "#64748B"),
-  white:  [255,255,255],
+  lblue:  hex2rgb(COLORS.lightBlue),
+  lorange:hex2rgb(COLORS.lightOrange),
+  text:   hex2rgb(COLORS.darkText),
+  muted:  hex2rgb(COLORS.grayText),
+  white:  [255, 255, 255],
   alt:    hex2rgb(COLORS.rowAlt),
-  border: hex2rgb(COLORS.borderColor || "#E2E8F0"),
-  row:    hex2rgb(COLORS.rowOdd      || "#F8FAFC"),
+  row:    hex2rgb(COLORS.rowOdd),
+  border: hex2rgb(COLORS.borderColor),
 };
 
 const COMPARE_RGB = (COLORS.compareColors || []).map(hex2rgb);
-
-/** Formato numérico es-CO: enteros sin decimal, % y min con 1 decimal.
- *  Separador de miles → punto, decimal → coma (es-CO locale). */
-/** Formatea un número con máx 2 decimales en todo modo (agrupar y comparar).
- *  - Si es entero exacto: sin decimales.  Ej: 1234 → "1.234"
- *  - Si tiene decimales: hasta 2.         Ej: 45.678 → "45,68"
- *  Separador de miles: punto, decimal: coma  (locale es-CO).
- */
-const fmtVal = (v, unit = "") => {
-  if (typeof v !== "number" || !Number.isFinite(v)) return String(v ?? "--");
-  // Redondear a máximo 2 decimales
-  const n = parseFloat(v.toFixed(2));
-  const isInt = Number.isInteger(n);
-  const str = n.toLocaleString("es-CO", {
-    minimumFractionDigits: isInt ? 0 : undefined,
-    maximumFractionDigits: 2,
-  });
-  return str + (unit === "%" ? " %" : unit === "min" ? " min" : "");
-};
 
 // ─── Utilidades de dibujo ─────────────────────────────────────────────────────
 const rf  = (doc, x, y, w, h, rgb) => { doc.setFillColor(...rgb); doc.rect(x, y, w, h, "F"); };
@@ -90,13 +70,11 @@ function text(doc, txt, x, y, opts = {}) {
 
 // ─── Header y footer de página ────────────────────────────────────────────────
 function drawPageHeaderFooter(doc, pageNum, totalPages) {
-  // Header
   rf(doc, 0, 0, PAGE_W, 14, C.hdr);
-  rf(doc, 0, 13, PAGE_W, 2,  C.gr2);
+  rf(doc, 0, 13, PAGE_W, 2, C.gr2);
   text(doc, "VISOR DE MOVILIDAD — AMVA", ML, 7.5, { bold:true, sz:9, color:C.white });
   text(doc, `Pág. ${pageNum} / ${totalPages}`, PAGE_W - MR, 7.5, { sz:8, color:C.lgr, align:"right" });
 
-  // Footer
   rf(doc, 0, PAGE_H - 10, PAGE_W, 10, C.lgr);
   const now = new Date().toLocaleString("es-CO", { dateStyle:"short", timeStyle:"short" });
   text(doc, `Generado: ${now}`, ML, PAGE_H - 4.5, { sz:7, color:C.muted });
@@ -120,177 +98,225 @@ class Cursor {
   }
 }
 
-// ─── Sección: título ──────────────────────────────────────────────────────────
+// ─── Título de sección ────────────────────────────────────────────────────────
 function drawSectionHeading(doc, cursor, label, index) {
   cursor.checkBreak(16);
-  rf(doc,  ML,      cursor.y,     CW,   12, C.lgr);
-  rf(doc,  ML,      cursor.y,     3.5,  12, C.gr1);
-  text(doc, `${index}. ${label}`, ML + 6, cursor.y + 6.5,
-       { bold:true, sz:11, color:C.hdr });
-  cursor.y += 15;
+  rf(doc, ML, cursor.y, CW, 13, C.lgr);
+  rf(doc, ML, cursor.y, 4,  13, C.gr1);
+  text(doc, `${index}. ${label}`, ML + 8, cursor.y + 6.8,
+       { bold:true, sz:12, color:C.hdr });
+  cursor.y += 17;
 }
 
-// ─── Mini bar chart ───────────────────────────────────────────────────────────
-function drawMiniBarChart(doc, cursor, categories, seriesArr, unit) {
+// ─── Mini bar chart mejorado ──────────────────────────────────────────────────
+/**
+ * Dibuja un gráfico de barras horizontal.
+ * @param {object} opts
+ *   categories, seriesArr, unit, xAxisLabel (eje de valor), yAxisLabel (eje de categoría)
+ */
+function drawMiniBarChart(doc, cursor, categories, seriesArr, unit, xAxisLabel, yAxisLabel) {
   if (!categories || !categories.length) return;
+
   const n    = categories.length;
   const nSer = seriesArr.length;
 
-  // Modo comparar: barras más compactas con espacio extra entre categorías
   const barH   = nSer > 1
-    ? Math.max(1.8, Math.min(3.2, 30 / n))
-    : Math.max(2,   Math.min(4.5, 40 / n));
-  const serGap = 0.7;                        // separación entre barras de la misma categoría
-  const catGap = nSer > 1 ? 4.5 : 2;        // espacio extra entre categorías distintas
+    ? Math.max(2.2, Math.min(4.0, 36 / n))
+    : Math.max(2.8, Math.min(5.5, 48 / n));
+  const serGap = 0.8;
+  const catGap = nSer > 1 ? 5 : 2.5;
   const blockH = barH * nSer + serGap * (nSer - 1) + catGap;
-  const legendH = nSer > 1 ? 14 : 4;
-  const chartH  = 10 + n * blockH + legendH;
 
-  cursor.checkBreak(chartH + 4);
+  const legendH    = nSer > 1 ? (Math.ceil(nSer / 2) * 7 + 4) : 0;
+  const xLabelH    = xAxisLabel ? 9 : 0;
+  const yLabelH    = 0; // integrated as bar labels
+  const chartH     = 10 + n * blockH + legendH + xLabelH;
+
+  cursor.checkBreak(chartH + 6);
   const y0 = cursor.y;
 
-  // Fondo
+  // Fondo del gráfico
   rfs(doc, ML, y0, CW, chartH, C.row, C.border);
 
-  const padL = 58, padR = 14, padT = 6, padB = legendH;
+  // Acento lateral izquierdo
+  rf(doc, ML, y0, 3, chartH, C.gr1);
+
+  const padL = 62, padR = 18, padT = 8, padB = legendH + xLabelH;
   const zone = CW - padL - padR;
 
   const allVals = seriesArr.flatMap((s) => (s.values || []).map(Number).filter(Number.isFinite));
   const maxV    = Math.max(...allVals, 1);
 
+  // Líneas de cuadrícula verticales (4 divisiones)
+  doc.setDrawColor(...C.border);
+  doc.setLineDashPattern([1, 2.5], 0);
+  doc.setLineWidth(0.2);
+  [0.25, 0.5, 0.75, 1.0].forEach((frac) => {
+    const gx = ML + padL + frac * zone;
+    doc.line(gx, y0 + padT - 2, gx, y0 + padT + n * blockH + 2);
+    // Valor en el eje
+    const gridVal = frac * maxV;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.2);
+    doc.setTextColor(...C.muted);
+    doc.text(fmtExport(gridVal, unit), gx, y0 + padT - 4.5, { baseline:"middle", align:"center" });
+  });
+  doc.setLineDashPattern([], 0);
+  doc.setLineWidth(0.25);
+
+  // Línea del eje de valores (x=0)
+  doc.setDrawColor(...C.gr2);
+  doc.setLineWidth(0.5);
+  doc.line(ML + padL, y0 + padT - 2, ML + padL, y0 + padT + n * blockH + 2);
+  doc.setLineWidth(0.25);
+
   categories.forEach((cat, ci) => {
     const yBase = y0 + padT + ci * blockH;
 
     // Etiqueta de categoría
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.2);
-    doc.setTextColor(...C.muted);
-    doc.text(String(cat).slice(0, 30), ML + 2, yBase + (barH * nSer) / 2,
-             { maxWidth: padL - 4, baseline: "middle" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.0);
+    doc.setTextColor(...C.text);
+    const catStr = String(cat).slice(0, 34);
+    doc.text(catStr, ML + padL - 3, yBase + (barH * nSer) / 2,
+             { maxWidth: padL - 6, baseline: "middle", align: "right" });
 
     // Barras de cada serie
     seriesArr.forEach((s, si) => {
       const val  = Number((s.values || [])[ci]) || 0;
-      const barW = Math.max(0.8, (val / maxV) * zone);
+      const barW = Math.max(1.2, (val / maxV) * zone);
       const yBar = yBase + si * (barH + serGap);
 
-      doc.setFillColor(...(s.color || C.gr1));
-      doc.roundedRect(ML + padL, yBar, barW, barH, 0.5, 0.5, "F");
+      // Barra
+      const bRgb = s.color || C.gr1;
+      doc.setFillColor(...bRgb);
+      doc.roundedRect(ML + padL, yBar, barW, barH, 0.6, 0.6, "F");
 
-      // Valor al extremo derecho de la barra
+      // Valor al extremo de la barra
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(5.0);
-      doc.setTextColor(...C.muted);
-      doc.text(fmtVal(val, unit), ML + padL + barW + 1.5, yBar + barH / 2,
-               { baseline: "middle" });
+      doc.setFontSize(6.0);
+      doc.setTextColor(...C.text);
+      const valStr = fmtExport(val, unit);
+      const valX   = ML + padL + barW + 1.8;
+      if (valX + doc.getTextWidth(valStr) < ML + CW - 2) {
+        doc.text(valStr, valX, yBar + barH / 2, { baseline: "middle" });
+      }
     });
 
-    // Línea punteada divisoria entre categorías (solo modo comparar)
+    // Línea separadora entre categorías (modo comparar)
     if (nSer > 1 && ci < n - 1) {
       const divY = yBase + blockH - catGap / 2;
-      doc.setDrawColor(200, 212, 220);
+      doc.setDrawColor(...C.border);
       doc.setLineDashPattern([1, 2], 0);
-      doc.setLineWidth(0.18);
-      doc.line(ML + padL - 3, divY, ML + padL + zone + 8, divY);
+      doc.setLineWidth(0.15);
+      doc.line(ML + padL - 2, divY, ML + padL + zone + 4, divY);
       doc.setLineDashPattern([], 0);
-      doc.setLineWidth(0.2);
+      doc.setLineWidth(0.25);
     }
   });
 
-  // Leyenda (en 2 columnas si hay muchas series)
+  // ── Etiqueta del eje de valores (debajo del gráfico) ─────────────────────
+  if (xAxisLabel) {
+    const lx = ML + padL + zone / 2;
+    const ly = y0 + chartH - legendH - 3;
+    text(doc, xAxisLabel, lx, ly, { sz:7.5, bold:true, color:C.hdr, align:"center" });
+  }
+
+  // ── Leyenda ───────────────────────────────────────────────────────────────
   if (nSer > 1) {
-    const legCols = nSer > 5 ? 2 : 1;
+    const legCols = nSer > 4 ? 2 : 1;
     const legColW = zone / legCols;
-    const ly0     = y0 + chartH - legendH + 2;
+    const ly0     = y0 + chartH - legendH + 3;
     seriesArr.forEach((s, si) => {
       const col = si % legCols;
       const row = Math.floor(si / legCols);
       const lx  = ML + padL + col * legColW;
-      const ly  = ly0 + row * 6;
-      doc.setFillColor(...(s.color || C.gr1));
-      doc.roundedRect(lx, ly - 2, 4, 3, 0.4, 0.4, "F");
+      const ly  = ly0 + row * 6.5;
+      const bRgb = s.color || C.gr1;
+      doc.setFillColor(...bRgb);
+      doc.roundedRect(lx, ly - 2.2, 4.5, 3.5, 0.5, 0.5, "F");
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(5.5);
+      doc.setFontSize(6.2);
       doc.setTextColor(...C.text);
-      doc.text(String(s.name || "").slice(0, 30), lx + 5.5, ly - 0.3, { baseline: "middle" });
+      doc.text(String(s.name || "").slice(0, 32), lx + 6, ly - 0.3, { baseline: "middle" });
     });
   }
 
-  cursor.y += chartH + 4;
+  cursor.y += chartH + 6;
 }
 
 // ─── autoTable wrapper ────────────────────────────────────────────────────────
 function drawTable(doc, cursor, head, body, opts = {}) {
-  const { accentRgb = C.gr1 } = opts;
-
-  // Construir opciones: extraConfig se fusiona sin permitir que undefined sobreescriba claves
+  const { accentRgb = C.gr1, colStyles = {} } = opts;
   const extra = opts.extraConfig || {};
+
   const tableOpts = {
     head,
     body,
-    startY:    cursor.y,
-    margin:    { left: ML, right: MR },
+    startY:     cursor.y,
+    margin:     { left: ML, right: MR },
     tableWidth: CW,
     styles: {
       font:        "helvetica",
-      fontSize:    8,
-      cellPadding: 2.5,
+      fontSize:    9,
+      cellPadding: 3,
       valign:      "middle",
       overflow:    "linebreak",
       lineColor:   C.border,
-      lineWidth:   0.25,
+      lineWidth:   0.3,
     },
     headStyles: {
-      fillColor:  accentRgb,
-      textColor:  [255,255,255],
-      fontStyle:  "bold",
-      fontSize:   8.5,
-      halign:     "center",
+      fillColor: accentRgb,
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize:  9,
+      halign:    "center",
     },
     alternateRowStyles: { fillColor: C.alt },
-    bodyStyles:          { fillColor: C.row },
-    columnStyles:        { 0: { cellWidth: 55, fontStyle:"bold" } },
+    bodyStyles:          { fillColor: C.row, fontSize: 9 },
+    columnStyles: {
+      0: { cellWidth: 58, fontStyle: "bold" },
+      ...colStyles,
+    },
   };
-  // Mezclar extraConfig omitiendo valores undefined (evita crashear autoTable)
+
   Object.entries(extra).forEach(([k, v]) => { if (v !== undefined) tableOpts[k] = v; });
   autoTable(doc, tableOpts);
-
-  cursor.y = doc.lastAutoTable.finalY + 5;
+  cursor.y = doc.lastAutoTable.finalY + 6;
 }
 
 // ─── Renders por tipo ─────────────────────────────────────────────────────────
+
 function renderKpiTable(doc, cursor, data) {
   const { kpis } = data;
   const inCompare = kpis.some((k) => k.comparisons?.length > 0);
 
   if (!inCompare) {
-    // Cards en grid 2 columnas
-    const cardW  = (CW - 3) / 2;
-    const cardH  = 15;
+    const cardW  = (CW - 4) / 2;
+    const cardH  = 17;
     const cols   = 2;
 
     kpis.forEach((kpi, i) => {
-      if (i % cols === 0) cursor.checkBreak(cardH + 3);
+      if (i % cols === 0) cursor.checkBreak(cardH + 4);
       const col = i % cols;
-      const x   = ML + col * (cardW + 3);
+      const x   = ML + col * (cardW + 4);
       const y   = cursor.y;
 
-      rfs(doc, x, y, cardW, cardH, col === 0 || i % 4 < 2 ? C.lgr : C.row, C.border);
-      rf(doc, x, y, 2.5, cardH, C.gr1);
+      rfs(doc, x, y, cardW, cardH, (i % 4) < 2 ? C.lgr : C.row, C.border);
+      rf(doc, x, y, 3, cardH, C.gr1);
 
-      // Etiqueta
-      doc.setFont("helvetica","bold");
-      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
       doc.setTextColor(...C.muted);
-      doc.text(String(kpi.label || "").toUpperCase().slice(0,52), x + 5, y + 5, { baseline:"middle" });
+      doc.text(String(kpi.label || "").toUpperCase().slice(0, 52), x + 6, y + 5.5,
+               { baseline: "middle", maxWidth: cardW - 8 });
 
-      // Valor
-      doc.setFont("helvetica","bold");
-      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
       doc.setTextColor(...C.hdr);
-      doc.text(String(kpi.value || "--"), x + 5, y + 11.5, { baseline:"middle" });
+      doc.text(String(kpi.value || "--"), x + 6, y + 13, { baseline: "middle" });
 
-      if (col === cols - 1 || i === kpis.length - 1) cursor.y += cardH + 3;
+      if (col === cols - 1 || i === kpis.length - 1) cursor.y += cardH + 4;
     });
   } else {
     const allDets = [...new Set(kpis.flatMap((k) => k.comparisons.map((c) => c.detalle)))];
@@ -304,22 +330,25 @@ function renderKpiTable(doc, cursor, data) {
   cursor.y += 3;
 }
 
-function renderBarChart(doc, cursor, data) {
+function renderBarChart(doc, cursor, data, section) {
   const { categories = [], values = [], series = [], compareMode, unit } = data;
+  const xAxisLabel = section?.xAxisLabel || "";
+  const yAxisLabel = section?.yAxisLabel || "";
+
   if (!categories.length) return;
 
   if (!compareMode) {
     const head = [["Categoría", `Valor${unit ? " (" + unit + ")" : ""}`]];
-    const body = categories.map((cat, i) => [cat, values[i] ?? 0]);
+    const body = categories.map((cat, i) => [cat, fmtExport(values[i] ?? 0, unit)]);
     drawTable(doc, cursor, head, body, { accentRgb: C.gr1 });
     drawMiniBarChart(doc, cursor, categories,
-      [{ values, color: C.gr1, name: "Valor" }], unit);
+      [{ values, color: C.gr1, name: yAxisLabel || "Valor" }], unit, xAxisLabel, yAxisLabel);
   } else {
     if (!series.length) return;
     const head = [["Categoría", ...series.map((s) =>
       `${s.name}${unit ? " (" + unit + ")" : ""}` )]];
     const body = categories.map((cat, i) => [
-      cat, ...series.map((s) => s.values[i] ?? 0),
+      cat, ...series.map((s) => fmtExport(s.values[i] ?? 0, unit)),
     ]);
     drawTable(doc, cursor, head, body, {
       accentRgb: C.blue,
@@ -338,78 +367,90 @@ function renderBarChart(doc, cursor, data) {
         values: s.values,
         color:  hex2rgb(s.color) || COMPARE_RGB[si % COMPARE_RGB.length],
         name:   s.name,
-      })), unit);
+      })), unit, xAxisLabel, yAxisLabel);
   }
 }
 
 function renderTimeTable(doc, cursor, data) {
   const { timeAxis, series, compareMode } = data;
 
-  if (!compareMode) {
-    const head = [["Hora", ...series.map((s) => s.name)]];
-    const body = timeAxis.map((h, i) => [h, ...series.map((s) => s.values[i] ?? 0)]);
-    drawTable(doc, cursor, head, body, {
-      accentRgb: C.gr2,
-      extraConfig: {
-        didParseCell(data) {
-          if (data.section === "head" && data.column.index > 0) {
-            const si = data.column.index - 1;
-            const rgb = hex2rgb(series[si]?.color || "#339933");
-            data.cell.styles.fillColor = rgb;
-          }
-        },
+  // Solo se llama en modo NO comparar (skipInCompareMode: true garantiza esto)
+  const head = [["Hora", ...series.map((s) => s.name)]];
+  const body = timeAxis.map((h, i) => [h, ...series.map((s) => fmtExport(s.values[i] ?? 0))]);
+  drawTable(doc, cursor, head, body, {
+    accentRgb: C.gr2,
+    extraConfig: {
+      didParseCell(data) {
+        if (data.section === "head" && data.column.index > 0) {
+          const si = data.column.index - 1;
+          const rgb = hex2rgb(series[si]?.color || COLORS.secondaryGreen);
+          data.cell.styles.fillColor = rgb;
+        }
       },
-    });
-  } else {
-    // Modo comparar: 4 columnas (una por serie de transporte).
-    // Dentro de cada celda se lista "Detalle: valor" por línea → legible sin sub-columnas.
-    const head = [["Hora", ...series.map((s) => s.name)]];
-    const body = timeAxis.map((hour, hi) => [
-      hour,
-      ...series.map((s) => {
-        const lines = (s.subSeries || []).map((ss) => {
-          const v = fmtVal(ss.values[hi] ?? 0, "");
-          return `${ss.detalle}: ${v}`;
-        });
-        return lines.join("\n");
-      }),
-    ]);
+    },
+  });
+}
 
+function renderOdTable(doc, cursor, data) {
+  const renderHalf = (rows, title, accentRgb) => {
+    cursor.checkBreak(20);
+    // Sub-título
+    rf(doc, ML, cursor.y, CW, 10, accentRgb);
+    text(doc, title, ML + 6, cursor.y + 5, { bold:true, sz:9.5, color:C.white });
+    cursor.y += 13;
+
+    if (!rows.length) {
+      text(doc, "Sin datos disponibles.", ML, cursor.y, { italic:true, color:C.muted });
+      cursor.y += 10;
+      return;
+    }
+
+    const head = [["Municipio", "Macrozona", "Viajes", "% del total"]];
+    const body = rows.map((r) => [
+      r.municipio,
+      r.macrozona,
+      fmtExport(r.trips),
+      fmtExport(r.pct, "%"),
+    ]);
     drawTable(doc, cursor, head, body, {
-      accentRgb: C.gr2,
+      accentRgb,
+      colStyles: {
+        0: { cellWidth: 38 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 30, halign: "right" },
+        3: { cellWidth: 30, halign: "right" },
+      },
       extraConfig: {
-        styles:      { fontSize: 7, cellPadding: 2 },
+        styles: { fontSize: 8.5 },
         columnStyles: {
-          0: { cellWidth: 14, fontStyle: "bold", halign: "center" },
-        },
-        didParseCell(data) {
-          if (data.section === "head" && data.column.index > 0) {
-            const si  = data.column.index - 1;
-            const rgb = hex2rgb(series[si]?.color || "#339933");
-            data.cell.styles.fillColor = rgb;
-          }
+          0: { cellWidth: 38, fontStyle: "normal" },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 30, halign: "right" },
+          3: { cellWidth: 30, halign: "right" },
         },
       },
     });
-  }
+  };
+
+  renderHalf(data.origin || [],      "▶  Macrozonas de Origen",  C.gr1);
+  cursor.y += 4;
+  renderHalf(data.destination || [], "▶  Macrozonas de Destino", C.orange);
 }
 
 // ─── Portada ──────────────────────────────────────────────────────────────────
 async function drawCoverPage(doc, ctx) {
   const { filters, compareMode, themeName, selectedValues } = ctx;
 
-  // Fondo oscuro superior
   rf(doc, 0, 0, PAGE_W, 82, C.hdr);
-  rf(doc, 0, 80, PAGE_W, 4,  C.gr1);
-  rf(doc, 0, 83, PAGE_W, 2,  C.lgr);
+  rf(doc, 0, 80, PAGE_W, 4, C.gr1);
+  rf(doc, 0, 83, PAGE_W, 2, C.lgr);
 
-  // Logo centrado, cuadrado (28×28 mm), encima del título
   const { logoUrl } = ctx;
   if (logoUrl) {
     try {
       const resp = await fetch(logoUrl);
       if (resp.ok) {
-        const blob  = await resp.blob();
+        const blob    = await resp.blob();
         const dataUrl = await new Promise((res) => {
           const rd = new FileReader();
           rd.onload  = () => res(rd.result);
@@ -417,70 +458,70 @@ async function drawCoverPage(doc, ctx) {
           rd.readAsDataURL(blob);
         });
         if (dataUrl) {
-          const ext   = logoUrl.match(/\.svg(\?|$)/i) ? "SVG" : "PNG";
-          const side  = 28;                          // cuadrado 28×28 mm
-          const logoX = (PAGE_W - side) / 2;         // centrado horizontal
-          doc.addImage(dataUrl, ext, logoX, 7, side, side);
+          const ext  = logoUrl.match(/\.svg(\?|$)/i) ? "SVG" : "PNG";
+          const side = 28;
+          doc.addImage(dataUrl, ext, (PAGE_W - side) / 2, 7, side, side);
         }
       }
-    } catch { /* sin logo, continuar */ }
+    } catch { /* sin logo */ }
   }
 
-  // Título debajo del logo
-  text(doc, "Encuestas Origen - Destino 2025", PAGE_W / 2, 44, { bold:true, sz:24, color:C.white, align:"center" });
+  text(doc, "Encuestas Origen - Destino 2025", PAGE_W / 2, 44,
+       { bold:true, sz:24, color:C.white, align:"center" });
   text(doc, "Área Metropolitana del Valle de Aburrá", PAGE_W / 2, 56,
        { sz:14, color:C.lgr, align:"center" });
   text(doc, "Informe de Indicadores de Movilidad", PAGE_W / 2, 67,
        { italic:true, sz:10, color:C.lgr, align:"center" });
 
-  // Fecha
   const now = new Date().toLocaleString("es-CO", { dateStyle:"long", timeStyle:"short" });
-  text(doc, `Generado el ${now}`, PAGE_W / 2, 95, { sz:8.5, color:C.muted, align:"center" });
+  text(doc, `Generado el ${now}`, PAGE_W / 2, 95, { sz:9, color:C.muted, align:"center" });
 
   // Caja de parámetros
-  const boxY = 104;
-  const boxH = 72;
+  const boxY = 104, boxH = 74;
   rfs(doc, ML, boxY, CW, boxH, C.lgr, C.gr1);
-  rf(doc,  ML, boxY, 3.5, boxH, C.gr1);
+  rf(doc, ML, boxY, 3.5, boxH, C.gr1);
 
-  text(doc, "Parámetros del informe", ML + 7, boxY + 9,
-       { bold:true, sz:10, color:C.hdr });
+  text(doc, "Parámetros del informe", ML + 7, boxY + 9, { bold:true, sz:10, color:C.hdr });
 
   const pData = [
-    ["Municipio",          filters.municipio || "AMVA General"],
-    ["Tipo de zona",       filters.zona || "Todos"],
-    ["Macrozona",          filters.macrozona ? `ID ${filters.macrozona}` : "Todas"],
-    ["Modo de análisis",   compareMode ? "Comparar" : "Agrupar"],
-    ["Variable de comp.",  themeName || "N/A"],
+    ["Municipio",         filters.municipio || "AMVA General"],
+    ["Tipo de zona",      filters.zona || "Todos"],
+    ["Macrozona",         filters.macrozona ? `ID ${filters.macrozona}` : "Todas"],
+    ["Modo de análisis",  compareMode ? "Comparar" : "Agrupar"],
+    ["Variable de comp.", themeName || "N/A"],
     ...(compareMode && selectedValues?.length
-      ? [["Valores", selectedValues.slice(0,5).join(", ") + (selectedValues.length > 5 ? "…" : "")]]
+      ? [["Valores", selectedValues.slice(0, 5).join(", ") + (selectedValues.length > 5 ? "…" : "")]]
       : []),
   ];
 
   pData.forEach(([k, v], i) => {
-    const fy = boxY + 17 + i * 9.5;
-    text(doc, `${k}:`, ML + 7,  fy, { bold:true, sz:8, color:C.muted });
-    text(doc, String(v).slice(0,90), ML + 52, fy, { sz:8.5, color:C.text });
+    const fy = boxY + 18 + i * 9.5;
+    text(doc, `${k}:`, ML + 7, fy, { bold:true, sz:8.5, color:C.muted });
+    text(doc, String(v).slice(0, 90), ML + 54, fy, { sz:9, color:C.text });
   });
 
   // Tabla de contenido
+  const visibleSections = EXPORT_SECTIONS.filter(
+    (s) => !(s.skipInCompareMode && compareMode)
+  );
   const tocY = 188;
   text(doc, "Contenido del informe", ML, tocY, { bold:true, sz:11, color:C.hdr });
-  rf(doc, ML, tocY + 3, CW, 0.6, C.gr1);
+  rf(doc, ML, tocY + 3, CW, 0.7, C.gr1);
 
-  EXPORT_SECTIONS.forEach((s, i) => {
-    const ty = tocY + 12 + i * 8;
+  visibleSections.forEach((s, i) => {
+    const ty = tocY + 13 + i * 8;
     if (ty > PAGE_H - 22) return;
-    text(doc, `${i + 1}.`, ML + 2,  ty, { bold:true, sz:8, color:C.gr1 });
-    text(doc, s.sectionLabel, ML + 10, ty, { sz:8, color:C.text });
-    // Línea punteada
+    text(doc, `${i + 1}.`, ML + 2, ty, { bold:true, sz:8.5, color:C.gr1 });
+    text(doc, s.sectionLabel, ML + 10, ty, { sz:8.5, color:C.text });
     doc.setDrawColor(...C.border);
-    doc.setLineDashPattern([1,2],0);
-    doc.line(ML + 11 + doc.getTextWidth(s.sectionLabel) + 2, ty - 0.5, PAGE_W - MR - 14, ty - 0.5);
-    doc.setLineDashPattern([],0);
+    doc.setLineDashPattern([1, 2], 0);
+    doc.line(
+      ML + 11 + doc.getTextWidth(s.sectionLabel) + 2, ty - 0.5,
+      PAGE_W - MR - 14, ty - 0.5
+    );
+    doc.setLineDashPattern([], 0);
   });
 
-  // Footer portada
   rf(doc, 0, PAGE_H - 10, PAGE_W, 10, C.lgr);
   text(doc, `Generado: ${now}`, ML, PAGE_H - 4.5, { sz:7, color:C.muted });
   text(doc, "Área Metropolitana del Valle de Aburrá", PAGE_W - MR, PAGE_H - 4.5,
@@ -488,21 +529,18 @@ async function drawCoverPage(doc, ctx) {
 }
 
 // ─── API pública ──────────────────────────────────────────────────────────────
-/**
- * generatePdfReport(ctx)
- * ctx = { filters, compareMode, selectedValues, themeName,
- *         indicadoresData, analysisViewsData, mobilityPatternsData }
- */
 export async function generatePdfReport(ctx) {
   const doc = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
 
-  // Portada (página 1)
   await drawCoverPage(doc, ctx);
 
   const cursor = new Cursor(doc);
 
-  // Páginas de contenido
-  EXPORT_SECTIONS.forEach((section, index) => {
+  const visibleSections = EXPORT_SECTIONS.filter(
+    (s) => !(s.skipInCompareMode && ctx.compareMode)
+  );
+
+  visibleSections.forEach((section, index) => {
     const data = section.extractNormalizedData(ctx);
 
     doc.addPage();
@@ -519,21 +557,21 @@ export async function generatePdfReport(ctx) {
     }
 
     switch (data.type) {
-      case "kpi_table":  renderKpiTable(doc, cursor, data);  break;
-      case "bar_chart":  renderBarChart(doc, cursor, data);  break;
-      case "time_table": renderTimeTable(doc, cursor, data); break;
+      case "kpi_table":  renderKpiTable(doc, cursor, data);              break;
+      case "bar_chart":  renderBarChart(doc, cursor, data, section);     break;
+      case "time_table": renderTimeTable(doc, cursor, data);             break;
+      case "od_table":   renderOdTable(doc, cursor, data);               break;
       default:
         text(doc, "Tipo de sección no reconocido.", ML, cursor.y, { color:C.muted });
         cursor.y += 10;
     }
   });
 
-  // Aplicar header/footer a todas las páginas de contenido (2 en adelante)
   const total = doc.internal.getNumberOfPages();
   for (let p = 2; p <= total; p++) {
     doc.setPage(p);
     drawPageHeaderFooter(doc, p - 1, total - 1);
   }
 
-  doc.save(`Informe_Movilidad_AMVA_${new Date().toISOString().slice(0,10)}.pdf`);
+  doc.save(`Informe_Movilidad_AMVA_${new Date().toISOString().slice(0, 10)}.pdf`);
 }
