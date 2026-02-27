@@ -11,14 +11,15 @@
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { EXPORT_SECTIONS, COLORS, HOURLY_SERIES_META, fmtExport } from "./exportConfig";
+import { EXPORT_SECTIONS, COLORS, fmtExport } from "./exportConfig";
+import { MACROZONA_BY_ID } from "../config/geoLookup";
 
 // ─── Constantes de layout ─────────────────────────────────────────────────────
 const PAGE_W = 210;
 const PAGE_H = 297;
 const ML     = 16;   // margen izquierdo
 const MR     = 16;   // margen derecho
-const MT     = 22;   // margen superior (debajo del header)
+const MT     = 16;   // margen superior (debajo del header)
 const MB     = 18;   // margen inferior
 const CW     = PAGE_W - ML - MR;
 
@@ -59,7 +60,7 @@ const rfs = (doc, x, y, w, h, fRgb, sRgb) => {
 
 function text(doc, txt, x, y, opts = {}) {
   doc.setFont("helvetica", opts.italic ? "italic" : (opts.bold ? "bold" : "normal"));
-  doc.setFontSize(opts.sz || 10);
+  doc.setFontSize(opts.sz || 9);
   doc.setTextColor(...(opts.color || C.text));
   doc.text(String(txt), x, y, {
     align:    opts.align    || "left",
@@ -108,7 +109,7 @@ function drawSectionHeading(doc, cursor, label, index) {
   cursor.y += 17;
 }
 
-// ─── Mini bar chart mejorado ──────────────────────────────────────────────────
+// ─── Mini bar chart ──────────────────────────────────────────────────
 /**
  * Dibuja un gráfico de barras horizontal.
  * @param {object} opts
@@ -129,7 +130,6 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit, xAxisLabel, 
 
   const legendH    = nSer > 1 ? (Math.ceil(nSer / 2) * 7 + 4) : 0;
   const xLabelH    = xAxisLabel ? 9 : 0;
-  const yLabelH    = 0; // integrated as bar labels
   const chartH     = 10 + n * blockH + legendH + xLabelH;
 
   cursor.checkBreak(chartH + 6);
@@ -141,7 +141,7 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit, xAxisLabel, 
   // Acento lateral izquierdo
   rf(doc, ML, y0, 3, chartH, C.gr1);
 
-  const padL = 62, padR = 18, padT = 8, padB = legendH + xLabelH;
+  const padL = 62, padR = 18, padT = 8;
   const zone = CW - padL - padR;
 
   const allVals = seriesArr.flatMap((s) => (s.values || []).map(Number).filter(Number.isFinite));
@@ -174,8 +174,8 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit, xAxisLabel, 
     const yBase = y0 + padT + ci * blockH;
 
     // Etiqueta de categoría
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.0);
+    doc.setFont("helvetica");
+    doc.setFontSize(5.0);
     doc.setTextColor(...C.text);
     const catStr = String(cat).slice(0, 34);
     doc.text(catStr, ML + padL - 3, yBase + (barH * nSer) / 2,
@@ -206,7 +206,7 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit, xAxisLabel, 
     // Línea separadora entre categorías (modo comparar)
     if (nSer > 1 && ci < n - 1) {
       const divY = yBase + blockH - catGap / 2;
-      doc.setDrawColor(...C.border);
+      doc.setDrawColor(...C.text);
       doc.setLineDashPattern([1, 2], 0);
       doc.setLineWidth(0.15);
       doc.line(ML + padL - 2, divY, ML + padL + zone + 4, divY);
@@ -216,15 +216,30 @@ function drawMiniBarChart(doc, cursor, categories, seriesArr, unit, xAxisLabel, 
   });
 
   // ── Etiqueta del eje de valores (debajo del gráfico) ─────────────────────
-  if (xAxisLabel) {
+  if (yAxisLabel) {
     const lx = ML + padL + zone / 2;
     const ly = y0 + chartH - legendH - 3;
-    text(doc, xAxisLabel, lx, ly, { sz:7.5, bold:true, color:C.hdr, align:"center" });
+    text(doc, yAxisLabel, lx, ly, { sz:7.5, bold:true, color:C.hdr, align:"center" });
+  }
+
+  // Etiqueta del eje de categorías (texto vertical al lado izquierdo)
+  if (xAxisLabel) {
+    const lx = ML + 10;
+    const ly = y0 + padT + (n * blockH) / 2;
+
+    doc.saveGraphicsState();
+
+    // Rotamos -90 grados alrededor del punto (lx, ly)
+    doc.text(xAxisLabel, lx, ly-10, {
+      angle: -90,
+    });
+
+    doc.restoreGraphicsState();
   }
 
   // ── Leyenda ───────────────────────────────────────────────────────────────
   if (nSer > 1) {
-    const legCols = nSer > 4 ? 2 : 1;
+    const legCols = Math.round(nSer / 3) + 1;
     const legColW = zone / legCols;
     const ly0     = y0 + chartH - legendH + 3;
     seriesArr.forEach((s, si) => {
@@ -372,7 +387,7 @@ function renderBarChart(doc, cursor, data, section) {
 }
 
 function renderTimeTable(doc, cursor, data) {
-  const { timeAxis, series, compareMode } = data;
+  const { timeAxis, series } = data;
 
   // Solo se llama en modo NO comparar (skipInCompareMode: true garantiza esto)
   const head = [["Hora", ...series.map((s) => s.name)]];
@@ -432,9 +447,9 @@ function renderOdTable(doc, cursor, data) {
     });
   };
 
-  renderHalf(data.origin || [],      "▶  Macrozonas de Origen",  C.gr1);
+  renderHalf(data.origin || [],      "Macrozonas de Origen",  C.gr1);
   cursor.y += 4;
-  renderHalf(data.destination || [], "▶  Macrozonas de Destino", C.orange);
+  renderHalf(data.destination || [], "Macrozonas de Destino", C.orange);
 }
 
 // ─── Portada ──────────────────────────────────────────────────────────────────
@@ -486,7 +501,7 @@ async function drawCoverPage(doc, ctx) {
   const pData = [
     ["Municipio",         filters.municipio || "AMVA General"],
     ["Tipo de zona",      filters.zona || "Todos"],
-    ["Macrozona",         filters.macrozona ? `ID ${filters.macrozona}` : "Todas"],
+    ["Macrozona",         filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"],
     ["Modo de análisis",  compareMode ? "Comparar" : "Agrupar"],
     ["Variable de comp.", themeName || "N/A"],
     ...(compareMode && selectedValues?.length

@@ -11,7 +11,8 @@
  */
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { EXPORT_SECTIONS, COLORS, HOURLY_SERIES_META, fmtExport, numExport } from "./exportConfig";
+import { EXPORT_SECTIONS, COLORS, numExport } from "./exportConfig";
+import { MACROZONA_BY_ID } from "../config/geoLookup";
 
 // ─── Conversión hex → ARGB (ExcelJS) derivada de COLORS ──────────────────────
 const hex2argb = (hex) =>
@@ -158,7 +159,7 @@ async function buildCoverSheet(wb, ctx, logo) {
   ws.mergeCells("B3:D3");
 
   const subCell = ws.getCell("B4");
-  subCell.value = "Informe de Indicadores de Movilidad AMVA";
+  subCell.value = "Informe de Indicadores de Movilidad";
   subCell.font  = { name:"Calibri", size:12, italic:true, color:{ argb: P.lightGreen } };
   subCell.alignment = { horizontal:"left", vertical:"middle" };
   ws.mergeCells("B4:D4");
@@ -190,7 +191,7 @@ async function buildCoverSheet(wb, ctx, logo) {
     ["Fecha de generación", now],
     ["Municipio",           filters.municipio || "AMVA General"],
     ["Tipo de zona",        filters.zona || "Todos"],
-    ["Macrozona",           filters.macrozona ? `ID ${filters.macrozona}` : "Todas"],
+    ["Macrozona",           filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"],
     ["Modo de análisis",    compareMode ? "Comparar" : "Agrupar"],
     ["Variable de comp.",   themeName || "N/A"],
     ...(compareMode && selectedValues?.length
@@ -225,7 +226,7 @@ async function buildCoverSheet(wb, ctx, logo) {
   ws.getRow(tocStartRow + 1).height = 5;
 
   const tcHr = tocStartRow + 2;
-  colHeader(ws.getCell(tcHr, 2), "#",       P.primaryGreen, 10);
+  colHeader(ws.getCell(tcHr, 2), "# de Hoja", P.primaryGreen, 10);
   colHeader(ws.getCell(tcHr, 3), "Sección", P.primaryGreen, 10);
   ws.getRow(tcHr).height = 18;
 
@@ -234,7 +235,7 @@ async function buildCoverSheet(wb, ctx, logo) {
     const isAlt = i % 2 === 0;
     ws.getRow(r).height = 16;
     const numCell = ws.getCell(r, 2);
-    numCell.value = i + 1;
+    numCell.value = i + 3;
     style(numCell, { sz:10, bg: isAlt ? P.rowAlt : P.rowOdd, halign:"center", color: P.primaryGreen, bold:true });
     const nameCell = ws.getCell(r, 3);
     nameCell.value = s.sectionLabel;
@@ -265,7 +266,7 @@ function buildFiltersSheet(wb, ctx) {
   const rows = [
     ["Municipio",          filters.municipio || "AMVA General"],
     ["Tipo de zona",       filters.zona || "Todos"],
-    ["Macrozona",          filters.macrozona ? `ID ${filters.macrozona}` : "Todas"],
+    ["Macrozona",          filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"],
     ["Modo de análisis",   compareMode ? "Comparar" : "Agrupar"],
     ["Variable de comp.",  themeName || "N/A"],
     ["Valores comparados", compareMode ? (selectedValues || []).join(", ") : "N/A"],
@@ -334,23 +335,10 @@ function renderBarChart(ws, data, startRow, section) {
   const xAxisLabel = section?.xAxisLabel || "";
   const yAxisLabel = section?.yAxisLabel || "";
 
-  // Fila de etiquetas de eje (como metadato informativo)
-  if (xAxisLabel || yAxisLabel) {
-    ws.getRow(r).height = 15;
-    const axCell = ws.getCell(r, 2);
-    axCell.value = `Eje de categorías: ${yAxisLabel || "—"}   |   Eje de valores: ${xAxisLabel || "—"}`;
-    style(axCell, { sz:8, italic:true, bg: P.lightGreen, color: P.headerDark, wrap:false, bold:false,
-                    border: { bottom:{ style:"thin", color:{ argb: P.primaryGreen } } } });
-    ws.mergeCells(r, 2, r, 12);
-    r++;
-    ws.getRow(r).height = 4;
-    r++;
-  }
-
   if (!compareMode) {
     ws.getRow(r).height = 20;
-    colHeader(ws.getCell(r, 2), "Categoría",      P.headerDark);
-    colHeader(ws.getCell(r, 3), `Valor${unitLabel}`, P.primaryGreen);
+    colHeader(ws.getCell(r, 2), `${xAxisLabel}`,      P.headerDark);
+    colHeader(ws.getCell(r, 3), `${yAxisLabel}`, P.primaryGreen);
     r++;
     categories.forEach((cat, i) => {
       ws.getRow(r).height = 17;

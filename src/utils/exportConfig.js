@@ -73,7 +73,7 @@ export const COLORS = {
  * Formatea un número al estilo es-CO (. miles, , decimal, máx 2 dec).
  * Para celdas de string (PDF o texto en Excel).
  * @param {number} v   – valor numérico
- * @param {string} unit – "" | "%" | "min"
+ * @param {string} unit – "" | "%" | "min" | "prom"
  */
 export function fmtExport(v, unit = "") {
   if (typeof v !== "number" || !Number.isFinite(v)) return String(v ?? "--");
@@ -91,7 +91,7 @@ export function fmtExport(v, unit = "") {
  */
 export function numExport(v, unit = "") {
   if (typeof v !== "number" || !Number.isFinite(v)) return 0;
-  if (unit === "%" || unit === "min") return parseFloat(v.toFixed(2));
+  if (unit === "%" || unit === "min" || unit === "prom") return parseFloat(v.toFixed(2));
   return Math.round(v);
 }
 
@@ -103,6 +103,7 @@ function fmtKpi(value, unit) {
   if (typeof value !== "number") return "--";
   if (unit === "%") return fmtExport(value * 100, "%");
   if (unit === "min") return fmtExport(value, "min");
+  if (unit === "prom") return fmtExport(value, "");
   return fmtExport(Math.round(value));
 }
 
@@ -203,7 +204,7 @@ export const EXPORT_SECTIONS = [
     extractNormalizedData: (ctx) =>
       buildKpiSection({
         ids: [1,2,3,4,5,6,7,8],
-        unitMap: { 2: "%", 3: "min" },
+        unitMap: { 2: "%", 3: "min", 7: "prom", 8: "prom" },
         indicadoresData: ctx.indicadoresData,
         compareMode: ctx.compareMode,
         selectedValues: ctx.selectedValues,
@@ -219,7 +220,7 @@ export const EXPORT_SECTIONS = [
     extractNormalizedData: (ctx) =>
       buildKpiSection({
         ids: [9,10,11,12,13,14],
-        unitMap: { 11: "%" },
+        unitMap: { 10: "prom", 11: "%", 12: "prom", 13: "prom", 14: "prom" },
         indicadoresData: ctx.indicadoresData,
         compareMode: ctx.compareMode,
         selectedValues: ctx.selectedValues,
@@ -229,7 +230,7 @@ export const EXPORT_SECTIONS = [
   /* ── 3. Macrozonas Origen–Destino (solo modo AGRUPAR) ── */
   {
     key:             "macrozones",
-    sectionLabel:    "Distribución Geográfica (Origen – Destino)",
+    sectionLabel:    "Distribución Geográfica (Origen - Destino)",
     excelSheetName:  "Macrozonas OD",
     pdfType:         "od_table",
     skipInCompareMode: true,
