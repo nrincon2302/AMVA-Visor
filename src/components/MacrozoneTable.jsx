@@ -147,8 +147,11 @@ export default function MacrozoneTable({
         }}
       >
         <span style={{ flex: 1 }}>Macrozona</span>
-        <span style={{ flexShrink: 0, minWidth: 80, textAlign: "right" }}>
+        <span style={{ flexShrink: 0, minWidth: 68, textAlign: "right" }}>
           % del total
+        </span>
+        <span style={{ flexShrink: 0, minWidth: 72, textAlign: "right", marginLeft: 8 }}>
+          Viajes
         </span>
       </div>
 
@@ -212,7 +215,7 @@ export default function MacrozoneTable({
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                 <div
                   style={{
-                    width: 60,
+                    width: 44,
                     height: 5,
                     borderRadius: 3,
                     background: "#f1f5f9",
@@ -232,16 +235,32 @@ export default function MacrozoneTable({
                 </div>
                 <span
                   style={{
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 600,
                     color: isSelected ? "#1a3a12" : "#374151",
-                    minWidth: 42,
+                    minWidth: 44,
                     textAlign: "right",
                   }}
                 >
                   {fmtPct(pct)}
                 </span>
               </div>
+
+              {/* Cantidad de viajes */}
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: isSelected ? 700 : 500,
+                  color: isSelected ? "#1a3a12" : "#374151",
+                  minWidth: 72,
+                  textAlign: "right",
+                  flexShrink: 0,
+                  marginLeft: 2,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {formateo(row.trips)}
+              </span>
             </div>
           );
         })}

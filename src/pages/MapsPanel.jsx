@@ -10,46 +10,35 @@ export default function MapsPanel({
   municipios = [],
   isCompareMode,
 }) {
-  /* ── Selección de macrozona por clic en tabla ── */
-  const [selectedOrigin,      setSelectedOrigin]      = useState(null);
+  const [selectedOrigin, setSelectedOrigin] = useState(null);
   const [selectedDestination, setSelectedDestination] = useState(null);
   const [expandedMap, setExpandedMap] = useState(null);
-
-  /* ── Filtros locales de municipio (solo afectan este panel) ── */
-  const [originMunicipio,      setOriginMunicipio]      = useState("AMVA General");
+  const [originMunicipio, setOriginMunicipio] = useState("AMVA General");
   const [destinationMunicipio, setDestinationMunicipio] = useState("AMVA General");
 
   const matriz = macroHeatData?.data;
 
-  /* ── Totales globales por ID ── */
   const globalData = useMemo(() => {
-    const originMap      = new Map();
+    const originMap = new Map();
     const destinationMap = new Map();
-
     matriz.forEach(({ agrupa_mz_origen, agrupa_mz_destino, valor }) => {
       const oid = Number(agrupa_mz_origen);
       const did = Number(agrupa_mz_destino);
-      originMap.set(oid,      (originMap.get(oid)      || 0) + valor);
+      originMap.set(oid, (originMap.get(oid) || 0) + valor);
       destinationMap.set(did, (destinationMap.get(did) || 0) + valor);
     });
-
     const toArr = (map) =>
       Array.from(map.entries()).map(([id, value]) => {
         const { municipio, macrozona } = getMacroInfo(id);
         return { id, municipio, macrozona, name: getMacroDisplayName(id), trips: Math.round(value), value };
       });
-
     return { origin: toArr(originMap), destination: toArr(destinationMap) };
   }, [matriz]);
 
-  /* ── Orígenes: filtrados por destino seleccionado Y municipio de destino ──
-     El municipio de destino hace una pre-selección cruzada sobre orígenes.      */
   const originData = useMemo(() => {
     const hasDestMunFilter =
       destinationMunicipio && destinationMunicipio !== "Todos" && destinationMunicipio !== "AMVA General";
-
     if (selectedDestination === null && !hasDestMunFilter) return globalData.origin;
-
     const map = new Map();
     matriz.forEach(({ agrupa_mz_origen, agrupa_mz_destino, valor }) => {
       const oid = Number(agrupa_mz_origen);
@@ -58,21 +47,16 @@ export default function MapsPanel({
       if (hasDestMunFilter && getMacroInfo(did).municipio !== destinationMunicipio) return;
       map.set(oid, (map.get(oid) || 0) + valor);
     });
-
     return Array.from(map.entries()).map(([id, value]) => {
       const { municipio, macrozona } = getMacroInfo(id);
       return { id, municipio, macrozona, name: getMacroDisplayName(id), trips: Math.round(value), value };
     });
   }, [selectedDestination, destinationMunicipio, matriz, globalData.origin]);
 
-  /* ── Destinos: filtrados por origen seleccionado Y municipio de origen ──
-     El municipio de origen hace una pre-selección cruzada sobre destinos.      */
   const destinationData = useMemo(() => {
     const hasOriginMunFilter =
       originMunicipio && originMunicipio !== "Todos" && originMunicipio !== "AMVA General";
-
     if (selectedOrigin === null && !hasOriginMunFilter) return globalData.destination;
-
     const map = new Map();
     matriz.forEach(({ agrupa_mz_origen, agrupa_mz_destino, valor }) => {
       const oid = Number(agrupa_mz_origen);
@@ -81,14 +65,12 @@ export default function MapsPanel({
       if (hasOriginMunFilter && getMacroInfo(oid).municipio !== originMunicipio) return;
       map.set(did, (map.get(did) || 0) + valor);
     });
-
     return Array.from(map.entries()).map(([id, value]) => {
       const { municipio, macrozona } = getMacroInfo(id);
       return { id, municipio, macrozona, name: getMacroDisplayName(id), trips: Math.round(value), value };
     });
   }, [selectedOrigin, originMunicipio, matriz, globalData.destination]);
 
-  /* ── IDs a iluminar en tablas cruzadas ── */
   const highlightedDestinations = useMemo(
     () => selectedOrigin === null ? [] : destinationData.map((d) => d.id),
     [selectedOrigin, destinationData]
@@ -98,7 +80,6 @@ export default function MapsPanel({
     [selectedDestination, originData]
   );
 
-  /* ── Filtro visual adicional por municipio sobre los datos ya cruzados ── */
   const filteredOriginByMunicipio = useMemo(() => {
     if (!originMunicipio || originMunicipio === "Todos" || originMunicipio === "AMVA General")
       return originData;
@@ -111,7 +92,7 @@ export default function MapsPanel({
     return destinationData.filter((item) => item.municipio === destinationMunicipio);
   }, [destinationData, destinationMunicipio]);
 
-  /* ── Handlers ── */
+  /* Handlers shared between map click and table click */
   const handleOriginSelect = (id) => {
     setSelectedOrigin(id === selectedOrigin ? null : id);
     setSelectedDestination(null);
@@ -148,7 +129,7 @@ export default function MapsPanel({
         </div>
       )}
 
-      {/* ── Mapas ── */}
+      {/* Maps */}
       <div className="map-grid-2" style={{ marginBottom: 20 }}>
         <MapCardWithHeader
           title="Orígenes de viajes"
@@ -156,6 +137,7 @@ export default function MapsPanel({
           palette="green"
           selectedMacrozone={selectedOrigin}
           onExpand={() => setExpandedMap("origin")}
+          onSelect={handleOriginSelect}
         />
         <MapCardWithHeader
           title="Destinos de viajes"
@@ -163,10 +145,11 @@ export default function MapsPanel({
           palette="orange"
           selectedMacrozone={selectedDestination}
           onExpand={() => setExpandedMap("destination")}
+          onSelect={handleDestinationSelect}
         />
       </div>
 
-      {/* ── Tablas ── */}
+      {/* Tables */}
       <div className="map-grid-2">
         <MacrozoneTable
           data={filteredOriginByMunicipio}
@@ -192,7 +175,7 @@ export default function MapsPanel({
         />
       </div>
 
-      {/* ── Modal expandido ── */}
+      {/* Expanded modal */}
       {expandedMap && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -230,6 +213,7 @@ export default function MapsPanel({
                 palette={expandedMap === "origin" ? "green" : "orange"}
                 selectedMacrozone={expandedMap === "origin" ? selectedOrigin : selectedDestination}
                 expandedHeight={500}
+                onSelect={expandedMap === "origin" ? handleOriginSelect : handleDestinationSelect}
               />
             </div>
           </div>

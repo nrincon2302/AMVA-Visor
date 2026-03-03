@@ -13,6 +13,7 @@ const MapCardWithHeader = ({
   palette,
   selectedMacrozone,
   onExpand,
+  onSelect,
 }) => {
   const headerGradient =
     palette === "green"
@@ -28,7 +29,6 @@ const MapCardWithHeader = ({
         background: "#fff",
       }}
     >
-      {/* Header */}
       <div
         style={{
           position: "relative",
@@ -38,9 +38,9 @@ const MapCardWithHeader = ({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 12,
         }}
       >
-        {/* Imagen de fondo decorativa */}
         <div
           style={{
             position: "absolute",
@@ -51,7 +51,6 @@ const MapCardWithHeader = ({
             opacity: 0.15,
           }}
         />
-
         <div
           style={{
             position: "relative",
@@ -63,8 +62,17 @@ const MapCardWithHeader = ({
         >
           {title}
         </div>
-
-        {/* Botón expandir — se oculta en móvil vía CSS (.map-expand-btn) */}
+        <div
+          style={{
+            position: "relative",
+            fontSize: 11,
+            color: "rgba(255,255,255,0.8)",
+            fontStyle: "italic",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Click en una zona para seleccionar
+        </div>
         {onExpand && (
           <button
             className="map-expand-btn"
@@ -80,6 +88,7 @@ const MapCardWithHeader = ({
               fontSize: 12,
               fontWeight: 600,
               transition: "all 0.2s ease",
+              display: "inline-flex",
               alignItems: "center",
               gap: 6,
             }}
@@ -90,19 +99,17 @@ const MapCardWithHeader = ({
               e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
             }}
           >
-            <span>⛶ </span>
             <span>Expandir</span>
           </button>
         )}
       </div>
-
-      {/* Mapa */}
       <div style={{ padding: 12 }}>
         <HighchartsMapCard
           title={null}
           data={data}
           palette={palette}
           selectedMacrozone={selectedMacrozone}
+          onSelect={onSelect}
         />
       </div>
     </div>

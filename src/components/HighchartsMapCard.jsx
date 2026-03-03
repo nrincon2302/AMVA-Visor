@@ -5,6 +5,7 @@ import HighchartsReact from "highcharts-react-official";
 import ChartCard from "./ChartCard";
 import mapDataSource from "../assets/macrozonas_actualizado.geo.json";
 import TiledWebMapModule from "highcharts/modules/tiledwebmap";
+import { SECONDARY_GREEN, TERTIARY_ORANGE } from "../config/constants";
 
 const initModule = (mod) => {
   const fn = mod?.default ?? mod;
@@ -18,13 +19,17 @@ const HighchartsMapCard = ({
   palette = "green",
   hideBaseMap = false,
   selectedMacrozone,
-  expandedHeight
+  expandedHeight,
+  onSelect,
 }) => {
   const [mapGeoJSON, setMapGeoJSON] = useState(null);
 
   useEffect(() => {
     setMapGeoJSON(JSON.parse(JSON.stringify(mapDataSource)));
   }, []);
+
+  // Determine highlight color based on palette
+  const selectColor = palette === "orange" ? TERTIARY_ORANGE : SECONDARY_GREEN;
 
   const colorAxis =
     palette === "orange"
@@ -49,6 +54,17 @@ const HighchartsMapCard = ({
           ],
         };
 
+  // Build data: highlight selected with solid accent color, null out others when selection active
+  const processedData = (data || []).map((item) => {
+    if (selectedMacrozone) {
+      if (item.id === selectedMacrozone) {
+        return { ...item, color: selectColor };
+      }
+      return { ...item, value: null };
+    }
+    return item;
+  });
+
   const options = {
     chart: {
       height: expandedHeight ?? 320,
@@ -66,7 +82,7 @@ const HighchartsMapCard = ({
     credits: { enabled: false },
 
     exporting: {
-      enabled: false,           // Ocultamos el menú nativo de Highcharts
+      enabled: false,
       allowHTML: true,
     },
 
@@ -95,12 +111,26 @@ const HighchartsMapCard = ({
       pointFormatter() {
         const rawName = this.name || "";
         const parts = rawName.split(" - ");
-        // Manejo defensivo por si el nombre no tiene guión
-        const municipio = parts.length > 1 ? parts[0] : "Medellín"; 
+        const municipio = parts.length > 1 ? parts[0] : "Medellín";
         const macrozona = parts.length > 1 ? parts[1] : rawName;
         return `<span style="font-weight:600">${macrozona}</span><br/>
                 Municipio: ${municipio}
                 <br/>Viajes: ${Highcharts.numberFormat(this.value || 0, 0)}`;
+      },
+    },
+
+    plotOptions: {
+      series: {
+        cursor: "pointer",
+        point: {
+          events: {
+            click: function () {
+              if (onSelect && this.id !== undefined) {
+                onSelect(this.id);
+              }
+            },
+          },
+        },
       },
     },
 
@@ -122,11 +152,7 @@ const HighchartsMapCard = ({
       {
         type: "map",
         mapData: mapGeoJSON || mapDataSource,
-        data: (data || []).map((item) =>
-          selectedMacrozone && item.id !== selectedMacrozone
-            ? { ...item, value: null }
-            : item
-        ),
+        data: processedData,
         joinBy: ["name", "name"],
         allAreas: true,
         ignoreLatLon: true,
@@ -141,10 +167,11 @@ const HighchartsMapCard = ({
         opacity: 0.95,
 
         states: {
-          hover:  { brightness: 0.1, borderWidth: 2, borderColor: "#808080" },
-          select: { color: "#1d4ed8", borderColor: "#1d4ed8", borderWidth: 2 },
+          hover: { brightness: 0.1, borderWidth: 2, borderColor: "#808080" },
+          // Disable built-in select styling — we handle it via data color
+          select: { color: null, borderColor: null, borderWidth: 0 },
         },
-        allowPointSelect: true,
+        allowPointSelect: false,
         zIndex: 1,
       },
     ],
