@@ -203,7 +203,7 @@ export const EXPORT_SECTIONS = [
     pdfType:        "kpi_table",
     extractNormalizedData: (ctx) =>
       buildKpiSection({
-        ids: [1,2,3,4,5,6,7,8],
+        ids: ctx.hasODFilter ? [1,3,4,5,6] : [1,2,3,4,5,6,7,8],
         unitMap: { 2: "%", 3: "min", 7: "prom", 8: "prom" },
         indicadoresData: ctx.indicadoresData,
         compareMode: ctx.compareMode,
@@ -214,6 +214,7 @@ export const EXPORT_SECTIONS = [
   /* ── 2. KPIs Motorización ── */
   {
     key:            "kpis_motor",
+    skipWithODFilter: true,
     sectionLabel:   "Indicadores de Motorización",
     excelSheetName: "KPIs Motorización",
     pdfType:        "kpi_table",
@@ -366,6 +367,7 @@ export const EXPORT_SECTIONS = [
   /* ── 11. Etapas del viaje ── */
   {
     key:            "stages",
+    skipWithODFilter: true,
     sectionLabel:   "Etapas del Viaje",
     excelSheetName: "Etapas del Viaje",
     pdfType:        "bar_chart",
@@ -382,6 +384,7 @@ export const EXPORT_SECTIONS = [
   /* ── 12. Grupos poblacionales ── */
   {
     key:            "population",
+    skipWithODFilter: true,
     sectionLabel:   "Grupos Poblacionales de Interés",
     excelSheetName: "Grupos Poblacionales",
     pdfType:        "bar_chart",
@@ -399,6 +402,7 @@ export const EXPORT_SECTIONS = [
   /* ── 13. Tipología vehicular ── */
   {
     key:            "vehicle_type",
+    skipWithODFilter: true,
     sectionLabel:   "Tipología de Vehículos",
     excelSheetName: "Tipología Vehicular",
     pdfType:        "bar_chart",
@@ -415,6 +419,7 @@ export const EXPORT_SECTIONS = [
   /* ── 14. Cantidad de vehículos por hogar ── */
   {
     key:            "vehicle_tenure",
+    skipWithODFilter: true,
     sectionLabel:   "Cantidad de Vehículos por Hogar",
     excelSheetName: "Cantidad Vehículos",
     pdfType:        "bar_chart",
@@ -431,6 +436,7 @@ export const EXPORT_SECTIONS = [
   /* ── 15. Modelo de vehículos ── */
   {
     key:            "vehicle_model",
+    skipWithODFilter: true,
     sectionLabel:   "Modelo de Vehículos",
     excelSheetName: "Modelo Vehicular",
     pdfType:        "bar_chart",
@@ -447,6 +453,7 @@ export const EXPORT_SECTIONS = [
   /* ── 16. Vehículos por estrato ── */
   {
     key:            "vehicle_strato",
+    skipWithODFilter: true,
     sectionLabel:   "Vehículos por Estrato Socioeconómico",
     excelSheetName: "Vehículos por Estrato",
     pdfType:        "bar_chart",
@@ -463,6 +470,7 @@ export const EXPORT_SECTIONS = [
   /* ── 17. Población por edad ── */
   {
     key:            "socio_age",
+    skipWithODFilter: true,
     sectionLabel:   "Caracterización Socioeconómica — Edad",
     excelSheetName: "Socio Edad",
     pdfType:        "bar_chart",
@@ -479,6 +487,7 @@ export const EXPORT_SECTIONS = [
   /* ── 18. Población por género ── */
   {
     key:            "socio_gender",
+    skipWithODFilter: true,
     sectionLabel:   "Caracterización Socioeconómica — Género",
     excelSheetName: "Socio Género",
     pdfType:        "bar_chart",
@@ -495,6 +504,7 @@ export const EXPORT_SECTIONS = [
   /* ── 19. Población por ocupación ── */
   {
     key:            "socio_occupation",
+    skipWithODFilter: true,
     sectionLabel:   "Caracterización Socioeconómica — Ocupación",
     excelSheetName: "Socio Ocupación",
     pdfType:        "bar_chart",
@@ -511,6 +521,7 @@ export const EXPORT_SECTIONS = [
   /* ── 20. Población por escolaridad ── */
   {
     key:            "socio_education",
+    skipWithODFilter: true,
     sectionLabel:   "Caracterización Socioeconómica — Escolaridad",
     excelSheetName: "Socio Escolaridad",
     pdfType:        "bar_chart",

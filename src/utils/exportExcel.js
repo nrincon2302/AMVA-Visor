@@ -191,7 +191,10 @@ async function buildCoverSheet(wb, ctx, logo) {
     ["Fecha de generación", now],
     ["Municipio",           filters.municipio || "AMVA General"],
     ["Tipo de zona",        filters.zona || "Todos"],
-    ["Macrozona",           filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"],
+    ((ctx.origen != null) || (ctx.destino != null) ? ["Macrozona de residencia", filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"] : 
+              ["Macrozona",  filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"]),
+    ...(ctx.origen  != null ? [["Macrozona de origen", `${MACROZONA_BY_ID[ctx.origen].macrozona}`]]  : []),
+    ...(ctx.destino != null ? [["Macrozona de destino", `${MACROZONA_BY_ID[ctx.destino].macrozona}`]] : []),
     ["Modo de análisis",    compareMode ? "Comparar" : "Agrupar"],
     ["Variable de comp.",   themeName || "N/A"],
     ...(compareMode && selectedValues?.length
@@ -212,7 +215,7 @@ async function buildCoverSheet(wb, ctx, logo) {
   });
 
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && compareMode)
+    (s) => !(s.skipInCompareMode && compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
   );
 
   const tocStartRow = 10 + params.length + 3;
@@ -529,7 +532,7 @@ export async function generateExcelReport(ctx) {
   buildFiltersSheet(wb, ctx);
 
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && ctx.compareMode)
+    (s) => !(s.skipInCompareMode && ctx.compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
   );
 
   visibleSections.forEach((section) => buildSectionSheet(wb, section, ctx));

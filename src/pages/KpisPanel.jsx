@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import KpiCard from "../components/KpiCard";
 import { formateo } from "../config/constants";
 
-export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, localSelectedValues, selectedColorMap }) {
+export default function KpisPanel({
+  kpisData,
+  kpisGlobales,
+  isCompareMode,
+  localSelectedValues,
+  selectedColorMap,
+  hasODFilter = false,
+}) {
   const [activeComparisonIndex, setActiveComparisonIndex] = useState(0);
 
   useEffect(() => {
@@ -39,6 +46,9 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
   const globalLabel = "Estadística para el Valle de Aburrá";
   const hasValue = (v) => v !== undefined && v !== null;
 
+  // IDs 2, 7, 8 don't respond to OD filter — hide them when active
+  const hideNonOD = hasODFilter;
+
   return (
     <section
       style={{
@@ -51,6 +61,13 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
       }}
     >
       <h3 style={{ marginTop: 0 }}>Estadísticas generales</h3>
+
+      {hasODFilter && (
+        <p style={{ margin: "0 0 12px", fontSize: 11.5, color: "#6b7280", fontStyle: "italic" }}>
+          Mostrando indicadores que varían con el filtro Origen–Destino.
+          Los de población y movilidad per-cápita se ocultan al filtrar por macrozona.
+        </p>
+      )}
 
       {isCompareMode && localSelectedValues?.length > 0 && (
         <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
@@ -81,47 +98,53 @@ export default function KpisPanel({ kpisData, kpisGlobales, isCompareMode, local
         </div>
       )}
 
-      <div className="kpi-grid-4">
-        <KpiCard 
-          label={kpisData[1]?.nombre ?? "Viajes totales diarios"} 
-          value={formateo(viajesTotales || 0)} 
-          subLabel={hasValue(viajesTotales) ? `${globalLabel}: ${formateo(viajesTotalesGlobal || 0)}` : undefined} 
+      <div className={hideNonOD ? "kpi-grid-3" : "kpi-grid-4"}>
+        <KpiCard
+          label={kpisData[1]?.nombre ?? "Viajes totales diarios"}
+          value={formateo(viajesTotales || 0)}
+          subLabel={hasValue(viajesTotales) ? `${globalLabel}: ${formateo(viajesTotalesGlobal || 0)}` : undefined}
         />
-        <KpiCard 
-          label={kpisData[2]?.nombre ?? "% de personas que no viajan"} 
-          value={`${formateo(porcentajeNoViajan || 0)}%`} 
-          subLabel={hasValue(porcentajeNoViajasGlobal) ? `${globalLabel}: ${formateo(porcentajeNoViajasGlobal || 0)}%` : undefined} 
+        {!hideNonOD && (
+          <KpiCard
+            label={kpisData[2]?.nombre ?? "% de personas que no viajan"}
+            value={`${formateo(porcentajeNoViajan || 0)}%`}
+            subLabel={hasValue(porcentajeNoViajasGlobal) ? `${globalLabel}: ${formateo(porcentajeNoViajasGlobal || 0)}%` : undefined}
+          />
+        )}
+        <KpiCard
+          label={kpisData[3]?.nombre ?? "Tiempo promedio de viaje (min)"}
+          value={`${formateo(duracionPromedio || 0)} min`}
+          subLabel={hasValue(duracionPromedioGlobal) ? `${globalLabel}: ${formateo(duracionPromedioGlobal || 0)} min` : undefined}
         />
-        <KpiCard 
-          label={kpisData[3]?.nombre ?? "Tiempo promedio de viaje (min)"} 
-          value={`${formateo(duracionPromedio || 0)} min`} 
-          subLabel={hasValue(duracionPromedioGlobal) ? `${globalLabel}: ${formateo(duracionPromedioGlobal || 0)} min` : undefined} 
+        <KpiCard
+          label={kpisData[4]?.nombre ?? "Viajes diarios en modos privados"}
+          value={`${formateo(viajesPrivados || 0)}`}
+          subLabel={hasValue(viajesPrivadosGlobal) ? `${globalLabel}: ${formateo(viajesPrivadosGlobal || 0)}` : undefined}
         />
-        <KpiCard 
-          label={kpisData[4]?.nombre ?? "Viajes diarios en modos privados"} 
-          value={`${formateo(viajesPrivados || 0)}`} 
-          subLabel={hasValue(viajesPrivadosGlobal) ? `${globalLabel}: ${formateo(viajesPrivadosGlobal || 0)}` : undefined} 
+        <KpiCard
+          label={kpisData[5]?.nombre ?? "Viajes diarios en modos no motorizados"}
+          value={formateo(viajesModoNoMotorizado || 0)}
+          subLabel={hasValue(viajesNoMotorizadoGlobal) ? `${globalLabel}: ${formateo(viajesNoMotorizadoGlobal || 0)}` : undefined}
         />
-        <KpiCard 
-          label={kpisData[5]?.nombre ?? "Viajes diarios en modos no motorizados"} 
-          value={formateo(viajesModoNoMotorizado || 0)} 
-          subLabel={hasValue(viajesNoMotorizadoGlobal) ? `${globalLabel}: ${formateo(viajesNoMotorizadoGlobal || 0)}` : undefined} 
+        <KpiCard
+          label={kpisData[6]?.nombre ?? "Viajes diarios en modos públicos"}
+          value={`${formateo(viajesPublicos || 0)}`}
+          subLabel={hasValue(viajesPublicos) ? `${globalLabel}: ${formateo(viajesPublicosGlobal || 0)}` : undefined}
         />
-        <KpiCard 
-          label={kpisData[6]?.nombre ?? "Viajes diarios en modos públicos"} 
-          value={`${formateo(viajesPublicos || 0)}`} 
-          subLabel={hasValue(viajesPublicos) ? `${globalLabel}: ${formateo(viajesPublicosGlobal || 0)}` : undefined} 
-        />
-        <KpiCard 
-          label={kpisData[7]?.nombre ?? "Viajes diarios promedio por persona"} 
-          value={`${formateo(viajesPorPersona || 0)}`} 
-          subLabel={hasValue(viajesPorPersona) ? `${globalLabel}: ${formateo(viajesPorPersonaGlobal || 0)}` : undefined} 
-        />
-        <KpiCard 
-          label={kpisData[8]?.nombre ?? "Viajes diarios promedio por personas que realizan viajes"} 
-          value={`${formateo(viajesPorViajero || 0)}`} 
-          subLabel={hasValue(viajesPorViajero) ? `${globalLabel}: ${formateo(viajesPorViajeroGlobal || 0)}` : undefined} 
-        />
+        {!hideNonOD && (
+          <KpiCard
+            label={kpisData[7]?.nombre ?? "Viajes diarios promedio por persona"}
+            value={`${formateo(viajesPorPersona || 0)}`}
+            subLabel={hasValue(viajesPorPersona) ? `${globalLabel}: ${formateo(viajesPorPersonaGlobal || 0)}` : undefined}
+          />
+        )}
+        {!hideNonOD && (
+          <KpiCard
+            label={kpisData[8]?.nombre ?? "Viajes diarios promedio por personas que realizan viajes"}
+            value={`${formateo(viajesPorViajero || 0)}`}
+            subLabel={hasValue(viajesPorViajero) ? `${globalLabel}: ${formateo(viajesPorViajeroGlobal || 0)}` : undefined}
+          />
+        )}
       </div>
     </section>
   );

@@ -492,16 +492,20 @@ async function drawCoverPage(doc, ctx) {
   text(doc, `Generado el ${now}`, PAGE_W / 2, 95, { sz:9, color:C.muted, align:"center" });
 
   // Caja de parámetros
-  const boxY = 104, boxH = 74;
+  const boxY = 104, boxH = 80;
   rfs(doc, ML, boxY, CW, boxH, C.lgr, C.gr1);
   rf(doc, ML, boxY, 3.5, boxH, C.gr1);
 
   text(doc, "Parámetros del informe", ML + 7, boxY + 9, { bold:true, sz:10, color:C.hdr });
 
+  const { origen, destino } = ctx;
   const pData = [
     ["Municipio",         filters.municipio || "AMVA General"],
     ["Tipo de zona",      filters.zona || "Todos"],
-    ["Macrozona",         filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"],
+    ((ctx.origen != null) || (ctx.destino != null) ? ["Macrozona de residencia", filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"] : 
+              ["Macrozona",  filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"]),
+    ...(origen  != null ? [["Macrozona de origen",  `${MACROZONA_BY_ID[origen].macrozona}`]]  : []),
+    ...(destino != null ? [["Macrozona de destino", `${MACROZONA_BY_ID[destino].macrozona}`]] : []),
     ["Modo de análisis",  compareMode ? "Comparar" : "Agrupar"],
     ["Variable de comp.", themeName || "N/A"],
     ...(compareMode && selectedValues?.length
@@ -517,9 +521,9 @@ async function drawCoverPage(doc, ctx) {
 
   // Tabla de contenido
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && compareMode)
+    (s) => !(s.skipInCompareMode && compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
   );
-  const tocY = 188;
+  const tocY = 195;
   text(doc, "Contenido del informe", ML, tocY, { bold:true, sz:11, color:C.hdr });
   rf(doc, ML, tocY + 3, CW, 0.7, C.gr1);
 
@@ -552,7 +556,7 @@ export async function generatePdfReport(ctx) {
   const cursor = new Cursor(doc);
 
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && ctx.compareMode)
+    (s) => !(s.skipInCompareMode && ctx.compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
   );
 
   visibleSections.forEach((section, index) => {

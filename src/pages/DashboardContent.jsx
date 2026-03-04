@@ -18,51 +18,30 @@ import SociodemographicPanel from "./SociodemographicPanel";
 
 export default function DashboardSection() {
   const {
-    municipios,
-    temas,
-    thematicOptions,
-    filters,
-    setMunicipio,
-    setZona,
-    setMacrozona,
-    macrozonas,
-    setTemaValues,
-    setActiveTema,
-    indicadoresData,
-    indicadoresGlobales,
-    mobilityPatternsData,
-    hourlyModeDatasets,
-    analysisViewsData,
-    detailedData,
-    compareMode,
-    setCompareMode,
-    metadataLoaded,
-    isLoading,
-    // OD filters from hook
-    origen,
-    destino,
-    toggleOrigen,
-    toggleDestino,
-    setOrigen,
-    setDestino,
+    municipios, temas, thematicOptions, filters,
+    setMunicipio, setZona, setMacrozona, macrozonas,
+    setTemaValues, setActiveTema,
+    indicadoresData, indicadoresGlobales,
+    mobilityPatternsData, hourlyModeDatasets, analysisViewsData, detailedData,
+    compareMode, setCompareMode,
+    metadataLoaded, isLoading,
+    origen, destino, toggleOrigen, toggleDestino, setOrigen, setDestino,
   } = useTravelDataFromAPI();
 
-  /* ── UI state ── */
+  const hasODFilter = origen !== null || destino !== null;
+
   const [activeThematicKey,   setActiveThematicKey]  = useState("");
   const [localSelectedValues, setLocalSelectedValues] = useState([]);
   const [, startTransition] = useTransition();
   const [activeSection, setActiveSection] = useState("stats");
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
-  // OD display state (local — do not trigger API, only affect map cross-filter visual)
   const [originMunicipio,      setOriginMunicipio]      = useState("AMVA General");
   const [destinationMunicipio, setDestinationMunicipio] = useState("AMVA General");
   const [expandedMap, setExpandedMap] = useState(null);
 
   useEffect(() => {
-    if (metadataLoaded && !isLoading && !initialLoadDone) {
-      setInitialLoadDone(true);
-    }
+    if (metadataLoaded && !isLoading && !initialLoadDone) setInitialLoadDone(true);
   }, [metadataLoaded, isLoading, initialLoadDone]);
 
   const showInitialVeil = !initialLoadDone && isLoading;
@@ -88,7 +67,6 @@ export default function DashboardSection() {
     }
   }, [isLoading]);
 
-  /* ── Section refs ── */
   const dashboardRef         = useRef(null);
   const statsSectionRef      = useRef(null);
   const indicatorsSectionRef = useRef(null);
@@ -99,18 +77,18 @@ export default function DashboardSection() {
   const sociodemographicSectionRef = useRef(null);
 
   const sectionOptions = [
-    { key: "stats",      label: "Estadísticas generales"     },
-    { key: "indicators", label: "Indicadores de motorización" },
-    { key: "maps",       label: "Distribución geográfica"     },
-    { key: "mobility",   label: "Patrones de Movilidad"       },
-    { key: "viajes",     label: "Características de los viajes" },
-    { key: "vehicular",  label: "Vehículos por hogar"         },
+    { key: "stats",      label: "Estadísticas generales"       },
+    { key: "indicators", label: "Indicadores de motorización"  },
+    { key: "maps",       label: "Distribución geográfica"      },
+    { key: "mobility",   label: "Patrones de Movilidad"        },
+    { key: "viajes",     label: "Características de los viajes"},
+    { key: "vehicular",  label: "Vehículos por hogar"          },
     { key: "sociodemographic", label: "Caracterización socioeconómica" },
   ];
 
   const sectionRefs = {
     stats: statsSectionRef, indicators: indicatorsSectionRef,
-    maps: mapsSectionRef, mobility: mobilitySectionRef,
+    maps: mapsSectionRef,   mobility: mobilitySectionRef,
     viajes: viajesSectionRef, vehicular: vehicularSectionRef,
     sociodemographic: sociodemographicSectionRef,
   };
@@ -120,12 +98,9 @@ export default function DashboardSection() {
     sectionRefs[key]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  /* ── Thematic config ── */
   const thematicConfig = useMemo(
     () => temas.map(({ id, nombre }) => ({
-      key:     id,
-      label:   nombre,
-      options: thematicOptions[id] || [],
+      key: id, label: nombre, options: thematicOptions[id] || [],
     })),
     [temas, thematicOptions]
   );
@@ -143,12 +118,10 @@ export default function DashboardSection() {
   const activeThematic = thematicConfig.find((t) => t.key === activeThematicKey);
 
   useEffect(() => {
-    if (activeThematic?.options?.length && !compareMode) {
+    if (activeThematic?.options?.length && !compareMode)
       setLocalSelectedValues(activeThematic.options);
-    }
   }, [activeThematic, compareMode]);
 
-  /* ── Indicator ranges ── */
   const pickRange = (source, from, to) =>
     Object.fromEntries(
       Object.entries(source || {})
@@ -160,61 +133,42 @@ export default function DashboardSection() {
   const kpisMotorizacion         = useMemo(() => pickRange(indicadoresData, 9, 14),    [indicadoresData]);
   const kpisMotorizacionGlobales = useMemo(() => pickRange(indicadoresGlobales, 9, 14),[indicadoresGlobales]);
 
-  /* ── Macrozone export data ── */
   const macrozoneExportData = useMemo(() => {
     const matriz = indicadoresData?.[15]?.data || [];
     if (!matriz.length) return { origin: [], destination: [] };
-    const originMap = new Map();
-    const destinationMap = new Map();
+    const originMap = new Map(), destinationMap = new Map();
     matriz.forEach(({ agrupa_mz_origen, agrupa_mz_destino, valor }) => {
-      const oid = Number(agrupa_mz_origen);
-      const did = Number(agrupa_mz_destino);
+      const oid = Number(agrupa_mz_origen), did = Number(agrupa_mz_destino);
       originMap.set(oid, (originMap.get(oid) || 0) + valor);
       destinationMap.set(did, (destinationMap.get(did) || 0) + valor);
     });
     const toArr = (map) =>
       Array.from(map.entries())
-        .map(([id, value]) => {
-          const { municipio, macrozona } = getMacroInfo(id);
-          return { id, municipio, macrozona, trips: Math.round(value) };
-        })
+        .map(([id, value]) => { const { municipio, macrozona } = getMacroInfo(id); return { id, municipio, macrozona, trips: Math.round(value) }; })
         .sort((a, b) => b.trips - a.trips);
     return { origin: toArr(originMap), destination: toArr(destinationMap) };
   }, [indicadoresData]);
 
-  /* ── Color map ── */
   const selectedColorMap = useMemo(
-    () => new Map(
-      (localSelectedValues || []).map((v, i) => [v, COMPARE_COLORS[i % COMPARE_COLORS.length]])
-    ),
+    () => new Map((localSelectedValues || []).map((v, i) => [v, COMPARE_COLORS[i % COMPARE_COLORS.length]])),
     [localSelectedValues]
   );
 
-  /* ── Thematic key change ── */
   const handleThematicKeyChange = (newKey) => {
     const t = thematicConfig.find((c) => c.key === newKey);
     const allOptions = t?.options || [];
     setActiveThematicKey(newKey);
     setLocalSelectedValues(allOptions);
-    startTransition(() => {
-      setActiveTema(newKey);
-      setTemaValues(newKey, []);
-      if (compareMode) setCompareMode(false);
-    });
+    startTransition(() => { setActiveTema(newKey); setTemaValues(newKey, []); if (compareMode) setCompareMode(false); });
   };
 
-  /* ── Mode change ── */
   const handleModeChange = (enterCompare) => {
     const allOptions = activeThematic?.options || [];
     setLocalSelectedValues(allOptions);
     triggerModeVeil();
-    startTransition(() => {
-      setCompareMode(enterCompare);
-      setTemaValues(activeThematicKey, []);
-    });
+    startTransition(() => { setCompareMode(enterCompare); setTemaValues(activeThematicKey, []); });
   };
 
-  /* ── Toggle thematic value ── */
   const toggleThematicValue = (value) => {
     const current = localSelectedValues || [];
     const exists  = current.includes(value);
@@ -224,16 +178,13 @@ export default function DashboardSection() {
     startTransition(() => { setTemaValues(activeThematicKey, next); });
   };
 
-  /* ── Select all ── */
   const handleSelectAll = () => {
     const allOptions = activeThematic?.options || [];
     setLocalSelectedValues(allOptions);
     startTransition(() => { setTemaValues(activeThematicKey, []); });
   };
 
-  /* ── OD handlers (toggle: clicking the same id deselects) ── */
   const handleOriginSelect = (id) => {
-    // null means clear
     if (id === null) { setOrigen(null); return; }
     toggleOrigen(id);
   };
@@ -242,9 +193,12 @@ export default function DashboardSection() {
     toggleDestino(id);
   };
 
-  /* ── Exports ── */
+  // Export context — includes OD filter info
   const exportCtx = {
     filters,
+    origen,
+    destino,
+    hasODFilter,
     compareMode,
     selectedValues: localSelectedValues,
     themeName: activeThematic?.label || "N/A",
@@ -257,12 +211,8 @@ export default function DashboardSection() {
   const handleExportPdf   = () => generatePdfReport(exportCtx);
   const handleExportExcel = () => generateExcelReport(exportCtx);
 
-  /* ── Render ── */
   return (
-    <main
-      className="dashboard-main"
-      style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}
-    >
+    <main className="dashboard-main" style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}>
       <div className="dashboard-grid">
         <FiltersPanel
           municipios={municipios}
@@ -294,10 +244,7 @@ export default function DashboardSection() {
         />
 
         <div ref={dashboardRef} style={{ position: "relative" }}>
-          <FilterVeil
-            visible={showInitialVeil || showModeVeil || showFilterVeil}
-            opaque={showInitialVeil || showModeVeil}
-          />
+          <FilterVeil visible={showInitialVeil || showModeVeil || showFilterVeil} opaque={showInitialVeil || showModeVeil} />
 
           {!compareMode && (
             <div ref={statsSectionRef}>
@@ -307,11 +254,13 @@ export default function DashboardSection() {
                 isCompareMode={compareMode}
                 localSelectedValues={localSelectedValues}
                 selectedColorMap={selectedColorMap}
+                hasODFilter={hasODFilter}
               />
             </div>
           )}
 
-          {!compareMode && (
+          {/* Indicadores 9-14 no responden al filtro OD — se ocultan */}
+          {!compareMode && !hasODFilter && (
             <div ref={indicatorsSectionRef}>
               <MobilityIndicatorsPanel
                 kpisData={kpisMotorizacion}
@@ -329,17 +278,14 @@ export default function DashboardSection() {
                 macroHeatData={indicadoresData?.[15] ?? { data: [] }}
                 municipios={municipios}
                 isCompareMode={compareMode}
-                // OD selection state (lifted here so it feeds the hook's qs)
                 selectedOrigin={origen}
                 selectedDestination={destino}
                 onOriginSelect={handleOriginSelect}
                 onDestinationSelect={handleDestinationSelect}
-                // municipio display filters (local, no API call)
                 originMunicipio={originMunicipio}
                 destinationMunicipio={destinationMunicipio}
                 onOriginMunicipioChange={setOriginMunicipio}
                 onDestinationMunicipioChange={setDestinationMunicipio}
-                // expand modal
                 expandedMap={expandedMap}
                 onExpandedMapChange={setExpandedMap}
               />
@@ -362,6 +308,8 @@ export default function DashboardSection() {
             />
           </div>
 
+          {/* Indicadores 27-28 (modo, propósito) responden al filtro OD — visibles.
+              Indicadores 29+ (etapas, población, vehículo) no responden — se ocultan. */}
           <div ref={viajesSectionRef}>
             <AnalysisViewsPanel
               analysisView="viajes"
@@ -371,46 +319,50 @@ export default function DashboardSection() {
               activeThematicKey={activeThematicKey}
               modeData={analysisViewsData?.modeData}
               purposeData={analysisViewsData?.purposeData}
-              stageData={analysisViewsData?.stageData}
-              populationInterestData={analysisViewsData?.populationInterestData}
-              vehicleTypeData={analysisViewsData?.vehicleTypeData}
-              vehicleModelData={analysisViewsData?.vehicleModelData}
-              vehicleTenureData={analysisViewsData?.vehicleTenureData}
+              stageData={!hasODFilter ? analysisViewsData?.stageData : undefined}
+              populationInterestData={!hasODFilter ? analysisViewsData?.populationInterestData : undefined}
+              vehicleTypeData={!hasODFilter ? analysisViewsData?.vehicleTypeData : undefined}
+              vehicleModelData={!hasODFilter ? analysisViewsData?.vehicleModelData : undefined}
+              vehicleTenureData={!hasODFilter ? analysisViewsData?.vehicleTenureData : undefined}
               detailedData={detailedData}
+              hasODFilter={hasODFilter}
             />
           </div>
 
-          <div ref={vehicularSectionRef}>
-            <AnalysisViewsPanel
-              analysisView="vehicular"
-              isCompareMode={compareMode}
-              localSelectedValues={localSelectedValues}
-              selectedColorMap={selectedColorMap}
-              activeThematicKey={activeThematicKey}
-              modeData={analysisViewsData?.modeData}
-              purposeData={analysisViewsData?.purposeData}
-              stageData={analysisViewsData?.stageData}
-              vehicleTypeData={analysisViewsData?.vehicleTypeData}
-              vehicleModelData={analysisViewsData?.vehicleModelData}
-              vehicleTenureData={analysisViewsData?.vehicleTenureData}
-              vehicleStratumData={analysisViewsData?.vehicleStratumData}
-              detailedData={detailedData}
-            />
-          </div>
+          {/* Vehículos por hogar: 36+ — no responde al filtro OD */}
+          {!hasODFilter && (
+            <div ref={vehicularSectionRef}>
+              <AnalysisViewsPanel
+                analysisView="vehicular"
+                isCompareMode={compareMode}
+                localSelectedValues={localSelectedValues}
+                selectedColorMap={selectedColorMap}
+                activeThematicKey={activeThematicKey}
+                vehicleTypeData={analysisViewsData?.vehicleTypeData}
+                vehicleModelData={analysisViewsData?.vehicleModelData}
+                vehicleTenureData={analysisViewsData?.vehicleTenureData}
+                vehicleStratumData={analysisViewsData?.vehicleStratumData}
+                detailedData={detailedData}
+              />
+            </div>
+          )}
 
-          <div ref={sociodemographicSectionRef}>
-            <SociodemographicPanel
-              isCompareMode={compareMode}
-              localSelectedValues={localSelectedValues}
-              selectedColorMap={selectedColorMap}
-              activeThematicKey={activeThematicKey}
-              socioData1={analysisViewsData?.socioData1}
-              socioData2={analysisViewsData?.socioData2}
-              socioData3={analysisViewsData?.socioData3}
-              socioData4={analysisViewsData?.socioData4}
-              detailedData={detailedData}
-            />
-          </div>
+          {/* Sociodemo 42-45 — no responde al filtro OD */}
+          {!hasODFilter && (
+            <div ref={sociodemographicSectionRef}>
+              <SociodemographicPanel
+                isCompareMode={compareMode}
+                localSelectedValues={localSelectedValues}
+                selectedColorMap={selectedColorMap}
+                activeThematicKey={activeThematicKey}
+                socioData1={analysisViewsData?.socioData1}
+                socioData2={analysisViewsData?.socioData2}
+                socioData3={analysisViewsData?.socioData3}
+                socioData4={analysisViewsData?.socioData4}
+                detailedData={detailedData}
+              />
+            </div>
+          )}
         </div>
       </div>
     </main>

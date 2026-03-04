@@ -20,6 +20,7 @@ export default function AnalysisViewsPanel({
   vehicleTenureData = [],
   vehicleStratumData = [],
   detailedData,
+  hasODFilter = false,
 }) {
   const groupedColor = SECONDARY_GREEN;
 
@@ -64,41 +65,45 @@ export default function AnalysisViewsPanel({
             })()}
           </div>
 
-          <div>
-            {(() => {
-              const s = buildComparisonSeries(stageData, 29, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
-              return <BarChartCard 
-                title="Etapas (% de viajes)" 
-                data={s.data} 
-                xKey="label" 
-                series={s.series} 
-                color={PRIMARY_GREEN} 
-                orientation="horizontal" 
-                chartHeight={360} 
-                isCompareMode={isCompareMode} 
-                xAxisLabel="% de viajes" 
-                yAxisLabel="Etapas" 
-              />;
-            })()}
-          </div>
+          {!hasODFilter && (
+            <div>
+              {(() => {
+                const s = buildComparisonSeries(stageData, 29, localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+                return <BarChartCard 
+                  title="Etapas (% de viajes)" 
+                  data={s.data} 
+                  xKey="label" 
+                  series={s.series} 
+                  color={PRIMARY_GREEN} 
+                  orientation="horizontal" 
+                  chartHeight={360} 
+                  isCompareMode={isCompareMode} 
+                  xAxisLabel="% de viajes" 
+                  yAxisLabel="Etapas" 
+                />;
+              })()}
+            </div>
+          )}
 
-          <div>
-            {(() => {
-              const pop = buildPopulationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
-              return <BarChartCard 
-                title="% de personas que sí viajan en grupos poblacionales de interés" 
-                data={pop.data} 
-                xKey="label" 
-                series={pop.series} 
-                color={PRIMARY_GREEN} 
-                orientation="horizontal" 
-                chartHeight={360} 
-                isCompareMode={isCompareMode} 
-                xAxisLabel="% de personas" 
-                yAxisLabel="Grupo poblacional" 
-              />;
-            })()}
-          </div>
+          {!hasODFilter && (
+            <div>
+              {(() => {
+                const pop = buildPopulationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
+                return <BarChartCard 
+                  title="% de personas que sí viajan en grupos poblacionales de interés" 
+                  data={pop.data} 
+                  xKey="label" 
+                  series={pop.series} 
+                  color={PRIMARY_GREEN} 
+                  orientation="horizontal" 
+                  chartHeight={360} 
+                  isCompareMode={isCompareMode} 
+                  xAxisLabel="% de personas" 
+                  yAxisLabel="Grupo poblacional" 
+                />;
+              })()}
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -126,28 +131,32 @@ export default function AnalysisViewsPanel({
             xAxisLabel="% de viajes" 
             yAxisLabel="Motivo" 
           />
-          <BarChartCard 
-            title="Etapas (% de viajes)" 
-            data={toLabelValue(stageData)} 
-            xKey="label" 
-            yKey="value" 
-            color={groupedColor} 
-            orientation="horizontal" 
-            chartHeight={360} 
-            xAxisLabel="% de viajes" 
-            yAxisLabel="Etapas" 
-          />
-          <BarChartCard 
-            title="% de personas que sí viajan en grupos poblacionales de interés" 
-            data={toLabelValue(populationInterestData)} 
-            xKey="label" 
-            yKey="value" 
-            color={groupedColor} 
-            orientation="horizontal" 
-            chartHeight={360} 
-            xAxisLabel="% de personas" 
-            yAxisLabel="Grupo poblacional" 
-          />
+          {!hasODFilter && (
+            <BarChartCard 
+              title="Etapas (% de viajes)" 
+              data={toLabelValue(stageData)} 
+              xKey="label" 
+              yKey="value" 
+              color={groupedColor} 
+              orientation="horizontal" 
+              chartHeight={360} 
+              xAxisLabel="% de viajes" 
+              yAxisLabel="Etapas" 
+            />
+          )}
+          {!hasODFilter && (
+            <BarChartCard 
+              title="% de personas que sí viajan en grupos poblacionales de interés" 
+              data={toLabelValue(populationInterestData)} 
+              xKey="label" 
+              yKey="value" 
+              color={groupedColor} 
+              orientation="horizontal" 
+              chartHeight={360} 
+              xAxisLabel="% de personas" 
+              yAxisLabel="Grupo poblacional" 
+            />
+          )}
         </>
       )}
     </div>

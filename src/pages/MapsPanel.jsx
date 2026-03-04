@@ -139,7 +139,7 @@ export default function MapsPanel({
           }}>
             <span style={{ fontSize: 14 }}>🔍</span>
             <span>
-              Filtrando:{" "}
+              Filtro aplicado:{" "}
               {selectedOrigin !== null && (
                 <span style={{ color: SECONDARY_GREEN }}>
                   Origen
@@ -154,7 +154,7 @@ export default function MapsPanel({
                 </span>
               )}
               <span style={{ color: "#6b7280", marginLeft: 4, fontSize: 11, fontWeight: 400 }}>
-                — Recálculo aplicado solo a indicadores de viajes
+                — Mostrando solo indicadores de viajes
               </span>
             </span>
             <button
