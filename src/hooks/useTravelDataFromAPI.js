@@ -15,6 +15,10 @@ export function useTravelDataFromAPI() {
   const [macrozonas, setMacrozonas] = useState([]);
   const [temasFiltros, setTemasFiltros] = useState({});
 
+  // ── OD filters (triggered by map / table selection) ──────────────────────
+  const [origen, setOrigen] = useState(null);
+  const [destino, setDestino] = useState(null);
+
   const [indicadoresData, setIndicadoresData] = useState({});
   const [indicadoresGlobales, setIndicadoresGlobales] = useState(null);
   const [detailedData, setDetailedData] = useState(null);
@@ -74,14 +78,12 @@ export function useTravelDataFromAPI() {
       return;
     }
 
-    // Fuente local: siempre fiable con IDs correctos
     const localList = getMacrozonesByMunicipio(municipio);
     if (localList.length > 0) {
       setMacrozonas(localList);
       return;
     }
 
-    // Fallback API (municipio no está en geoLookup)
     (async () => {
       try {
         const data = await fetchJSON(urls.macrozonas(municipio));
@@ -100,7 +102,7 @@ export function useTravelDataFromAPI() {
     })();
   }, [municipio]);
 
-  /* === Query String: macrozona envía ID numérico === */
+  /* === Query String === */
   const qs = useMemo(() => {
     if (!municipio || !compareTema) return "";
     const params = {
@@ -108,11 +110,14 @@ export function useTravelDataFromAPI() {
       macrozona,
       zona,
       tema: compareTema,
+      // OD filters — only sent when set
+      ...(origen  != null ? { origen }  : {}),
+      ...(destino != null ? { destino } : {}),
     };
     const valoresSeleccionados = temasFiltros[compareTema];
     if (valoresSeleccionados?.length) params.detalles = valoresSeleccionados;
     return buildQueryParams(params);
-  }, [municipio, zona, macrozona, compareTema, temasFiltros]);
+  }, [municipio, zona, macrozona, compareTema, temasFiltros, origen, destino]);
 
   /* === Detalles de temas === */
   useEffect(() => {
@@ -156,7 +161,7 @@ export function useTravelDataFromAPI() {
     return () => { mounted = false; };
   }, [temas]);
 
-  /* === KPIs globales === */
+  /* === KPIs globales (sin filtros OD — siempre totales) === */
   useEffect(() => {
     (async () => {
       try {
@@ -171,7 +176,7 @@ export function useTravelDataFromAPI() {
     })();
   }, []);
 
-  /* === Indicadores filtrados === */
+  /* === Indicadores filtrados (incluye origen/destino en qs) === */
   useEffect(() => {
     if (!metadataLoaded || !indicadorIds.length || !qs) return;
     const urlFn = compareMode ? urls.porDetalle : urls.agregado;
@@ -207,6 +212,14 @@ export function useTravelDataFromAPI() {
     setTemasFiltros((prev) => ({ ...prev, [temaId]: valores }));
   }, []);
   const setActiveTema = useCallback((temaId) => setCompareTema(temaId), []);
+
+  // Toggle OD selection (null = deselect)
+  const toggleOrigen = useCallback((id) => {
+    setOrigen((prev) => (prev === id ? null : id));
+  }, []);
+  const toggleDestino = useCallback((id) => {
+    setDestino((prev) => (prev === id ? null : id));
+  }, []);
 
   const thematicOptions = useMemo(() => {
     const out = {};
@@ -259,29 +272,25 @@ export function useTravelDataFromAPI() {
   );
 
   return {
-    municipios, 
-    temas, 
-    temasDetalles, 
-    indicadorIds, 
-    thematicOptions, 
+    municipios,
+    temas,
+    temasDetalles,
+    indicadorIds,
+    thematicOptions,
     metadataLoaded,
 
-    filters, 
-    municipio, 
-    setMunicipio, 
-    zona, 
-    setZona,
-    macrozona, 
-    setMacrozona, 
-    macrozonas, 
-    
-    temasFiltros, 
-    setTemaValues, 
-    setActiveTema,
-    compareMode, 
-    setCompareMode, 
-    compareTema, 
-    setCompareTema,
+    filters,
+    municipio, setMunicipio,
+    zona, setZona,
+    macrozona, setMacrozona,
+    macrozonas,
+
+    // OD filters exposed
+    origen, setOrigen, toggleOrigen,
+    destino, setDestino, toggleDestino,
+
+    temasFiltros, setTemaValues, setActiveTema,
+    compareMode, setCompareMode, compareTema, setCompareTema,
 
     indicadoresData: compareMode ? indicadoresData : normalizedIndicadores,
     indicadoresGlobales, detailedData,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import MapCardWithHeader from "../components/MapCardWithHeader";
 import HighchartsMapCard from "../components/HighchartsMapCard";
 import MacrozoneTable from "../components/MacrozoneTable";
@@ -9,15 +9,23 @@ export default function MapsPanel({
   macroHeatData = {},
   municipios = [],
   isCompareMode,
+  // OD selection — lifted to DashboardContent so they feed global API filters
+  selectedOrigin,
+  selectedDestination,
+  onOriginSelect,
+  onDestinationSelect,
+  // local municipio filters (display only, no API recalc)
+  originMunicipio,
+  destinationMunicipio,
+  onOriginMunicipioChange,
+  onDestinationMunicipioChange,
+  // expand modal state
+  expandedMap,
+  onExpandedMapChange,
 }) {
-  const [selectedOrigin, setSelectedOrigin] = useState(null);
-  const [selectedDestination, setSelectedDestination] = useState(null);
-  const [expandedMap, setExpandedMap] = useState(null);
-  const [originMunicipio, setOriginMunicipio] = useState("AMVA General");
-  const [destinationMunicipio, setDestinationMunicipio] = useState("AMVA General");
-
   const matriz = macroHeatData?.data;
 
+  /* ── Global totals ─────────────────────────────────────────────────────── */
   const globalData = useMemo(() => {
     const originMap = new Map();
     const destinationMap = new Map();
@@ -35,6 +43,7 @@ export default function MapsPanel({
     return { origin: toArr(originMap), destination: toArr(destinationMap) };
   }, [matriz]);
 
+  /* ── Cross-filter: origin data filtered by destination selection ─────── */
   const originData = useMemo(() => {
     const hasDestMunFilter =
       destinationMunicipio && destinationMunicipio !== "Todos" && destinationMunicipio !== "AMVA General";
@@ -53,6 +62,7 @@ export default function MapsPanel({
     });
   }, [selectedDestination, destinationMunicipio, matriz, globalData.origin]);
 
+  /* ── Cross-filter: destination data filtered by origin selection ──────── */
   const destinationData = useMemo(() => {
     const hasOriginMunFilter =
       originMunicipio && originMunicipio !== "Todos" && originMunicipio !== "AMVA General";
@@ -71,15 +81,17 @@ export default function MapsPanel({
     });
   }, [selectedOrigin, originMunicipio, matriz, globalData.destination]);
 
+  /* ── Highlighted IDs in cross tables ─────────────────────────────────── */
   const highlightedDestinations = useMemo(
-    () => selectedOrigin === null ? [] : destinationData.map((d) => d.id),
+    () => (selectedOrigin === null ? [] : destinationData.map((d) => d.id)),
     [selectedOrigin, destinationData]
   );
   const highlightedOrigins = useMemo(
-    () => selectedDestination === null ? [] : originData.map((o) => o.id),
+    () => (selectedDestination === null ? [] : originData.map((o) => o.id)),
     [selectedDestination, originData]
   );
 
+  /* ── Apply municipio display filter on top of cross-filter data ────── */
   const filteredOriginByMunicipio = useMemo(() => {
     if (!originMunicipio || originMunicipio === "Todos" || originMunicipio === "AMVA General")
       return originData;
@@ -92,15 +104,8 @@ export default function MapsPanel({
     return destinationData.filter((item) => item.municipio === destinationMunicipio);
   }, [destinationData, destinationMunicipio]);
 
-  /* Handlers shared between map click and table click */
-  const handleOriginSelect = (id) => {
-    setSelectedOrigin(id === selectedOrigin ? null : id);
-    setSelectedDestination(null);
-  };
-  const handleDestinationSelect = (id) => {
-    setSelectedDestination(id === selectedDestination ? null : id);
-    setSelectedOrigin(null);
-  };
+  /* ── Active filter badge ─────────────────────────────────────────────── */
+  const hasODFilter = selectedOrigin !== null || selectedDestination !== null;
 
   return (
     <section
@@ -113,9 +118,68 @@ export default function MapsPanel({
         boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
       }}
     >
-      <h3 style={{ marginTop: 0, marginBottom: 16 }}>
-        Distribución geográfica de los viajes (Origen - Destino)
-      </h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <h3 style={{ margin: 0 }}>
+          Distribución geográfica de los viajes (Origen - Destino)
+        </h3>
+
+        {/* Active OD filter badge + clear button */}
+        {hasODFilter && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "6px 12px",
+            borderRadius: 20,
+            background: "linear-gradient(135deg, rgba(51,153,51,0.12) 0%, rgba(255,144,0,0.10) 100%)",
+            border: "1px solid rgba(51,153,51,0.3)",
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#1a3a12",
+          }}>
+            <span style={{ fontSize: 14 }}>🔍</span>
+            <span>
+              Filtrando:{" "}
+              {selectedOrigin !== null && (
+                <span style={{ color: SECONDARY_GREEN }}>
+                  Origen
+                </span>
+              )}
+              {selectedOrigin !== null && selectedDestination !== null && (
+                <span style={{ color: "#6b7280", margin: "0 4px" }}>→</span>
+              )}
+              {selectedDestination !== null && (
+                <span style={{ color: TERTIARY_ORANGE }}>
+                  Destino
+                </span>
+              )}
+              <span style={{ color: "#6b7280", marginLeft: 4, fontSize: 11, fontWeight: 400 }}>
+                — Recálculo aplicado solo a indicadores de viajes
+              </span>
+            </span>
+            <button
+              onClick={() => { onOriginSelect(null); onDestinationSelect(null); }}
+              title="Limpiar filtro OD"
+              style={{
+                background: "none",
+                border: "1px solid rgba(51,153,51,0.4)",
+                borderRadius: "50%",
+                width: 20, height: 20,
+                cursor: "pointer",
+                fontSize: 11,
+                color: "#374151",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                flexShrink: 0,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
 
       {isCompareMode && (
         <div style={{
@@ -136,16 +200,16 @@ export default function MapsPanel({
           data={filteredOriginByMunicipio}
           palette="green"
           selectedMacrozone={selectedOrigin}
-          onExpand={() => setExpandedMap("origin")}
-          onSelect={handleOriginSelect}
+          onExpand={() => onExpandedMapChange("origin")}
+          onSelect={onOriginSelect}
         />
         <MapCardWithHeader
           title="Destinos de viajes"
           data={filteredDestinationByMunicipio}
           palette="orange"
           selectedMacrozone={selectedDestination}
-          onExpand={() => setExpandedMap("destination")}
-          onSelect={handleDestinationSelect}
+          onExpand={() => onExpandedMapChange("destination")}
+          onSelect={onDestinationSelect}
         />
       </div>
 
@@ -155,23 +219,23 @@ export default function MapsPanel({
           data={filteredOriginByMunicipio}
           type="origin"
           selectedId={selectedOrigin}
-          onSelectId={handleOriginSelect}
+          onSelectId={onOriginSelect}
           highlightedIds={highlightedOrigins}
           headerColor={SECONDARY_GREEN}
           municipios={municipios}
           selectedMunicipio={originMunicipio}
-          onMunicipioChange={setOriginMunicipio}
+          onMunicipioChange={onOriginMunicipioChange}
         />
         <MacrozoneTable
           data={filteredDestinationByMunicipio}
           type="destination"
           selectedId={selectedDestination}
-          onSelectId={handleDestinationSelect}
+          onSelectId={onDestinationSelect}
           highlightedIds={highlightedDestinations}
           headerColor={TERTIARY_ORANGE}
           municipios={municipios}
           selectedMunicipio={destinationMunicipio}
-          onMunicipioChange={setDestinationMunicipio}
+          onMunicipioChange={onDestinationMunicipioChange}
         />
       </div>
 
@@ -197,7 +261,7 @@ export default function MapsPanel({
                 {expandedMap === "origin" ? "Orígenes de viajes" : "Destinos de viajes"}
               </h3>
               <button
-                onClick={() => setExpandedMap(null)}
+                onClick={() => onExpandedMapChange(null)}
                 style={{
                   background: "none", border: "none", fontSize: 24,
                   cursor: "pointer", color: "#6b7280",
@@ -213,7 +277,7 @@ export default function MapsPanel({
                 palette={expandedMap === "origin" ? "green" : "orange"}
                 selectedMacrozone={expandedMap === "origin" ? selectedOrigin : selectedDestination}
                 expandedHeight={500}
-                onSelect={expandedMap === "origin" ? handleOriginSelect : handleDestinationSelect}
+                onSelect={expandedMap === "origin" ? onOriginSelect : onDestinationSelect}
               />
             </div>
           </div>

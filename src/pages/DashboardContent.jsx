@@ -38,18 +38,26 @@ export default function DashboardSection() {
     setCompareMode,
     metadataLoaded,
     isLoading,
+    // OD filters from hook
+    origen,
+    destino,
+    toggleOrigen,
+    toggleDestino,
+    setOrigen,
+    setDestino,
   } = useTravelDataFromAPI();
 
-
-  /* ========================================================
-   ESTADO DE LA INTERFAZ
-   ======================================================== */
+  /* ── UI state ── */
   const [activeThematicKey,   setActiveThematicKey]  = useState("");
   const [localSelectedValues, setLocalSelectedValues] = useState([]);
   const [, startTransition] = useTransition();
   const [activeSection, setActiveSection] = useState("stats");
-
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  // OD display state (local — do not trigger API, only affect map cross-filter visual)
+  const [originMunicipio,      setOriginMunicipio]      = useState("AMVA General");
+  const [destinationMunicipio, setDestinationMunicipio] = useState("AMVA General");
+  const [expandedMap, setExpandedMap] = useState(null);
 
   useEffect(() => {
     if (metadataLoaded && !isLoading && !initialLoadDone) {
@@ -73,7 +81,6 @@ export default function DashboardSection() {
   useEffect(() => {
     const prev = prevIsLoadingRef.current;
     prevIsLoadingRef.current = isLoading;
-
     if (!modeVeilActiveRef.current) return;
     if (prev === true && isLoading === false) {
       modeVeilActiveRef.current = false;
@@ -81,7 +88,7 @@ export default function DashboardSection() {
     }
   }, [isLoading]);
 
-  /* ── Refs de secciones para scroll ── */
+  /* ── Section refs ── */
   const dashboardRef         = useRef(null);
   const statsSectionRef      = useRef(null);
   const indicatorsSectionRef = useRef(null);
@@ -102,12 +109,9 @@ export default function DashboardSection() {
   ];
 
   const sectionRefs = {
-    stats:      statsSectionRef,
-    indicators: indicatorsSectionRef,
-    maps:       mapsSectionRef,
-    mobility:   mobilitySectionRef,
-    viajes:     viajesSectionRef,
-    vehicular:  vehicularSectionRef,
+    stats: statsSectionRef, indicators: indicatorsSectionRef,
+    maps: mapsSectionRef, mobility: mobilitySectionRef,
+    viajes: viajesSectionRef, vehicular: vehicularSectionRef,
     sociodemographic: sociodemographicSectionRef,
   };
 
@@ -116,7 +120,7 @@ export default function DashboardSection() {
     sectionRefs[key]?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  /* ── Configuración temática ── */
+  /* ── Thematic config ── */
   const thematicConfig = useMemo(
     () => temas.map(({ id, nombre }) => ({
       key:     id,
@@ -144,49 +148,41 @@ export default function DashboardSection() {
     }
   }, [activeThematic, compareMode]);
 
-
-  /* ── Extracción de rangos de indicadores ── */
+  /* ── Indicator ranges ── */
   const pickRange = (source, from, to) =>
     Object.fromEntries(
       Object.entries(source || {})
         .filter(([key]) => { const n = Number(key); return n >= from && n <= to; })
     );
 
-  const kpisGenerales            = useMemo(() => pickRange(indicadoresData, 1, 8),        [indicadoresData]);
-  const kpisGlobales             = useMemo(() => pickRange(indicadoresGlobales, 1, 8),     [indicadoresGlobales]);
-  const kpisMotorizacion         = useMemo(() => pickRange(indicadoresData, 9, 14),        [indicadoresData]);
-  const kpisMotorizacionGlobales = useMemo(() => pickRange(indicadoresGlobales, 9, 14),    [indicadoresGlobales]);
+  const kpisGenerales            = useMemo(() => pickRange(indicadoresData, 1, 8),     [indicadoresData]);
+  const kpisGlobales             = useMemo(() => pickRange(indicadoresGlobales, 1, 8), [indicadoresGlobales]);
+  const kpisMotorizacion         = useMemo(() => pickRange(indicadoresData, 9, 14),    [indicadoresData]);
+  const kpisMotorizacionGlobales = useMemo(() => pickRange(indicadoresGlobales, 9, 14),[indicadoresGlobales]);
 
-  /* ── Datos de macrozonas para exportación ── */
+  /* ── Macrozone export data ── */
   const macrozoneExportData = useMemo(() => {
     const matriz = indicadoresData?.[15]?.data || [];
     if (!matriz.length) return { origin: [], destination: [] };
-
-    const originMap      = new Map();
+    const originMap = new Map();
     const destinationMap = new Map();
-
     matriz.forEach(({ agrupa_mz_origen, agrupa_mz_destino, valor }) => {
       const oid = Number(agrupa_mz_origen);
       const did = Number(agrupa_mz_destino);
-      originMap.set(oid,      (originMap.get(oid)      || 0) + valor);
+      originMap.set(oid, (originMap.get(oid) || 0) + valor);
       destinationMap.set(did, (destinationMap.get(did) || 0) + valor);
     });
-
-    const toArr = (map) => {
-      const arr = Array.from(map.entries())
+    const toArr = (map) =>
+      Array.from(map.entries())
         .map(([id, value]) => {
           const { municipio, macrozona } = getMacroInfo(id);
           return { id, municipio, macrozona, trips: Math.round(value) };
         })
         .sort((a, b) => b.trips - a.trips);
-      return arr;
-    };
-
     return { origin: toArr(originMap), destination: toArr(destinationMap) };
   }, [indicadoresData]);
 
-
-  /* ── Mapa de colores ── */
+  /* ── Color map ── */
   const selectedColorMap = useMemo(
     () => new Map(
       (localSelectedValues || []).map((v, i) => [v, COMPARE_COLORS[i % COMPARE_COLORS.length]])
@@ -194,14 +190,12 @@ export default function DashboardSection() {
     [localSelectedValues]
   );
 
-  /* ── Cambio de tema temático ── */
+  /* ── Thematic key change ── */
   const handleThematicKeyChange = (newKey) => {
     const t = thematicConfig.find((c) => c.key === newKey);
     const allOptions = t?.options || [];
-
     setActiveThematicKey(newKey);
     setLocalSelectedValues(allOptions);
-
     startTransition(() => {
       setActiveTema(newKey);
       setTemaValues(newKey, []);
@@ -209,47 +203,46 @@ export default function DashboardSection() {
     });
   };
 
-  /* ── Cambio de modo AGRUPAR / COMPARAR ── */
+  /* ── Mode change ── */
   const handleModeChange = (enterCompare) => {
     const allOptions = activeThematic?.options || [];
     setLocalSelectedValues(allOptions);
     triggerModeVeil();
-
     startTransition(() => {
       setCompareMode(enterCompare);
       setTemaValues(activeThematicKey, []);
     });
   };
 
-  /* ── Toggle individual de valor temático ── */
+  /* ── Toggle thematic value ── */
   const toggleThematicValue = (value) => {
     const current = localSelectedValues || [];
     const exists  = current.includes(value);
     if (exists && current.length === 1) return;
-
-    const next = exists
-      ? current.filter((x) => x !== value)
-      : [...current, value];
-
+    const next = exists ? current.filter((x) => x !== value) : [...current, value];
     setLocalSelectedValues(next);
-
-    startTransition(() => {
-      setTemaValues(activeThematicKey, next);
-    });
+    startTransition(() => { setTemaValues(activeThematicKey, next); });
   };
 
-  /* ── Seleccionar todos ── */
+  /* ── Select all ── */
   const handleSelectAll = () => {
     const allOptions = activeThematic?.options || [];
     setLocalSelectedValues(allOptions);
-
-    startTransition(() => {
-      setTemaValues(activeThematicKey, []);
-    });
+    startTransition(() => { setTemaValues(activeThematicKey, []); });
   };
 
+  /* ── OD handlers (toggle: clicking the same id deselects) ── */
+  const handleOriginSelect = (id) => {
+    // null means clear
+    if (id === null) { setOrigen(null); return; }
+    toggleOrigen(id);
+  };
+  const handleDestinationSelect = (id) => {
+    if (id === null) { setDestino(null); return; }
+    toggleDestino(id);
+  };
 
-  /* ── Exportaciones ── */
+  /* ── Exports ── */
   const exportCtx = {
     filters,
     compareMode,
@@ -261,10 +254,8 @@ export default function DashboardSection() {
     macrozoneData: macrozoneExportData,
     logoUrl,
   };
-
   const handleExportPdf   = () => generatePdfReport(exportCtx);
   const handleExportExcel = () => generateExcelReport(exportCtx);
-
 
   /* ── Render ── */
   return (
@@ -273,8 +264,6 @@ export default function DashboardSection() {
       style={{ width: "100%", maxWidth: 1400, margin: "0 auto", padding: 24 }}
     >
       <div className="dashboard-grid">
-
-        {/* Panel de filtros unificado (sidebar + drawer + FAB) */}
         <FiltersPanel
           municipios={municipios}
           macrozonas={macrozonas}
@@ -304,14 +293,13 @@ export default function DashboardSection() {
           }
         />
 
-        {/* Contenido principal */}
         <div ref={dashboardRef} style={{ position: "relative" }}>
           <FilterVeil
             visible={showInitialVeil || showModeVeil || showFilterVeil}
             opaque={showInitialVeil || showModeVeil}
           />
 
-          {!compareMode ? (
+          {!compareMode && (
             <div ref={statsSectionRef}>
               <KpisPanel
                 kpisData={kpisGenerales}
@@ -321,9 +309,9 @@ export default function DashboardSection() {
                 selectedColorMap={selectedColorMap}
               />
             </div>
-          ) : undefined}
+          )}
 
-          {!compareMode ? (
+          {!compareMode && (
             <div ref={indicatorsSectionRef}>
               <MobilityIndicatorsPanel
                 kpisData={kpisMotorizacion}
@@ -333,17 +321,30 @@ export default function DashboardSection() {
                 selectedColorMap={selectedColorMap}
               />
             </div>
-          ) : undefined}
+          )}
 
-          {!compareMode ? (
+          {!compareMode && (
             <div ref={mapsSectionRef}>
               <MapsPanel
                 macroHeatData={indicadoresData?.[15] ?? { data: [] }}
                 municipios={municipios}
                 isCompareMode={compareMode}
+                // OD selection state (lifted here so it feeds the hook's qs)
+                selectedOrigin={origen}
+                selectedDestination={destino}
+                onOriginSelect={handleOriginSelect}
+                onDestinationSelect={handleDestinationSelect}
+                // municipio display filters (local, no API call)
+                originMunicipio={originMunicipio}
+                destinationMunicipio={destinationMunicipio}
+                onOriginMunicipioChange={setOriginMunicipio}
+                onDestinationMunicipioChange={setDestinationMunicipio}
+                // expand modal
+                expandedMap={expandedMap}
+                onExpandedMapChange={setExpandedMap}
               />
             </div>
-          ) : undefined}
+          )}
 
           <div ref={mobilitySectionRef}>
             <MobilityPatternsPanel
