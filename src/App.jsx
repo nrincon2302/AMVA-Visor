@@ -9,6 +9,33 @@ const App = () => (
   <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
     <Header />
 
+    {/* ── Párrafo introductorio ── */}
+    <div style={{ width: "100%", background: "#ffffff", borderBottom: "1px solid #e5e7eb" }}>
+      <div
+        style={{
+          maxWidth: 1400,
+          margin: "0 auto",
+          padding: "16px 28px",
+        }}
+      >
+        <p style={{ margin: 0, fontSize: 12, color: "#374151", lineHeight: 1.75, textAlign: "justify" }}>
+          Este visor tiene como propósito generar un ambiente gráfico y de fácil consulta de los
+          resultados de la Encuesta de Origen y Destino para el Valle de Aburrá. En el visor se
+          clasifica las estadísticas resultantes en siete ejes temáticos:{" "}
+          <strong>(i) Estadísticas generales</strong> que presenta los indicadores de mayor consulta
+          en el sector, <strong>(ii) Indicadores de motorización</strong>,{" "}
+          <strong>(iii) Distribución geográfica</strong> que permite generar mapas de concentración
+          y movilidad de origen y destino por macrozona,{" "}
+          <strong>(iv) Patrones de movilidad</strong>,{" "}
+          <strong>(v) Caracterización de los viajes</strong>,{" "}
+          <strong>(vi) Tenencia de vehículos</strong>, y{" "}
+          <strong>(vii) Caracterización Socioeconómica</strong>. La generación de resultados se
+          visualizan en la pantalla y también permite la exportación de la consulta realizada en
+          formato Excel y PDF.
+        </p>
+      </div>
+    </div>
+
     {/* ── Banda verde de título ── */}
     <div style={{ width: "100%", background: PRIMARY_GREEN, color: "#fff" }}>
       <div style={{ maxWidth: 1400, margin: "0 auto", padding: "18px 24px", display: "flex", alignItems: "center", gap: 16 }}>

@@ -25,10 +25,12 @@ export default function DashboardSection() {
     mobilityPatternsData, hourlyModeDatasets, analysisViewsData, detailedData,
     compareMode, setCompareMode,
     metadataLoaded, isLoading,
+    // origen y destino ahora son arrays
     origen, destino, toggleOrigen, toggleDestino, setOrigen, setDestino,
   } = useTravelDataFromAPI();
 
-  const hasODFilter = origen !== null || destino !== null;
+  // Hay filtro OD cuando alguno de los arrays tiene elementos
+  const hasODFilter = origen.length > 0 || destino.length > 0;
 
   const [activeThematicKey,   setActiveThematicKey]  = useState("");
   const [localSelectedValues, setLocalSelectedValues] = useState([]);
@@ -184,20 +186,24 @@ export default function DashboardSection() {
     startTransition(() => { setTemaValues(activeThematicKey, []); });
   };
 
-  const handleOriginSelect = (id) => {
-    if (id === null) { setOrigen(null); return; }
-    toggleOrigen(id);
+  // Handlers para selección de origen/destino (toggle individual)
+  const handleOriginSelect = (idOrArray) => {
+    if (Array.isArray(idOrArray)) { setOrigen(idOrArray); return; }
+    if (idOrArray === null) { setOrigen([]); return; }
+    toggleOrigen(idOrArray);
   };
-  const handleDestinationSelect = (id) => {
-    if (id === null) { setDestino(null); return; }
-    toggleDestino(id);
+
+  const handleDestinationSelect = (idOrArray) => {
+    if (Array.isArray(idOrArray)) { setDestino(idOrArray); return; }
+    if (idOrArray === null) { setDestino([]); return; }
+    toggleDestino(idOrArray);
   };
 
   // Export context — includes OD filter info
   const exportCtx = {
     filters,
-    origen,
-    destino,
+    origen: origen.length > 0 ? origen[0] : null,   // para compatibilidad con export
+    destino: destino.length > 0 ? destino[0] : null,
     hasODFilter,
     compareMode,
     selectedValues: localSelectedValues,
@@ -259,7 +265,6 @@ export default function DashboardSection() {
             </div>
           )}
 
-          {/* Indicadores 9-14 no responden al filtro OD — se ocultan */}
           {!compareMode && !hasODFilter && (
             <div ref={indicatorsSectionRef}>
               <MobilityIndicatorsPanel
@@ -278,8 +283,8 @@ export default function DashboardSection() {
                 macroHeatData={indicadoresData?.[15] ?? { data: [] }}
                 municipios={municipios}
                 isCompareMode={compareMode}
-                selectedOrigin={origen}
-                selectedDestination={destino}
+                selectedOrigins={origen}
+                selectedDestinations={destino}
                 onOriginSelect={handleOriginSelect}
                 onDestinationSelect={handleDestinationSelect}
                 originMunicipio={originMunicipio}
@@ -308,8 +313,6 @@ export default function DashboardSection() {
             />
           </div>
 
-          {/* Indicadores 27-28 (modo, propósito) responden al filtro OD — visibles.
-              Indicadores 29+ (etapas, población, vehículo) no responden — se ocultan. */}
           <div ref={viajesSectionRef}>
             <AnalysisViewsPanel
               analysisView="viajes"
@@ -329,7 +332,6 @@ export default function DashboardSection() {
             />
           </div>
 
-          {/* Vehículos por hogar: 36+ — no responde al filtro OD */}
           {!hasODFilter && (
             <div ref={vehicularSectionRef}>
               <AnalysisViewsPanel
@@ -347,7 +349,6 @@ export default function DashboardSection() {
             </div>
           )}
 
-          {/* Sociodemo 42-45 — no responde al filtro OD */}
           {!hasODFilter && (
             <div ref={sociodemographicSectionRef}>
               <SociodemographicPanel

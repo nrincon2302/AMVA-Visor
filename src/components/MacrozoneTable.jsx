@@ -15,12 +15,11 @@ const fmtPct = (v) => `${formateo(v)} %`;
 export default function MacrozoneTable({
   data = [],
   type = "origin",
-  selectedId = null,
+  selectedIds = [],           // array de IDs seleccionados (multi-select)
   onSelectId,
   highlightedIds = [],
   headerColor = SECONDARY_GREEN,
   municipios = [],
-  /* Nuevo API unificado: municipio local para filtrar el mapa */
   selectedMunicipio = "AMVA General",
   onMunicipioChange,
 }) {
@@ -30,21 +29,25 @@ export default function MacrozoneTable({
   const selectedBorder = isOrigin ? ORIGIN_SELECTED_BORDER : DEST_SELECTED_BORDER;
   const highlightBg    = isOrigin ? ORIGIN_HIGHLIGHT_BG    : DEST_HIGHLIGHT_BG;
 
-  // Ordenar por viajes desc; si hay selección mostrar solo esa fila
+  // Ordenar por viajes desc
   const sorted = useMemo(() => {
-    const arr = [...data].sort((a, b) => b.trips - a.trips);
-    if (selectedId !== null) {
-      return arr.filter((row) => row.id === selectedId);
-    }
-    return arr;
-  }, [data, selectedId]);
+    return [...data].sort((a, b) => b.trips - a.trips);
+  }, [data]);
 
-  const dataForPercent = useMemo(() => {
-    if (selectedId !== null) return 1;
-    return data.reduce((s, d) => s + d.trips, 0) || 1;
-  }, [data, selectedId]);
+  const dataForPercent = useMemo(
+    () => data.reduce((s, d) => s + d.trips, 0) || 1,
+    [data]
+  );
 
-  /* ── Selector de municipio (compartido por origen y destino) ── */
+  // Total de viajes de las macrozonas seleccionadas
+  const selectedTotal = useMemo(() => {
+    if (!selectedIds.length) return 0;
+    return data
+      .filter((r) => selectedIds.includes(r.id))
+      .reduce((s, d) => s + d.trips, 0);
+  }, [data, selectedIds]);
+
+  /* ── Selector de municipio ── */
   const municipioSelector = (
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
       <p style={{ margin: 0, fontSize: 11 }}>Ver municipio:</p>
@@ -126,8 +129,23 @@ export default function MacrozoneTable({
           flexWrap: "wrap",
         }}
       >
-        <span>{isOrigin ? "Macrozonas de origen" : "Macrozonas de destino"}</span>
-        {/* Selector de municipio — idéntico en origen y destino */}
+        <span>
+          {isOrigin ? "Macrozonas de origen" : "Macrozonas de destino"}
+          {selectedIds.length > 0 && (
+            <span
+              style={{
+                marginLeft: 8,
+                fontSize: 11,
+                fontWeight: 600,
+                background: "rgba(255,255,255,0.22)",
+                borderRadius: 10,
+                padding: "1px 8px",
+              }}
+            >
+              {selectedIds.length} seleccionada{selectedIds.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </span>
         {municipios.length > 0 && municipioSelector}
       </div>
 
@@ -158,10 +176,10 @@ export default function MacrozoneTable({
       {/* ── Filas ── */}
       <div style={{ maxHeight: 200, overflowY: "auto" }}>
         {sorted.map((row, idx) => {
-          const isSelected    = row.id === selectedId;
+          const isSelected    = selectedIds.includes(row.id);
           const isHighlighted = !isSelected && highlightedIds.includes(row.id);
 
-          const pct    = selectedId !== null ? 100 : (row.trips / dataForPercent) * 100;
+          const pct    = (row.trips / dataForPercent) * 100;
           const barPct = Math.min(pct, 100);
 
           let rowBg = idx % 2 === 0 ? "#fafafa" : "#ffffff";
@@ -191,6 +209,28 @@ export default function MacrozoneTable({
                 e.currentTarget.style.background = rowBg;
               }}
             >
+              {/* Checkbox visual */}
+              <div
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 3,
+                  border: isSelected
+                    ? `2px solid ${selectedBorder}`
+                    : "2px solid #cbd5e1",
+                  background: isSelected ? selectedBorder : "#fff",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 9,
+                  color: "#fff",
+                  fontWeight: 800,
+                }}
+              >
+                {isSelected ? "✓" : ""}
+              </div>
+
               {/* Nombre + municipio */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
@@ -266,22 +306,34 @@ export default function MacrozoneTable({
         })}
       </div>
 
-      {/* ── Pie informativo cuando hay selección ── */}
-      {selectedId !== null && (
-        <div
-          style={{
-            padding: "5px 14px",
-            borderTop: "1px solid #f1f5f9",
-            fontSize: 10,
-            color: "#9ca3af",
-            fontStyle: "italic",
-          }}
-        >
-          {isOrigin
-            ? "La tabla de destinos muestra solo los destinos desde esta zona"
-            : "La tabla de orígenes muestra solo los orígenes hacia esta zona"}
-        </div>
-      )}
+      {/* ── Pie: instrucción o resumen de selección ── */}
+      <div
+        style={{
+          padding: "5px 14px",
+          borderTop: "1px solid #f1f5f9",
+          fontSize: 10,
+          color: "#9ca3af",
+          fontStyle: "italic",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        {selectedIds.length > 0 ? (
+          <>
+            <span>
+              {isOrigin
+                ? `Filtros activos desde ${selectedIds.length} zona${selectedIds.length !== 1 ? "s" : ""} de origen`
+                : `Filtros activos hacia ${selectedIds.length} zona${selectedIds.length !== 1 ? "s" : ""} de destino`}
+            </span>
+            <span style={{ fontVariantNumeric: "tabular-nums", color: "#6b7280", fontStyle: "normal", fontWeight: 600 }}>
+              {formateo(selectedTotal)} viajes
+            </span>
+          </>
+        ) : (
+          <span>Haz clic en una fila para filtrar (múltiple selección)</span>
+        )}
+      </div>
     </div>
   );
 }

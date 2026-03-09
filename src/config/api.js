@@ -21,16 +21,28 @@ export const urls = {
 
 // ============================================
 // Construcción de los Queries según filtros aplicados
+// origen y destino pueden ser arrays (multi-selección de macrozonas)
 // ============================================
 export function buildQueryParams({municipio, macrozona, origen, destino, tema, zona, detalles} = {}) {
   const p = new URLSearchParams();
 
-  // Adjuntar el municipio, la zona y las macrozonas
+  // Adjuntar el municipio, la zona y la macrozona de residencia
   if (municipio && municipio !== "AMVA General") p.append("municipio", municipio);
   if (macrozona) p.append("macrozona", macrozona);
-  if (origen) p.append("origen", origen);
-  if (destino) p.append("destino", destino);
   if (zona) p.append("zona", zona);
+
+  // Origen y destino soportan arrays (multi-selección)
+  if (Array.isArray(origen) && origen.length > 0) {
+    origen.forEach((o) => p.append("origen", String(o)));
+  } else if (origen && !Array.isArray(origen)) {
+    p.append("origen", origen);
+  }
+
+  if (Array.isArray(destino) && destino.length > 0) {
+    destino.forEach((d) => p.append("destino", String(d)));
+  } else if (destino && !Array.isArray(destino)) {
+    p.append("destino", destino);
+  }
 
   // Adjuntar el tema y los detalles
   if (tema) p.append("tema", tema);

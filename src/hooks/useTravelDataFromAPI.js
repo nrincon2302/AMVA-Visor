@@ -15,9 +15,9 @@ export function useTravelDataFromAPI() {
   const [macrozonas, setMacrozonas] = useState([]);
   const [temasFiltros, setTemasFiltros] = useState({});
 
-  // ── OD filters (triggered by map / table selection) ──────────────────────
-  const [origen, setOrigen] = useState(null);
-  const [destino, setDestino] = useState(null);
+  // ── OD filters — arrays para multi-selección ─────────────────────────────
+  const [origen, setOrigen] = useState([]);   // [] = sin filtro
+  const [destino, setDestino] = useState([]); // [] = sin filtro
 
   const [indicadoresData, setIndicadoresData] = useState({});
   const [indicadoresGlobales, setIndicadoresGlobales] = useState(null);
@@ -110,9 +110,9 @@ export function useTravelDataFromAPI() {
       macrozona,
       zona,
       tema: compareTema,
-      // OD filters — only sent when set
-      ...(origen  != null ? { origen }  : {}),
-      ...(destino != null ? { destino } : {}),
+      // OD filters — solo se envían cuando tienen elementos
+      ...(origen.length > 0  ? { origen }  : {}),
+      ...(destino.length > 0 ? { destino } : {}),
     };
     const valoresSeleccionados = temasFiltros[compareTema];
     if (valoresSeleccionados?.length) params.detalles = valoresSeleccionados;
@@ -213,12 +213,18 @@ export function useTravelDataFromAPI() {
   }, []);
   const setActiveTema = useCallback((temaId) => setCompareTema(temaId), []);
 
-  // Toggle OD selection (null = deselect)
+  // Toggle origen: agrega/quita un ID del array
   const toggleOrigen = useCallback((id) => {
-    setOrigen((prev) => (prev === id ? null : id));
+    setOrigen((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   }, []);
+
+  // Toggle destino: agrega/quita un ID del array
   const toggleDestino = useCallback((id) => {
-    setDestino((prev) => (prev === id ? null : id));
+    setDestino((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   }, []);
 
   const thematicOptions = useMemo(() => {
@@ -285,7 +291,7 @@ export function useTravelDataFromAPI() {
     macrozona, setMacrozona,
     macrozonas,
 
-    // OD filters exposed
+    // OD filters (arrays para multi-selección)
     origen, setOrigen, toggleOrigen,
     destino, setDestino, toggleDestino,
 
