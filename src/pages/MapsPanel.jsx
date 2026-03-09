@@ -21,7 +21,7 @@ export default function MapsPanel({
   expandedMap,
   onExpandedMapChange,
 }) {
-  const matriz = macroHeatData?.data ?? [];
+  const matriz = macroHeatData?.data;
 
   // ── Selecciones pendientes (staging) ─────────────────────────────────────
   // Se inicializan con lo que esté aplicado; al clicar una fila se toglea aquí,
