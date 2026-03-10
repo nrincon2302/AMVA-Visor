@@ -36,21 +36,21 @@ const HighchartsMapCard = ({
       ? {
           min: 0,
           stops: [
-            [0,    "#fff7d6"],
-            [0.25, "#ffe8a3"],
-            [0.5,  "#ffd166"],
-            [0.75, "#ffad33"],
-            [1,    "#ff8c00"],
+            [0,    "#ffe4a0"],
+            [0.25, "#ffca60"],
+            [0.5,  "#ff9f20"],
+            [0.75, "#f07000"],
+            [1,    "#c04a00"],
           ],
         }
       : {
           min: 0,
           stops: [
-            [0,    "#e5f9e9"],
-            [0.25, "#bdeed0"],
-            [0.5,  "#7fdba6"],
-            [0.75, "#32b56f"],
-            [1,    "#15803d"],
+            [0,    "#b8e8c0"],
+            [0.25, "#72cb8c"],
+            [0.5,  "#35ab5e"],
+            [0.75, "#1a8840"],
+            [1,    "#0d6030"],
           ],
         };
 
@@ -161,9 +161,9 @@ const HighchartsMapCard = ({
         dataLabels: { enabled: false },
 
         name: "Viajes",
-        borderColor: "#808080",
+        borderColor: "#3a3a3a",
         borderWidth: 1,
-        nullColor: "rgba(191,191,191,0.10)",
+        nullColor: "rgba(160,160,160,0.30)",
         opacity: 0.95,
 
         states: {
