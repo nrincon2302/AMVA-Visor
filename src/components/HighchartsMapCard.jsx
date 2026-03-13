@@ -13,6 +13,10 @@ const initModule = (mod) => {
 };
 initModule(TiledWebMapModule);
 
+// Macrozonas urbanas que quedan "enterradas" dentro de sus contrapartes rurales.
+// Forzamos que siempre se rendericen al frente.
+const FRONT_ZONES = ["Urbana Barbosa", "Urbana Girardota"];
+
 const HighchartsMapCard = ({
   title,
   data,
@@ -70,6 +74,23 @@ const HighchartsMapCard = ({
       height: expandedHeight ?? 320,
       spacing: [0, 0, 0, 0],
       animation: false,
+      events: {
+        // Fuerza que las geometrías urbanas de Barbosa y Girardota siempre
+        // queden al frente, ya que sus polígonos rurales las "envuelven".
+        render: function () {
+          const mapSeries = this.series.find((s) => s.type === "map");
+          if (!mapSeries) return;
+          mapSeries.points.forEach((point) => {
+            if (
+              point.graphic &&
+              point.name &&
+              FRONT_ZONES.some((z) => point.name.includes(z))
+            ) {
+              point.graphic.toFront();
+            }
+          });
+        },
+      },
     },
 
     mapView: {

@@ -24,12 +24,10 @@ export default function MapsPanel({
   const matriz = macroHeatData?.data;
 
   // ── Selecciones pendientes (staging) ─────────────────────────────────────
-  // Se inicializan con lo que esté aplicado; al clicar una fila se toglea aquí,
-  // y solo al pulsar "Aplicar filtro" se llama onOriginSelect/onDestinationSelect.
   const [pendingOrigins,      setPendingOrigins]      = useState(selectedOrigins);
   const [pendingDestinations, setPendingDestinations] = useState(selectedDestinations);
 
-  // Si el padre limpia las selecciones (p.ej. botón global "Limpiar"), sincronizar pending.
+  // Si el padre limpia las selecciones, sincronizar pending.
   useEffect(() => { setPendingOrigins(selectedOrigins);      }, [selectedOrigins]);
   useEffect(() => { setPendingDestinations(selectedDestinations); }, [selectedDestinations]);
 
@@ -143,6 +141,102 @@ export default function MapsPanel({
 
   const hasODFilter = selectedOrigins.length > 0 || selectedDestinations.length > 0;
 
+  /* ── Barra de acción (reutilizada en JSX) ────────────────────────────── */
+  const actionBar = (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 10,
+      padding: "8px 4px 14px",
+      borderBottom: "1px solid #e5e7eb",
+      marginBottom: 18,
+    }}>
+      {/* Resumen de marcaciones pendientes */}
+      {(pendingOrigins.length > 0 || pendingDestinations.length > 0) && (
+        <span style={{ fontSize: 12, color: "#6b7280", flex: 1 }}>
+          {[
+            pendingOrigins.length > 0 && `${pendingOrigins.length} origen${pendingOrigins.length !== 1 ? "es" : ""}`,
+            pendingDestinations.length > 0 && `${pendingDestinations.length} destino${pendingDestinations.length !== 1 ? "s" : ""}`,
+          ].filter(Boolean).join(" · ")} marcado{(pendingOrigins.length + pendingDestinations.length) !== 1 ? "s" : ""}
+        </span>
+      )}
+
+      {/* Botón limpiar marcaciones pendientes */}
+      {(pendingOrigins.length > 0 || pendingDestinations.length > 0) && (
+        <button
+          onClick={() => { setPendingOrigins([]); setPendingDestinations([]); }}
+          style={{
+            padding: "7px 16px",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            background: "#ffffff",
+            color: "#6b7280",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
+        >
+          Limpiar selección
+        </button>
+      )}
+
+      {/* Botón Aplicar — solo visible cuando hay cambios pendientes */}
+      {hasPendingChanges && (
+        <button
+          onClick={handleApply}
+          style={{
+            padding: "7px 20px",
+            borderRadius: 8,
+            border: "none",
+            background: "linear-gradient(135deg, #7CB928 0%, #339933 100%)",
+            color: "#ffffff",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(51,153,51,0.35)",
+            transition: "all 0.15s ease",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+        >
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="1 7 5 11 12 2" />
+          </svg>
+          Aplicar filtro
+        </button>
+      )}
+
+      {/* Botón Restablecer — cuando hay filtro activo pero sin cambios pendientes */}
+      {hasODFilter && !hasPendingChanges && (
+        <button
+          onClick={handleClearAll}
+          style={{
+            padding: "7px 16px",
+            borderRadius: 8,
+            border: "1px solid #fca5a5",
+            background: "#fff1f2",
+            color: "#dc2626",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#fff1f2"; }}
+        >
+          Restablecer
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <section
       style={{
@@ -155,7 +249,7 @@ export default function MapsPanel({
       }}
     >
       {/* ── Cabecera ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
         <h3 style={{ margin: 0 }}>
           Distribución geográfica de los viajes (Origen - Destino)
         </h3>
@@ -188,7 +282,7 @@ export default function MapsPanel({
             </span>
             <button
               onClick={handleClearAll}
-              title="Limpiar filtros OD"
+              title="Restablecer filtro OD"
               style={{
                 background: "none", border: "1px solid rgba(51,153,51,0.4)", borderRadius: "50%",
                 width: 20, height: 20, cursor: "pointer", fontSize: 11, color: "#374151",
@@ -209,6 +303,9 @@ export default function MapsPanel({
           seleccionados. La comparación detallada no está disponible en esta visualización geográfica.
         </div>
       )}
+
+      {/* ── Barra de acción (arriba, antes de los mapas) ── */}
+      {actionBar}
 
       {/* Mapas */}
       <div className="map-grid-2" style={{ marginBottom: 20 }}>
@@ -237,7 +334,7 @@ export default function MapsPanel({
       </div>
 
       {/* Tablas */}
-      <div className="map-grid-2" style={{ marginBottom: 14 }}>
+      <div className="map-grid-2">
         <MacrozoneTable
           data={filteredOriginByMunicipio}
           type="origin"
@@ -262,99 +359,6 @@ export default function MapsPanel({
           selectedMunicipio={destinationMunicipio}
           onMunicipioChange={onDestinationMunicipioChange}
         />
-      </div>
-
-      {/* ── Barra de acción ── */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end",
-        gap: 10,
-        padding: "10px 4px 2px",
-        borderTop: "1px solid #e5e7eb",
-      }}>
-        {/* Resumen de marcaciones pendientes */}
-        {(pendingOrigins.length > 0 || pendingDestinations.length > 0) && (
-          <span style={{ fontSize: 12, color: "#6b7280", flex: 1 }}>
-            {[
-              pendingOrigins.length > 0 && `${pendingOrigins.length} origen${pendingOrigins.length !== 1 ? "es" : ""}`,
-              pendingDestinations.length > 0 && `${pendingDestinations.length} destino${pendingDestinations.length !== 1 ? "s" : ""}`,
-            ].filter(Boolean).join(" · ")} marcado{(pendingOrigins.length + pendingDestinations.length) !== 1 ? "s" : ""}
-          </span>
-        )}
-
-        {/* Botón limpiar marcaciones */}
-        {(pendingOrigins.length > 0 || pendingDestinations.length > 0) && (
-          <button
-            onClick={() => { setPendingOrigins([]); setPendingDestinations([]); }}
-            style={{
-              padding: "7px 16px",
-              borderRadius: 8,
-              border: "1px solid #d1d5db",
-              background: "#ffffff",
-              color: "#6b7280",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
-          >
-            Limpiar selección
-          </button>
-        )}
-
-        {/* Botón Aplicar — solo visible cuando hay cambios pendientes */}
-        {hasPendingChanges && (
-          <button
-            onClick={handleApply}
-            style={{
-              padding: "7px 20px",
-              borderRadius: 8,
-              border: "none",
-              background: "linear-gradient(135deg, #7CB928 0%, #339933 100%)",
-              color: "#ffffff",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(51,153,51,0.35)",
-              transition: "all 0.15s ease",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
-          >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="1 7 5 11 12 2" />
-            </svg>
-            Aplicar filtro
-          </button>
-        )}
-
-        {/* Botón limpiar TODO (aplicado + pending) cuando hay filtro activo pero nada pendiente */}
-        {hasODFilter && !hasPendingChanges && (
-          <button
-            onClick={handleClearAll}
-            style={{
-              padding: "7px 16px",
-              borderRadius: 8,
-              border: "1px solid #fca5a5",
-              background: "#fff1f2",
-              color: "#dc2626",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#fff1f2"; }}
-          >
-            Quitar filtro OD
-          </button>
-        )}
       </div>
 
       {/* Expanded modal */}

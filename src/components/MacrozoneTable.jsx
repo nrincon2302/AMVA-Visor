@@ -46,9 +46,11 @@ export default function MacrozoneTable({
     [data, pendingIds]
   );
 
+  // ── Selector de municipio ("Enfocar mapa") ───────────────────────────────
+  // Siempre construido, se incluye tanto en estado vacío como lleno.
   const municipioSelector = municipios.length > 0 && (
     <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-      <p style={{ margin: 0, fontSize: 11 }}>Ver municipio:</p>
+      <p style={{ margin: 0, fontSize: 11 }}>Enfocar mapa:</p>
       <select
         value={selectedMunicipio || "AMVA General"}
         onChange={(e) => onMunicipioChange?.(e.target.value)}
@@ -70,14 +72,52 @@ export default function MacrozoneTable({
     </div>
   );
 
+  // ── Encabezado compartido ─────────────────────────────────────────────────
+  const header = (
+    <div
+      style={{
+        padding: "10px 14px",
+        background: headerColor,
+        color: "#fff",
+        fontWeight: 700,
+        fontSize: 14,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
+      }}
+    >
+      <span>
+        {isOrigin ? "Macrozonas de origen" : "Macrozonas de destino"}
+        {pendingIds.length > 0 && (
+          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: 10, padding: "1px 8px" }}>
+            {pendingIds.length} marcada{pendingIds.length !== 1 ? "s" : ""}
+          </span>
+        )}
+      </span>
+      {municipioSelector}
+    </div>
+  );
+
+  // ── Estado vacío: sin datos para el enfoque actual ───────────────────────
   if (!data.length) {
+    const outOfViewCount = pendingIds.length + appliedIds.length;
     return (
-      <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden", background: "#fff", fontSize: 13 }}>
-        <div style={{ padding: "10px 14px", background: headerColor, color: "#fff", fontWeight: 700, fontSize: 13 }}>
-          {isOrigin ? "Macrozonas de origen" : "Macrozonas de destino"}
-        </div>
-        <div style={{ padding: 16, color: "#9ca3af", textAlign: "center" }}>
-          Sin datos para el filtro actual
+      <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden", background: "#fff", fontSize: 13, userSelect: "none" }}>
+        {header}
+        <div style={{ padding: "16px 18px", fontSize: 12, textAlign: "center" }}>
+          {outOfViewCount > 0 ? (
+            <span style={{ color: "#6b7280", fontStyle: "italic", lineHeight: 1.5, display: "block" }}>
+              Hay {outOfViewCount} zona{outOfViewCount !== 1 ? "s" : ""} seleccionada{outOfViewCount !== 1 ? "s" : ""} fuera del municipio enfocado.
+              <br />
+              Cambia el <strong>Enfocar mapa</strong> para verlas aquí.
+            </span>
+          ) : (
+            <span style={{ color: "#9ca3af" }}>
+              Sin datos para el municipio seleccionado
+            </span>
+          )}
         </div>
       </div>
     );
@@ -86,30 +126,7 @@ export default function MacrozoneTable({
   return (
     <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden", background: "#fff", fontSize: 13, userSelect: "none" }}>
       {/* ── Encabezado ── */}
-      <div
-        style={{
-          padding: "10px 14px",
-          background: headerColor,
-          color: "#fff",
-          fontWeight: 700,
-          fontSize: 14,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 8,
-          flexWrap: "wrap",
-        }}
-      >
-        <span>
-          {isOrigin ? "Macrozonas de origen" : "Macrozonas de destino"}
-          {pendingIds.length > 0 && (
-            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.22)", borderRadius: 10, padding: "1px 8px" }}>
-              {pendingIds.length} marcada{pendingIds.length !== 1 ? "s" : ""}
-            </span>
-          )}
-        </span>
-        {municipioSelector}
-      </div>
+      {header}
 
       {/* ── Rótulos de columna ── */}
       <div
