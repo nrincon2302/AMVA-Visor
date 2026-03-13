@@ -1,24 +1,15 @@
 /**
  * exportExcel.js  — Visor de Movilidad AMVA
- * ─────────────────────────────────────────────────────────────────────────────
- * Genera un Excel con formato completo usando ExcelJS.
- *
- * COLORES: se usan únicamente desde COLORS (exportConfig.js → constants.js).
- *          No se define ningún color localmente aquí.
- *
- * Para agregar/quitar indicadores: edita SOLO exportConfig.js → EXPORT_SECTIONS.
- * ─────────────────────────────────────────────────────────────────────────────
  */
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { EXPORT_SECTIONS, COLORS, numExport } from "./exportConfig";
 import { MACROZONA_BY_ID } from "../config/geoLookup";
 
-// ─── Conversión hex → ARGB (ExcelJS) derivada de COLORS ──────────────────────
+// ─── Color helpers ────────────────────────────────────────────────────────────
 const hex2argb = (hex) =>
   "FF" + (hex || "#000000").replace("#", "").toUpperCase().padStart(6, "0");
 
-// Paleta ARGB completamente derivada de COLORS
 const P = {
   headerDark:   hex2argb(COLORS.headerBg),
   primaryGreen: hex2argb(COLORS.primaryGreen),
@@ -37,10 +28,9 @@ const P = {
   borderColor:  hex2argb(COLORS.borderColor),
 };
 
-// Colores de comparación como ARGB
 const COMPARE_ARGB = (COLORS.compareColors || []).map(hex2argb);
 
-// ─── Helpers de estilo ─────────────────────────────────────────────────────────
+// ─── Style helpers ────────────────────────────────────────────────────────────
 const THIN_BORDER = {
   top:    { style:"thin",   color:{ argb: P.borderColor } },
   bottom: { style:"thin",   color:{ argb: P.borderColor } },
@@ -67,10 +57,7 @@ function style(cell, opts = {}) {
   }
 
   cell.font = {
-    name: "Calibri",
-    size: sz || 11,
-    bold: !!bold,
-    italic: !!italic,
+    name: "Calibri", size: sz || 11, bold: !!bold, italic: !!italic,
     color: { argb: fontColor },
   };
 
@@ -107,9 +94,7 @@ function colHeader(cell, text, bgArgb = P.headerDark, sz = 11) {
 function dataCell(cell, value, isAlt = false, opts = {}) {
   cell.value = value;
   style(cell, {
-    sz: 10,
-    bg: isAlt ? P.rowAlt : P.rowOdd,
-    color: P.darkText,
+    sz: 10, bg: isAlt ? P.rowAlt : P.rowOdd, color: P.darkText,
     halign: typeof value === "number" ? "right" : "left",
     bold: opts.bold || false,
     wrap: opts.wrap !== undefined ? opts.wrap : false,
@@ -118,23 +103,43 @@ function dataCell(cell, value, isAlt = false, opts = {}) {
 
 function labelCell(cell, text, isAlt = false) {
   cell.value = text;
-  style(cell, {
-    bold:true, sz:10,
-    bg: isAlt ? P.rowAlt : P.rowOdd,
-    color: P.darkText,
-    wrap:true,
-  });
+  style(cell, { bold:true, sz:10, bg: isAlt ? P.rowAlt : P.rowOdd, color: P.darkText, wrap:true });
 }
 
-function blankRow(ws, ri) {
-  ws.getRow(ri).height = 6;
-}
+function blankRow(ws, ri) { ws.getRow(ri).height = 6; }
 
 function setWidths(ws, widths) {
   widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
 }
 
-// ─── Hoja: Portada ─────────────────────────────────────────────────────────────
+// ─── Shared: build macrozone param rows from arrays ───────────────────────────
+function buildMacroParams(ctx) {
+  const { filters, origenes = [], destinos = [] } = ctx;
+  const hasOD = origenes.length > 0 || destinos.length > 0;
+  const rows  = [];
+
+  const mzLabel = hasOD ? "Macrozona de residencia" : "Macrozona";
+  const mzValue = filters.macrozona
+    ? (MACROZONA_BY_ID[filters.macrozona]?.macrozona ?? `ID ${filters.macrozona}`)
+    : "Todas";
+  rows.push([mzLabel, mzValue]);
+
+  origenes.forEach((id, i) => {
+    const info  = MACROZONA_BY_ID[id];
+    const label = i === 0 ? `Macrozona${origenes.length > 1 ? "s" : ""} de origen` : "";
+    rows.push([label, info ? `${info.municipio} — ${info.macrozona}` : `ID ${id}`]);
+  });
+
+  destinos.forEach((id, i) => {
+    const info  = MACROZONA_BY_ID[id];
+    const label = i === 0 ? `Macrozona${destinos.length > 1 ? "s" : ""} de destino` : "";
+    rows.push([label, info ? `${info.municipio} — ${info.macrozona}` : `ID ${id}`]);
+  });
+
+  return rows;
+}
+
+// ─── Cover sheet ──────────────────────────────────────────────────────────────
 async function buildCoverSheet(wb, ctx, logo) {
   const ws = wb.addWorksheet("Portada");
   const { filters, compareMode, themeName, selectedValues } = ctx;
@@ -177,24 +182,20 @@ async function buildCoverSheet(wb, ctx, logo) {
     cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb: P.secGreen } };
     cell.border = {};
   }
-
   ws.getRow(7).height = 8;
 
   const paramTitle = ws.getCell("B8");
   sectionTitle(paramTitle, "⚙  Parámetros del informe");
   ws.mergeCells("B8:D8");
   ws.getRow(8).height = 22;
-
   ws.getRow(9).height = 5;
 
+  const macroRows = buildMacroParams(ctx);
   const params = [
     ["Fecha de generación", now],
     ["Municipio",           filters.municipio || "AMVA General"],
     ["Tipo de zona",        filters.zona || "Todos"],
-    ((ctx.origen != null) || (ctx.destino != null) ? ["Macrozona de residencia", filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"] : 
-              ["Macrozona",  filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"]),
-    ...(ctx.origen  != null ? [["Macrozona de origen", `${MACROZONA_BY_ID[ctx.origen].macrozona}`]]  : []),
-    ...(ctx.destino != null ? [["Macrozona de destino", `${MACROZONA_BY_ID[ctx.destino].macrozona}`]] : []),
+    ...macroRows,
     ["Modo de análisis",    compareMode ? "Comparar" : "Agrupar"],
     ["Variable de comp.",   themeName || "N/A"],
     ...(compareMode && selectedValues?.length
@@ -208,7 +209,7 @@ async function buildCoverSheet(wb, ctx, logo) {
     ws.getRow(row).height = 18;
     const kCell = ws.getCell(row, 2);
     kCell.value = k;
-    style(kCell, { bold:true, sz:10, bg: isAlt ? P.lightGreen : P.rowOdd, color: P.headerDark });
+    style(kCell, { bold: !!k, sz:10, bg: isAlt ? P.lightGreen : P.rowOdd, color: P.headerDark });
     const vCell = ws.getCell(row, 3);
     vCell.value = v;
     style(vCell, { sz:10, bg: isAlt ? P.lightGreen : P.rowOdd, color: P.darkText });
@@ -225,7 +226,6 @@ async function buildCoverSheet(wb, ctx, logo) {
   sectionTitle(tocTitle, "📋  Contenido del informe");
   ws.mergeCells(`B${tocStartRow}:D${tocStartRow}`);
   ws.getRow(tocStartRow).height = 22;
-
   ws.getRow(tocStartRow + 1).height = 5;
 
   const tcHr = tocStartRow + 2;
@@ -248,7 +248,7 @@ async function buildCoverSheet(wb, ctx, logo) {
   ws.views = [{ showGridLines: false }];
 }
 
-// ─── Hoja: Filtros ─────────────────────────────────────────────────────────────
+// ─── Filters sheet ────────────────────────────────────────────────────────────
 function buildFiltersSheet(wb, ctx) {
   const ws = wb.addWorksheet("Filtros Aplicados");
   const { filters, compareMode, themeName, selectedValues } = ctx;
@@ -266,12 +266,13 @@ function buildFiltersSheet(wb, ctx) {
   colHeader(ws.getCell("B3"), "Parámetro", P.primaryGreen);
   colHeader(ws.getCell("C3"), "Valor",     P.primaryGreen);
 
+  const macroRows = buildMacroParams(ctx);
   const rows = [
-    ["Municipio",          filters.municipio || "AMVA General"],
-    ["Tipo de zona",       filters.zona || "Todos"],
-    ["Macrozona",          filters.macrozona ? `${MACROZONA_BY_ID[filters.macrozona].macrozona}` : "Todas"],
-    ["Modo de análisis",   compareMode ? "Comparar" : "Agrupar"],
-    ["Variable de comp.",  themeName || "N/A"],
+    ["Municipio",         filters.municipio || "AMVA General"],
+    ["Tipo de zona",      filters.zona || "Todos"],
+    ...macroRows,
+    ["Modo de análisis",  compareMode ? "Comparar" : "Agrupar"],
+    ["Variable de comp.", themeName || "N/A"],
     ["Valores comparados", compareMode ? (selectedValues || []).join(", ") : "N/A"],
   ];
 
@@ -288,8 +289,7 @@ function buildFiltersSheet(wb, ctx) {
   });
 }
 
-// ─── Renders de secciones ──────────────────────────────────────────────────────
-
+// ─── Section sheet renderers ──────────────────────────────────────────────────
 function renderKpiTable(ws, data, startRow) {
   let r = startRow;
   const { kpis } = data;
@@ -334,14 +334,13 @@ function renderKpiTable(ws, data, startRow) {
 function renderBarChart(ws, data, startRow, section) {
   let r = startRow;
   const { categories = [], values = [], series = [], compareMode, unit } = data;
-  const unitLabel = unit ? ` (${unit})` : "";
   const xAxisLabel = section?.xAxisLabel || "";
   const yAxisLabel = section?.yAxisLabel || "";
 
   if (!compareMode) {
     ws.getRow(r).height = 20;
-    colHeader(ws.getCell(r, 2), `${xAxisLabel}`,      P.headerDark);
-    colHeader(ws.getCell(r, 3), `${yAxisLabel}`, P.primaryGreen);
+    colHeader(ws.getCell(r, 2), xAxisLabel || "Categoría", P.headerDark);
+    colHeader(ws.getCell(r, 3), yAxisLabel || "Valor",     P.primaryGreen);
     r++;
     categories.forEach((cat, i) => {
       ws.getRow(r).height = 17;
@@ -356,7 +355,7 @@ function renderBarChart(ws, data, startRow, section) {
     colHeader(ws.getCell(r, 2), "Categoría", P.headerDark);
     (series || []).forEach((s, ci) => {
       const argb = hex2argb(s.color) || COMPARE_ARGB[ci % COMPARE_ARGB.length];
-      colHeader(ws.getCell(r, 3 + ci), `${s.name}${unitLabel}`, argb);
+      colHeader(ws.getCell(r, 3 + ci), `${s.name}${unit ? " (" + unit + ")" : ""}`, argb);
     });
     r++;
     categories.forEach((cat, i) => {
@@ -376,8 +375,6 @@ function renderBarChart(ws, data, startRow, section) {
 function renderTimeTable(ws, data, startRow) {
   let r = startRow;
   const { timeAxis, series } = data;
-
-  // Solo modo no comparar llega aquí (skipInCompareMode: true)
   ws.getRow(r).height = 20;
   colHeader(ws.getCell(r, 2), "Hora", P.headerDark);
   series.forEach((s, ci) => {
@@ -385,7 +382,6 @@ function renderTimeTable(ws, data, startRow) {
     colHeader(ws.getCell(r, 3 + ci), s.name, argb);
   });
   r++;
-
   timeAxis.forEach((hour, i) => {
     ws.getRow(r).height = 16;
     labelCell(ws.getCell(r, 2), hour, i % 2 === 0);
@@ -409,11 +405,9 @@ function renderOdTable(ws, data, startRow) {
     style(titleCell, { bold:true, sz:11, bg: bgArgb, color: P.white, wrap:false });
     ws.mergeCells(r, 2, r, 6);
     r++;
-
     ws.getRow(r).height = 5;
     r++;
 
-    // Encabezados
     ws.getRow(r).height = 20;
     colHeader(ws.getCell(r, 2), "Municipio",   bgArgb);
     colHeader(ws.getCell(r, 3), "Macrozona",   bgArgb);
@@ -450,11 +444,9 @@ function renderOdTable(ws, data, startRow) {
 
   renderHalf(data.origin || [],      "▶  Macrozonas de Origen",  P.primaryGreen);
   renderHalf(data.destination || [], "▶  Macrozonas de Destino", P.orange);
-
   return r;
 }
 
-// ─── Construir hoja por sección ───────────────────────────────────────────────
 function buildSectionSheet(wb, section, ctx) {
   const ws = wb.addWorksheet(section.excelSheetName);
   const data = section.extractNormalizedData(ctx);
@@ -478,7 +470,6 @@ function buildSectionSheet(wb, section, ctx) {
   }
 
   blankRow(ws, 3);
-
   let nextRow = 4;
 
   if (!data) {
@@ -500,7 +491,7 @@ function buildSectionSheet(wb, section, ctx) {
   ws.views = [{ state:"frozen", ySplit:3, topLeftCell:"A4", showGridLines:false }];
 }
 
-// ─── Carga del logo ───────────────────────────────────────────────────────────
+// ─── Logo loader ──────────────────────────────────────────────────────────────
 async function loadLogo(logoUrl) {
   if (!logoUrl) return null;
   try {

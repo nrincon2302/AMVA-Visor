@@ -1,3 +1,4 @@
+// src/components/MapCardWithHeader.jsx
 import React from "react";
 import HighchartsMapCard from "./HighchartsMapCard";
 import {
@@ -12,6 +13,7 @@ const MapCardWithHeader = ({
   data,
   palette,
   selectedMacrozone,
+  pendingIds,
   onExpand,
   onSelect,
 }) => {
@@ -109,6 +111,7 @@ const MapCardWithHeader = ({
           data={data}
           palette={palette}
           selectedMacrozone={selectedMacrozone}
+          pendingIds={pendingIds}
           onSelect={onSelect}
         />
       </div>

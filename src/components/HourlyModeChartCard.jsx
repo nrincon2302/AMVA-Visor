@@ -101,7 +101,7 @@ const HourlyModeChartCard = ({
       <ResponsiveContainer width="100%" height={360}>
         <LineChart
           data={activeData}
-          margin={{ top: 20, right: 24, left: 24, bottom: 10 }}
+          margin={{ top: 0, right: 24, left: 24, bottom: 10 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke={GRID_COLOR} />
 
@@ -138,7 +138,7 @@ const HourlyModeChartCard = ({
           {showLegend && (
             <Legend
               verticalAlign="top"
-              height={36}
+              height={76}
               onClick={handleLegendClick}
               wrapperStyle={{cursor: "pointer"}}
               formatter={(value, entry) => {

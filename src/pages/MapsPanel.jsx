@@ -1,3 +1,4 @@
+// src/pages/MapsPanel.jsx
 import { useMemo, useState, useEffect } from "react";
 import MapCardWithHeader from "../components/MapCardWithHeader";
 import HighchartsMapCard from "../components/HighchartsMapCard";
@@ -9,11 +10,10 @@ export default function MapsPanel({
   macroHeatData = {},
   municipios = [],
   isCompareMode,
-  // Selecciones APLICADAS (committed → activas en el API)
   selectedOrigins = [],
   selectedDestinations = [],
-  onOriginSelect,       // (array) => void
-  onDestinationSelect,  // (array) => void
+  onOriginSelect,
+  onDestinationSelect,
   originMunicipio,
   destinationMunicipio,
   onOriginMunicipioChange,
@@ -23,17 +23,22 @@ export default function MapsPanel({
 }) {
   const matriz = macroHeatData?.data;
 
-  // ── Selecciones pendientes (staging) ─────────────────────────────────────
   const [pendingOrigins,      setPendingOrigins]      = useState(selectedOrigins);
   const [pendingDestinations, setPendingDestinations] = useState(selectedDestinations);
 
-  // Si el padre limpia las selecciones, sincronizar pending.
   useEffect(() => { setPendingOrigins(selectedOrigins);      }, [selectedOrigins]);
   useEffect(() => { setPendingDestinations(selectedDestinations); }, [selectedDestinations]);
 
   const hasPendingChanges =
     JSON.stringify([...pendingOrigins].sort())      !== JSON.stringify([...selectedOrigins].sort()) ||
     JSON.stringify([...pendingDestinations].sort()) !== JSON.stringify([...selectedDestinations].sort());
+
+  // IDs that are marked (pending) but not yet committed (applied).
+  // Once the user clicks "Aplicar filtro", selectedOrigins syncs with
+  // pendingOrigins via the parent → useEffect above → both arrays become
+  // equal → these diff arrays become [] → overlay disappears automatically.
+  const unappliedOrigins      = pendingOrigins.filter((id) => !selectedOrigins.includes(id));
+  const unappliedDestinations = pendingDestinations.filter((id) => !selectedDestinations.includes(id));
 
   const handleApply = () => {
     onOriginSelect(pendingOrigins);
@@ -59,7 +64,6 @@ export default function MapsPanel({
     );
   };
 
-  /* ── Global totals ─────────────────────────────────────────────────────── */
   const globalData = useMemo(() => {
     const originMap = new Map();
     const destinationMap = new Map();
@@ -77,7 +81,6 @@ export default function MapsPanel({
     return { origin: toArr(originMap), destination: toArr(destinationMap) };
   }, [matriz]);
 
-  /* ── Cross-filter usa selecciones APLICADAS (no pending) ─────────────── */
   const originData = useMemo(() => {
     const hasDestMunFilter = destinationMunicipio && destinationMunicipio !== "Todos" && destinationMunicipio !== "AMVA General";
     if (!selectedDestinations.length && !hasDestMunFilter) return globalData.origin;
@@ -112,7 +115,6 @@ export default function MapsPanel({
     });
   }, [selectedOrigins, originMunicipio, matriz, globalData.destination]);
 
-  /* ── Highlighted IDs ─────────────────────────────────────────────────── */
   const highlightedDestinations = useMemo(
     () => (!selectedOrigins.length ? [] : destinationData.map((d) => d.id)),
     [selectedOrigins, destinationData]
@@ -122,7 +124,6 @@ export default function MapsPanel({
     [selectedDestinations, originData]
   );
 
-  /* ── Filtro de municipio en vista ─────────────────────────────────────── */
   const filteredOriginByMunicipio = useMemo(() => {
     if (!originMunicipio || originMunicipio === "Todos" || originMunicipio === "AMVA General")
       return originData;
@@ -135,13 +136,11 @@ export default function MapsPanel({
     return destinationData.filter((item) => item.municipio === destinationMunicipio);
   }, [destinationData, destinationMunicipio]);
 
-  // Para el highlight del mapa (Highcharts solo acepta 1 zona)
   const mapSelectedOrigin      = selectedOrigins.length === 1 ? selectedOrigins[0] : null;
   const mapSelectedDestination = selectedDestinations.length === 1 ? selectedDestinations[0] : null;
 
   const hasODFilter = selectedOrigins.length > 0 || selectedDestinations.length > 0;
 
-  /* ── Barra de acción (reutilizada en JSX) ────────────────────────────── */
   const actionBar = (
     <div style={{
       display: "flex",
@@ -152,30 +151,22 @@ export default function MapsPanel({
       borderBottom: "1px solid #e5e7eb",
       marginBottom: 18,
     }}>
-      {/* Resumen de marcaciones pendientes */}
       {(pendingOrigins.length > 0 || pendingDestinations.length > 0) && (
         <span style={{ fontSize: 12, color: "#6b7280", flex: 1 }}>
           {[
-            pendingOrigins.length > 0 && `${pendingOrigins.length} origen${pendingOrigins.length !== 1 ? "es" : ""}`,
+            pendingOrigins.length > 0      && `${pendingOrigins.length} origen${pendingOrigins.length !== 1 ? "es" : ""}`,
             pendingDestinations.length > 0 && `${pendingDestinations.length} destino${pendingDestinations.length !== 1 ? "s" : ""}`,
           ].filter(Boolean).join(" · ")} marcado{(pendingOrigins.length + pendingDestinations.length) !== 1 ? "s" : ""}
         </span>
       )}
 
-      {/* Botón limpiar marcaciones pendientes */}
       {(pendingOrigins.length > 0 || pendingDestinations.length > 0) && (
         <button
           onClick={() => { setPendingOrigins([]); setPendingDestinations([]); }}
           style={{
-            padding: "7px 16px",
-            borderRadius: 8,
-            border: "1px solid #d1d5db",
-            background: "#ffffff",
-            color: "#6b7280",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.15s ease",
+            padding: "7px 16px", borderRadius: 8, border: "1px solid #d1d5db",
+            background: "#ffffff", color: "#6b7280", fontSize: 12, fontWeight: 600,
+            cursor: "pointer", transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "#ffffff"; }}
@@ -184,24 +175,15 @@ export default function MapsPanel({
         </button>
       )}
 
-      {/* Botón Aplicar — solo visible cuando hay cambios pendientes */}
       {hasPendingChanges && (
         <button
           onClick={handleApply}
           style={{
-            padding: "7px 20px",
-            borderRadius: 8,
-            border: "none",
+            padding: "7px 20px", borderRadius: 8, border: "none",
             background: "linear-gradient(135deg, #7CB928 0%, #339933 100%)",
-            color: "#ffffff",
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 2px 8px rgba(51,153,51,0.35)",
-            transition: "all 0.15s ease",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
+            color: "#ffffff", fontSize: 12, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(51,153,51,0.35)", transition: "all 0.15s ease",
+            display: "flex", alignItems: "center", gap: 6,
           }}
           onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.9"; }}
           onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
@@ -213,20 +195,13 @@ export default function MapsPanel({
         </button>
       )}
 
-      {/* Botón Restablecer — cuando hay filtro activo pero sin cambios pendientes */}
       {hasODFilter && !hasPendingChanges && (
         <button
           onClick={handleClearAll}
           style={{
-            padding: "7px 16px",
-            borderRadius: 8,
-            border: "1px solid #fca5a5",
-            background: "#fff1f2",
-            color: "#dc2626",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.15s ease",
+            padding: "7px 16px", borderRadius: 8, border: "1px solid #fca5a5",
+            background: "#fff1f2", color: "#dc2626", fontSize: 12, fontWeight: 600,
+            cursor: "pointer", transition: "all 0.15s ease",
           }}
           onMouseEnter={(e) => { e.currentTarget.style.background = "#fee2e2"; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = "#fff1f2"; }}
@@ -248,13 +223,11 @@ export default function MapsPanel({
         boxShadow: "0 10px 24px rgba(15,23,42,0.06)",
       }}
     >
-      {/* ── Cabecera ── */}
+      {/* Cabecera */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
         <h3 style={{ margin: 0 }}>
           Distribución geográfica de los viajes (Origen - Destino)
         </h3>
-
-        {/* Badge de filtro aplicado */}
         {hasODFilter && (
           <div style={{
             display: "flex", alignItems: "center", gap: 8, padding: "6px 12px",
@@ -304,32 +277,27 @@ export default function MapsPanel({
         </div>
       )}
 
-      {/* ── Barra de acción (arriba, antes de los mapas) ── */}
       {actionBar}
 
-      {/* Mapas */}
+      {/* Mapas — pendingIds only contains IDs not yet applied */}
       <div className="map-grid-2" style={{ marginBottom: 20 }}>
         <MapCardWithHeader
           title="Orígenes de viajes"
           data={filteredOriginByMunicipio}
           palette="green"
           selectedMacrozone={mapSelectedOrigin}
+          pendingIds={unappliedOrigins}
           onExpand={() => onExpandedMapChange("origin")}
-          onSelect={(id) => {
-            if (id === null) return;
-            togglePendingOrigin(id);
-          }}
+          onSelect={(id) => { if (id === null) return; togglePendingOrigin(id); }}
         />
         <MapCardWithHeader
           title="Destinos de viajes"
           data={filteredDestinationByMunicipio}
           palette="orange"
           selectedMacrozone={mapSelectedDestination}
+          pendingIds={unappliedDestinations}
           onExpand={() => onExpandedMapChange("destination")}
-          onSelect={(id) => {
-            if (id === null) return;
-            togglePendingDestination(id);
-          }}
+          onSelect={(id) => { if (id === null) return; togglePendingDestination(id); }}
         />
       </div>
 
@@ -361,7 +329,7 @@ export default function MapsPanel({
         />
       </div>
 
-      {/* Expanded modal */}
+      {/* Modal expandido */}
       {expandedMap && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
@@ -393,6 +361,7 @@ export default function MapsPanel({
                 data={expandedMap === "origin" ? filteredOriginByMunicipio : filteredDestinationByMunicipio}
                 palette={expandedMap === "origin" ? "green" : "orange"}
                 selectedMacrozone={expandedMap === "origin" ? mapSelectedOrigin : mapSelectedDestination}
+                pendingIds={expandedMap === "origin" ? unappliedOrigins : unappliedDestinations}
                 expandedHeight={500}
                 onSelect={expandedMap === "origin"
                   ? (id) => { if (id !== null) togglePendingOrigin(id); }

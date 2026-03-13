@@ -102,7 +102,7 @@ export default function MacrozoneTable({
 
   // ── Estado vacío: sin datos para el enfoque actual ───────────────────────
   if (!data.length) {
-    const outOfViewCount = pendingIds.length + appliedIds.length;
+    const outOfViewCount = appliedIds.length;
     return (
       <div style={{ border: "1px solid #e2e8f0", borderRadius: 10, overflow: "hidden", background: "#fff", fontSize: 13, userSelect: "none" }}>
         {header}

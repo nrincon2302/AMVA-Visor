@@ -202,8 +202,9 @@ export default function DashboardSection() {
   // Export context — includes OD filter info
   const exportCtx = {
     filters,
-    origen: origen.length > 0 ? origen[0] : null,   // para compatibilidad con export
-    destino: destino.length > 0 ? destino[0] : null,
+    // Full arrays so export cover pages can list every selected macrozone.
+    origenes: origen,
+    destinos: destino,
     hasODFilter,
     compareMode,
     selectedValues: localSelectedValues,
