@@ -15,7 +15,7 @@ initModule(TiledWebMapModule);
 
 const FRONT_ZONES = ["Urbana Barbosa", "Urbana Girardota"];
 
-/** Remove the `color` prop from a data item so the colorAxis always drives fill. */
+/** Remove the `color` prop so the colorAxis always drives fill. */
 const stripColor = ({ color, ...rest }) => rest; // eslint-disable-line no-unused-vars
 
 const HighchartsMapCard = ({
@@ -26,11 +26,10 @@ const HighchartsMapCard = ({
   selectedMacrozone,
   expandedHeight,
   onSelect,
-  // IDs genuinely pending (not yet applied). MapsPanel sends [] once applied.
   pendingIds = [],
 }) => {
-  // Private deep copy — prevents shared GeoJSON object from being annotated
-  // with per-instance Highcharts state, which caused hover color contamination.
+  // Private deep copy — prevents the shared import from being annotated with
+  // per-instance Highcharts state.
   const [mapGeoJSON] = useState(() => JSON.parse(JSON.stringify(mapDataSource)));
 
   const chartRef = useRef(null);
@@ -48,14 +47,9 @@ const HighchartsMapCard = ({
   });
 
   // ── Pending overlay data ─────────────────────────────────────────────────
-  // Only zones that are marked but not yet applied.
-  // When pendingIds is [] (after apply or before any selection) this array
-  // is empty and the overlay series draws nothing.
   const pendingMapData = (data || [])
     .filter((item) => pendingIds.includes(item.id))
     .map(stripColor);
-
-  const hasPending = pendingMapData.length > 0;
 
   const colorAxis =
     palette === "orange"
@@ -89,10 +83,10 @@ const HighchartsMapCard = ({
         render: function () {
           const series = this.series;
 
-          // Set pointer-events:none on the overlay group so clicks/hovers
-          // pass through to the main series beneath.
-          const overlaySeries = series[series.length - 1];
-          if (overlaySeries?.group?.element && hasPending) {
+          // Always disable pointer-events on the overlay group so it never
+          // intercepts mouse events meant for the main series below it.
+          const overlaySeries = series.find((s) => s.options.name === "Pending");
+          if (overlaySeries?.group?.element) {
             overlaySeries.group.element.setAttribute("pointer-events", "none");
           }
 
@@ -100,11 +94,12 @@ const HighchartsMapCard = ({
           const mapSeries = series.find(
             (s) => s.type === "map" && s.options.name === "Viajes"
           );
-          if (!mapSeries) return;
-          FRONT_ZONES.forEach((zoneName) => {
-            const pt = mapSeries.points.find((p) => p.name?.includes(zoneName));
-            if (pt?.graphic) pt.graphic.toFront();
-          });
+          if (mapSeries) {
+            FRONT_ZONES.forEach((zoneName) => {
+              const pt = mapSeries.points.find((p) => p.name?.includes(zoneName));
+              if (pt?.graphic) pt.graphic.toFront();
+            });
+          }
         },
       },
     },
@@ -199,9 +194,9 @@ const HighchartsMapCard = ({
         opacity: 0.95,
         states: {
           hover: {
-            brightness: 0.12,
-            borderWidth: 3,
-            borderColor: selectColor,
+            color: null,
+            borderColor: "#2d2d2d",
+            borderWidth: 2,
           },
           select: { color: null, borderColor: null, borderWidth: 0 },
         },
@@ -210,9 +205,8 @@ const HighchartsMapCard = ({
       },
 
       // 3. Pending-selection overlay
-      // colorAxis:false → the series-level `color` is used directly.
-      // enableMouseTracking:false + pointer-events:none (set in render event)
-      // → all mouse events pass through to the main series below.
+      // colorAxis:false → series color prop is used directly.
+      // pointer-events:none set in render event → events pass through to series 2.
       // Empty when pendingIds is [].
       {
         type: "map",
