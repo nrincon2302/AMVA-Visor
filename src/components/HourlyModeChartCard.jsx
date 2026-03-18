@@ -18,6 +18,34 @@ const AXIS_COLOR = "#A6A6A6";
 const DEFAULT_LINE_COLOR = "#00A7F4";
 const DOT_STROKE = "#339933";
 
+// ── Hook: ancho de ventana reactivo ──────────────────────────────────────────
+function useWindowWidth() {
+  const [width, setWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return width;
+}
+
+/**
+ * Para el eje de horas (típicamente 24 puntos) calcula cuántas mostrar.
+ * Devuelve el interval de Recharts.
+ */
+function calcHourInterval(dataLength, windowWidth) {
+  if (!dataLength) return 0;
+  const maxLabels =
+    windowWidth < 400 ? 5
+    : windowWidth < 600 ? 8
+    : windowWidth < 900 ? 12
+    : 999;
+  if (dataLength <= maxLabels) return 0;
+  return Math.ceil(dataLength / maxLabels) - 1;
+}
+
 const HourlyModeChartCard = ({
   title,
   data = [],
@@ -26,6 +54,7 @@ const HourlyModeChartCard = ({
   lineColor,
   showLegend = false,
 }) => {
+  const windowWidth = useWindowWidth();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [visibleLines, setVisibleLines] = useState({});
 
@@ -36,30 +65,29 @@ const HourlyModeChartCard = ({
   }, [datasets]);
 
   useEffect(() => {
-  if (series?.length) {
-    const initialState = {};
-    series.forEach((s) => {
-      initialState[s.key] = true;
-    });
-    setVisibleLines(initialState);
-  }
+    if (series?.length) {
+      const initialState = {};
+      series.forEach((s) => {
+        initialState[s.key] = true;
+      });
+      setVisibleLines(initialState);
+    }
   }, [series]);
 
   const handleLegendClick = (data) => {
     const key = data.dataKey;
-
     setVisibleLines((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
   };
 
-  const activeData = isComparison
-    ? datasets[selectedIndex]?.data ?? []
-    : data;
+  const activeData = isComparison ? datasets[selectedIndex]?.data ?? [] : data;
 
-  const formatNumber = (value) =>
-    Number(value || 0).toLocaleString("es-CO");
+  // Intervalo adaptativo para las etiquetas del eje de horas
+  const hourInterval = calcHourInterval(activeData.length, windowWidth);
+
+  const formatNumber = (value) => Number(value || 0).toLocaleString("es-CO");
 
   return (
     <ChartCard title={title}>
@@ -85,9 +113,7 @@ const HourlyModeChartCard = ({
                     ? "2px solid #0f172a"
                     : "1px solid #cbd5e1",
                 background:
-                  index === selectedIndex
-                    ? "#f1f5f9"
-                    : "#ffffff",
+                  index === selectedIndex ? "#f1f5f9" : "#ffffff",
                 cursor: "pointer",
                 fontWeight: 500,
               }}
@@ -114,9 +140,14 @@ const HourlyModeChartCard = ({
               fill: "#0f172a",
               textAnchor: "end",
             }}
-            interval={0}
-            height={64}>
-            <Label value="Hora de inicio del viaje" position="bottom" offset={-10} />
+            interval={hourInterval}        // ← adaptativo
+            height={64}
+          >
+            <Label
+              value="Hora de inicio del viaje"
+              position="bottom"
+              offset={-10}
+            />
           </XAxis>
 
           <YAxis
@@ -126,7 +157,12 @@ const HourlyModeChartCard = ({
             tick={{ fontSize: "10pt", fill: "#0f172a" }}
             allowDecimals={false}
           >
-            <Label value="Cantidad de viajes" angle={-90} position="left" offset={15} />
+            <Label
+              value="Cantidad de viajes"
+              angle={-90}
+              position="left"
+              offset={15}
+            />
           </YAxis>
 
           <Tooltip
@@ -135,28 +171,26 @@ const HourlyModeChartCard = ({
           />
 
           <ReferenceLine y={0} stroke={AXIS_COLOR} />
+
           {showLegend && (
             <Legend
               verticalAlign="top"
               height={76}
               onClick={handleLegendClick}
-              wrapperStyle={{cursor: "pointer"}}
+              wrapperStyle={{ cursor: "pointer" }}
               formatter={(value, entry) => {
                 const active = visibleLines[entry.dataKey];
                 return (
-                  <span style={{ opacity: active ? 1 : 0.4 }}>
-                    {value}
-                  </span>
+                  <span style={{ opacity: active ? 1 : 0.4 }}>{value}</span>
                 );
               }}
             />
           )}
 
           {series?.length ? (
-            series
-              .map((entry) => {
-                const isVisible = visibleLines[entry.key];
-                return (
+            series.map((entry) => {
+              const isVisible = visibleLines[entry.key];
+              return (
                 <Line
                   key={entry.key}
                   type="monotone"
@@ -172,8 +206,9 @@ const HourlyModeChartCard = ({
                     fill: "#ffffff",
                   }}
                   activeDot={{ r: 5 }}
-                />)
-              })
+                />
+              );
+            })
           ) : (
             <Line
               type="monotone"

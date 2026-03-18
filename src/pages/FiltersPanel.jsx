@@ -2,6 +2,42 @@ import React, { useState, useEffect } from "react";
 import AnalysisSelector from "./AnalysisSelector";
 import SectionIndex from "../components/SectionIndex";
 
+// ── Estilos globales inyectados: pulse del FAB + landscape móvil ─────────────
+const INJECTED_STYLES = `
+  /* ── Animación de pulso para el FAB ── */
+  @keyframes fab-pulse {
+    0%   { box-shadow: 0 4px 14px rgba(124,185,40,0.55), 0 0 0 0   rgba(124,185,40,0.45); }
+    60%  { box-shadow: 0 4px 18px rgba(124,185,40,0.40), 0 0 0 10px rgba(124,185,40,0); }
+    100% { box-shadow: 0 4px 14px rgba(124,185,40,0.55), 0 0 0 0   rgba(124,185,40,0); }
+  }
+
+  .filters-fab:not(.is-open) {
+    animation: fab-pulse 2.2s ease-out infinite;
+  }
+
+  /* ── En landscape móvil: ocultar sidebar, mostrar FAB/drawer ── */
+  /*    Cubre teléfonos en horizontal (alto < 540 px) pero no laptops ni tablets grandes */
+  @media (orientation: landscape) and (max-height: 540px) {
+    .dashboard-sidebar {
+      display: none !important;
+    }
+    .filters-fab {
+      display: flex !important;
+    }
+  }
+`;
+
+// Inyectar hoja de estilos una sola vez en el <head>
+let stylesInjected = false;
+function ensureStylesInjected() {
+  if (stylesInjected) return;
+  stylesInjected = true;
+  const el = document.createElement("style");
+  el.setAttribute("data-fab-styles", "true");
+  el.textContent = INJECTED_STYLES;
+  document.head.appendChild(el);
+}
+
 const ZONA_OPTIONS = [
   { value: "",       label: "Todos"  },
   { value: "Urbano", label: "Urbano" },
@@ -80,7 +116,6 @@ const FilterContent = ({
             <select
               value={filters.macrozona ?? ""}
               onChange={(e) => {
-                // Convertir a número si es un ID numérico, o mantener string
                 const raw = e.target.value;
                 setMacrozona(raw === "" ? "" : (isNaN(Number(raw)) ? raw : Number(raw)));
               }}
@@ -159,6 +194,11 @@ const FilterContent = ({
 const FiltersPanel = (props) => {
   const { onSectionChange } = props;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Inyectar estilos al montar el componente
+  useEffect(() => {
+    ensureStylesInjected();
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = isDrawerOpen ? "hidden" : "";

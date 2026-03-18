@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { formateo } from "../config/constants";
 
 import {
@@ -18,6 +19,38 @@ const GRID_COLOR = "#BFBFBF";
 const AXIS_COLOR = "#A6A6A6";
 const TEXT_COLOR = "#0f172a";
 
+// ── Hook: ancho de ventana reactivo ──────────────────────────────────────────
+function useWindowWidth() {
+  const [width, setWidth] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return width;
+}
+
+/**
+ * Calcula el interval de Recharts para que no aparezcan más de `maxLabels`
+ * etiquetas en el eje X.
+ *   interval=0 → mostrar todas
+ *   interval=1 → una de cada 2
+ *   interval=n → una de cada n+1
+ */
+function calcXInterval(dataLength, windowWidth) {
+  if (!dataLength) return 0;
+  // Límite de etiquetas según breakpoint
+  const maxLabels =
+    windowWidth < 400 ? 4
+    : windowWidth < 600 ? 5
+    : windowWidth < 900 ? 8
+    : 999; // pantalla grande: mostrar todas
+  if (dataLength <= maxLabels) return 0;
+  return Math.ceil(dataLength / maxLabels) - 1;
+}
+
 const BarChartCard = ({
   title,
   actions,
@@ -36,12 +69,14 @@ const BarChartCard = ({
   xAxisLabel,
   yAxisLabel,
 }) => {
+  const windowWidth = useWindowWidth();
 
   const formatNumber = (value) => formateo(value);
   const formatValue = (value) => (showPercent ? `${formatNumber(value)}%` : formatNumber(value));
 
   const isHorizontal = orientation === "horizontal";
   const resolvedHighlightColor = highlightColor || color;
+
   const categoryTickStyle = {
     fontSize: "9pt",
     fill: TEXT_COLOR,
@@ -55,24 +90,26 @@ const BarChartCard = ({
         0,
         (dataMax) => {
           const pad = Math.abs(dataMax) * 0.05 || 1;
-          const max = Math.round(dataMax + pad)
+          const max = Math.round(dataMax + pad);
           return max < 100 ? max : 100;
-        }
+        },
       ]
     : [
         0,
         (dataMax) => {
           const pad = Math.abs(dataMax) * 0.05 || 1;
           return Math.round(dataMax + pad);
-        }
+        },
       ];
+
+  // Intervalo adaptativo solo para barras verticales (categorías en X)
+  const xInterval = !isHorizontal
+    ? calcXInterval(data?.length ?? 0, windowWidth)
+    : 0;
 
   return (
     <ChartCard title={title} actions={actions}>
-      <ResponsiveContainer
-        width="100%"
-        height={chartHeight ?? 360}
-      >
+      <ResponsiveContainer width="100%" height={chartHeight ?? 360}>
         <BarChart
           data={data}
           layout={isHorizontal ? "vertical" : "horizontal"}
@@ -84,6 +121,8 @@ const BarChartCard = ({
             vertical={!isHorizontal}
             horizontal={isHorizontal}
           />
+
+          {/* ── Eje numérico (X para vertical, Y para horizontal) ── */}
           {isHorizontal ? (
             <XAxis
               type="number"
@@ -93,7 +132,9 @@ const BarChartCard = ({
               tickFormatter={formatValue}
               tick={{ fontSize: "10pt", fill: TEXT_COLOR }}
             >
-              {xAxisLabel && <Label value={xAxisLabel} position="bottom" offset={0} />}
+              {xAxisLabel && (
+                <Label value={xAxisLabel} position="bottom" offset={0} />
+              )}
             </XAxis>
           ) : (
             <XAxis
@@ -101,12 +142,16 @@ const BarChartCard = ({
               tickLine={false}
               axisLine={{ stroke: AXIS_COLOR }}
               tick={categoryTickStyle}
-              interval={0}
+              interval={xInterval}          // ← adaptativo
               height={isHorizontal ? undefined : 70}
             >
-              {xAxisLabel && <Label value={xAxisLabel} position="bottom" offset={0} />}
+              {xAxisLabel && (
+                <Label value={xAxisLabel} position="bottom" offset={0} />
+              )}
             </XAxis>
           )}
+
+          {/* ── Eje de categorías (Y para horizontal, Y numérico para vertical) ── */}
           {isHorizontal ? (
             <YAxis
               dataKey={xKey}
@@ -116,7 +161,9 @@ const BarChartCard = ({
               axisLine={{ stroke: AXIS_COLOR }}
               tick={categoryTickStyle}
             >
-              {yAxisLabel && <Label value={yAxisLabel} angle={-90} position="left" offset={20} />}
+              {yAxisLabel && (
+                <Label value={yAxisLabel} angle={-90} position="left" offset={20} />
+              )}
             </YAxis>
           ) : (
             <YAxis
@@ -126,20 +173,23 @@ const BarChartCard = ({
               domain={numericDomain}
               tick={{ fontSize: "10pt", fill: TEXT_COLOR }}
             >
-              {yAxisLabel && <Label value={yAxisLabel} angle={-90} position="left" offset={0} />}
+              {yAxisLabel && (
+                <Label value={yAxisLabel} angle={-90} position="left" offset={0} />
+              )}
             </YAxis>
           )}
+
           <Tooltip
             cursor={{ fill: "rgba(148,163,184,0.15)" }}
             contentStyle={{ borderRadius: 8, border: "none" }}
             formatter={(value, name) => {
-              // En modo comparación, mostrar el nombre de la serie en lugar de "Valor" o "Participación"
               if (isCompareMode && series?.length) {
                 return [formatValue(value), name];
               }
               return [formatValue(value), showPercent ? "Participación" : "Valor"];
             }}
           />
+
           {series?.length ? (
             series.map((entry) => (
               <Bar
@@ -181,8 +231,12 @@ const BarChartCard = ({
                       ? resolvedHighlightColor
                       : "none"
                   }
-                  strokeWidth={highlightKey && entry[xKey] === highlightKey ? 2 : 0}
-                  opacity={highlightKey && entry[xKey] !== highlightKey ? 0.25 : 1}
+                  strokeWidth={
+                    highlightKey && entry[xKey] === highlightKey ? 2 : 0
+                  }
+                  opacity={
+                    highlightKey && entry[xKey] !== highlightKey ? 0.25 : 1
+                  }
                 />
               ))}
               <LabelList
