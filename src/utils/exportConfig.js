@@ -393,7 +393,7 @@ export const EXPORT_SECTIONS = [
     extractNormalizedData: (ctx) =>
       buildMultiIdBarSection({
         ids: [31,32,33,34,35],
-        labels: ["Cuidador","Extranjero (residente permanente)","Madre cabeza de familia","Persona en situación de discapacidad","Ninguna"],
+        labels: ["Cuidador/a","Extranjero/a (residente permanente)","Madre cabeza de familia","Persona en situación de discapacidad","Ninguna"],
         indicadoresData: ctx.indicadoresData,
         compareMode: ctx.compareMode, selectedValues: ctx.selectedValues, unit: "%",
       }),

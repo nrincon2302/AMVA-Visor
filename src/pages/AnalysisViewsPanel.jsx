@@ -11,6 +11,7 @@ export default function AnalysisViewsPanel({
   localSelectedValues,
   selectedColorMap,
   activeThematicKey,
+  activeThematicLabel = "",
   modeData = [],
   purposeData = [],
   stageData = [],
@@ -23,6 +24,11 @@ export default function AnalysisViewsPanel({
   hasODFilter = false,
 }) {
   const groupedColor = SECONDARY_GREEN;
+
+  // Ocultar la gráfica de grupos poblacionales cuando el tema activo
+  // ya ES "Poblaciones de interés" (evita redundancia).
+  const hidePopulationChart =
+    activeThematicLabel?.toLowerCase().includes("poblaciones de interés");
 
   /* ─── VIAJES ─────────────────────────────────────────── */
   const viajesCharts = (
@@ -85,7 +91,7 @@ export default function AnalysisViewsPanel({
             </div>
           )}
 
-          {!hasODFilter && (
+          {!hasODFilter && !hidePopulationChart && (
             <div>
               {(() => {
                 const pop = buildPopulationComparisonSeries(localSelectedValues, selectedColorMap, activeThematicKey, detailedData);
@@ -144,7 +150,7 @@ export default function AnalysisViewsPanel({
               yAxisLabel="Etapas" 
             />
           )}
-          {!hasODFilter && (
+          {!hasODFilter && !hidePopulationChart && (
             <BarChartCard 
               title="% de personas que sí viajan en grupos poblacionales de interés" 
               data={toLabelValue(populationInterestData)} 

@@ -321,6 +321,8 @@ export default function DashboardSection() {
               localSelectedValues={localSelectedValues}
               selectedColorMap={selectedColorMap}
               activeThematicKey={activeThematicKey}
+              // Se agrega prop para el caso de ocultar poblaciones de interés
+              activeThematicLabel={activeThematic?.label}
               modeData={analysisViewsData?.modeData}
               purposeData={analysisViewsData?.purposeData}
               stageData={!hasODFilter ? analysisViewsData?.stageData : undefined}

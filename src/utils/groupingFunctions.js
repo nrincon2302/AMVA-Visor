@@ -94,8 +94,8 @@ export const buildPopulationComparisonSeries = (
 
   const populationIds = [31, 32, 33, 34, 35];
   const populationLabels = [
-    "Cuidador",
-    "Extranjero (residente permanente)",
+    "Cuidador/a",
+    "Extranjero/a (residente permanente)",
     "Madre cabeza de familia",
     "Persona en situación de discapacidad",
     "Ninguna",

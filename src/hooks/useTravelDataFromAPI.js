@@ -395,7 +395,7 @@ function buildAnalysisViewsData(indicadoresData) {
     indicadoresData[id]?.tipo === "agrupado"
       ? indicadoresData[id].data.map(d => ({ label: id == 39 ? "Estrato " + d.label : d.label, value: d.value * 100 }))
       : [];
-  const populationLabels = ["Cuidador","Extranjero (residente permanente)","Madre cabeza de familia","Persona en situación de discapacidad","Ninguna"];
+  const populationLabels = ["Cuidador/a","Extranjero/a (residente permanente)","Madre cabeza de familia","Persona en situación de discapacidad","Ninguna"];
   return {
     modeData: mapAgrupadoPercent(27),
     purposeData: mapAgrupadoPercent(28),
