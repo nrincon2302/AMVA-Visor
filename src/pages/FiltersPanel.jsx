@@ -15,14 +15,35 @@ const INJECTED_STYLES = `
     animation: fab-pulse 2.2s ease-out infinite;
   }
 
-  /* ── En landscape móvil: ocultar sidebar, mostrar FAB/drawer ── */
+  /* ── En landscape móvil: ocultar sidebar, mostrar FAB/drawer, ancho completo ── */
   /*    Cubre teléfonos en horizontal (alto < 540 px) pero no laptops ni tablets grandes */
   @media (orientation: landscape) and (max-height: 540px) {
     .dashboard-sidebar {
       display: none !important;
     }
+    /* Mismo aspecto y posición que en portrait: redondo, verde, fijo abajo-derecha */
     .filters-fab {
       display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      position: fixed !important;
+      bottom: 20px !important;
+      right: 20px !important;
+      top: auto !important;
+      left: auto !important;
+      width: 52px !important;
+      height: 52px !important;
+      border-radius: 50% !important;
+      background: #7CB928 !important;
+      color: #ffffff !important;
+      border: none !important;
+      padding: 0 !important;
+      aspect-ratio: 1 !important;
+      z-index: 900 !important;
+    }
+    /* El grid pierde la columna del sidebar: el contenido ocupa todo el ancho */
+    .dashboard-grid {
+      grid-template-columns: 1fr !important;
     }
   }
 `;

@@ -216,7 +216,7 @@ async function buildCoverSheet(wb, ctx, logo) {
   });
 
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
+    (s) => !(s.skipInCompareMode && compareMode) && !(s.skipWithODFilter && ctx.hasODFilter) && !s.skipWhen?.(ctx)
   );
 
   const tocStartRow = 10 + params.length + 3;
@@ -523,7 +523,7 @@ export async function generateExcelReport(ctx) {
   buildFiltersSheet(wb, ctx);
 
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && ctx.compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
+    (s) => !(s.skipInCompareMode && ctx.compareMode) && !(s.skipWithODFilter && ctx.hasODFilter) && !s.skipWhen?.(ctx)
   );
 
   visibleSections.forEach((section) => buildSectionSheet(wb, section, ctx));

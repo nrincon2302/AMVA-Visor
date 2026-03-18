@@ -1,31 +1,3 @@
-/**
- * exportConfig.js
- * ─────────────────────────────────────────────────────────────────────────────
- * ÚNICA fuente de verdad para los exportables (PDF y Excel).
- *
- * TODOS los colores se centralizan aquí importándolos desde constants.js.
- * exportPDF.js y exportExcel.js NO definen colores propios.
- *
- * ┌─ PARA AGREGAR UNA NUEVA SECCIÓN ───────────────────────────────────────┐
- * │  1. Añade una entrada al array EXPORT_SECTIONS (ver ejemplos abajo).   │
- * │  2. Implementa su extractNormalizedData que devuelve un NormalizedData  │
- * │     del tipo correcto (ver tipos: kpi_table, bar_chart, time_table,    │
- * │     od_table).                                                          │
- * │  El PDF y Excel la incluirán automáticamente.                           │
- * └────────────────────────────────────────────────────────────────────────┘
- *
- * ┌─ TIPOS DE SECCIÓN (pdfType) ────────────────────────────────────────────┐
- * │  'kpi_table'  → cuadrícula de tarjetas KPI (etiqueta + valor)           │
- * │  'bar_chart'  → barras horizontales (una o varias series en comparar)   │
- * │  'time_table' → tabla temporal (horas × series, con sub-series)         │
- * │  'od_table'   → tablas de macrozonas origen / destino                   │
- * └────────────────────────────────────────────────────────────────────────┘
- *
- * ┌─ FLAGS ESPECIALES ──────────────────────────────────────────────────────┐
- * │  skipInCompareMode: true → la sección se omite en modo COMPARAR        │
- * └────────────────────────────────────────────────────────────────────────┘
- */
-
 import {
   PRIMARY_GREEN,
   SECONDARY_GREEN,
@@ -44,9 +16,6 @@ import {
   EXPORT_BORDER_COLOR,
 } from "../config/constants";
 
-// ═══════════════════════════════════════════════════════════════════════════
-//   PALETA CENTRAL — única fuente de colores para PDF y Excel
-// ═══════════════════════════════════════════════════════════════════════════
 export const COLORS = {
   primaryGreen:   PRIMARY_GREEN,
   secondaryGreen: SECONDARY_GREEN,
@@ -65,16 +34,6 @@ export const COLORS = {
   compareColors:  COMPARE_COLORS,
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-//   FORMATO NUMÉRICO COMPARTIDO (PDF + Excel)
-//   Enteros: sin decimales. Decimales: máx 2 cifras. Locale es-CO.
-// ═══════════════════════════════════════════════════════════════════════════
-/**
- * Formatea un número al estilo es-CO (. miles, , decimal, máx 2 dec).
- * Para celdas de string (PDF o texto en Excel).
- * @param {number} v   – valor numérico
- * @param {string} unit – "" | "%" | "min" | "prom"
- */
 export function fmtExport(v, unit = "") {
   if (typeof v !== "number" || !Number.isFinite(v)) return String(v ?? "--");
   const rounded = parseFloat(v.toFixed(2));
@@ -85,17 +44,12 @@ export function fmtExport(v, unit = "") {
   return str + (unit === "%" ? " %" : unit === "min" ? " min" : "");
 }
 
-/**
- * Devuelve el número listo para celda Excel (valor real, sin unidad).
- * Excel formatea con su propio número de formato.
- */
 export function numExport(v, unit = "") {
   if (typeof v !== "number" || !Number.isFinite(v)) return 0;
   if (unit === "%" || unit === "min" || unit === "prom") return parseFloat(v.toFixed(2));
   return Math.round(v);
 }
 
-// ── Helpers internos ─────────────────────────────────────────────────────────
 const scaleIfPct = (v, unit) =>
   unit === "%" && typeof v === "number" && v > 0 && v <= 1 ? +(v * 100).toFixed(2) : +(v ?? 0);
 
@@ -182,7 +136,6 @@ function buildKpiSection({ ids, unitMap, indicadoresData, compareMode }) {
   };
 }
 
-// Series horarias (shared entre PDF y Excel)
 export const HOURLY_SERIES_META = [
   { key: "informal",     name: "Transporte Informal",  color: COLORS.secondaryGreen },
   { key: "public",       name: "Transporte Público",   color: COLORS.tertiaryBlue   },
@@ -190,9 +143,6 @@ export const HOURLY_SERIES_META = [
   { key: "nonMotorized", name: "No Motorizado",        color: COLORS.tertiaryPink   },
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════
-//   EXPORT_SECTIONS  ← edita aquí para agregar/quitar/reordenar secciones
-// ═══════════════════════════════════════════════════════════════════════════
 export const EXPORT_SECTIONS = [
 
   /* ── 1. KPIs Generales ── */
@@ -385,6 +335,9 @@ export const EXPORT_SECTIONS = [
   {
     key:            "population",
     skipWithODFilter: true,
+    // Ocultar también cuando el tema activo ya ES "Poblaciones de interés"
+    skipWhen: (ctx) =>
+      ctx.themeName?.toLowerCase().includes("poblaciones de interés"),
     sectionLabel:   "Grupos Poblacionales de Interés",
     excelSheetName: "Grupos Poblacionales",
     pdfType:        "bar_chart",
@@ -393,7 +346,7 @@ export const EXPORT_SECTIONS = [
     extractNormalizedData: (ctx) =>
       buildMultiIdBarSection({
         ids: [31,32,33,34,35],
-        labels: ["Cuidador/a","Extranjero/a (residente permanente)","Madre cabeza de familia","Persona en situación de discapacidad","Ninguna"],
+        labels: ["Cuidador","Extranjero (residente permanente)","Madre cabeza de familia","Persona en situación de discapacidad","Ninguna"],
         indicadoresData: ctx.indicadoresData,
         compareMode: ctx.compareMode, selectedValues: ctx.selectedValues, unit: "%",
       }),

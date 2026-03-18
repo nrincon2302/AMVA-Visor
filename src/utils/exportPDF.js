@@ -55,15 +55,6 @@ function text(doc, txt, x, y, opts = {}) {
 }
 
 // ─── Shared: build macrozone param rows ───────────────────────────────────────
-/**
- * Converts an array of macrozone IDs into a compact human-readable string:
- *   1 item  → "Municipio — Zona"
- *   2 items → "Municipio — Zona A, Municipio — Zona B"
- *   3+ items→ "Municipio — Zona A, Municipio — Zona B y N más"
- *
- * jsPDF wraps long strings automatically when maxWidth is set, so a single
- * value cell is enough — no extra rows needed.
- */
 function macroListLabel(ids = []) {
   if (!ids.length) return null;
 
@@ -81,14 +72,12 @@ function buildMacroParams(ctx) {
   const hasOD = origenes.length > 0 || destinos.length > 0;
   const rows  = [];
 
-  // Residence macrozone (single value from sidebar filter)
   const mzLabel = hasOD ? "Macrozona de residencia" : "Macrozona";
   const mzValue = filters.macrozona
     ? (MACROZONA_BY_ID[filters.macrozona]?.macrozona ?? `ID ${filters.macrozona}`)
     : "Todas";
   rows.push([mzLabel, mzValue]);
 
-  // OD selections — each collapses to a single row / single string
   const orLabel = origenes.length > 1 ? "Macrozonas de origen" : "Macrozona de origen";
   const destLabel = destinos.length > 1 ? "Macrozonas de destino" : "Macrozona de destino";
 
@@ -487,11 +476,9 @@ async function drawCoverPage(doc, ctx) {
       : []),
   ];
 
-  // Estimate box height: each param row is ~9.5pt, but OD value strings may
-  // wrap — count approximate wrapped lines for those rows.
-  const valueColWidth = 90; // approx mm available for value column text
+  const valueColWidth = 90;
   const estimatedRows = pData.reduce((acc, [, v]) => {
-    const charsPerLine = Math.floor(valueColWidth / 2.2); // rough chars per 9pt line
+    const charsPerLine = Math.floor(valueColWidth / 2.2);
     return acc + Math.max(1, Math.ceil(String(v).length / charsPerLine));
   }, 0);
   const boxH = Math.max(70, 18 + estimatedRows * 9.5);
@@ -503,7 +490,6 @@ async function drawCoverPage(doc, ctx) {
 
   let paramY = boxY + 18;
   pData.forEach(([k, v]) => {
-    // Label (bold, muted)
     if (k) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
@@ -511,23 +497,20 @@ async function drawCoverPage(doc, ctx) {
       doc.text(`${k}:`, ML + 7, paramY, { baseline:"middle" });
     }
 
-    // Value — wrapped automatically by jsPDF when maxWidth is set
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(...C.text);
     const valueX    = ML + 54;
     const maxWidth  = PAGE_W - MR - valueX - 4;
-    // splitTextToSize lets us know how many lines this value occupies
     const lines     = doc.splitTextToSize(String(v), maxWidth);
     doc.text(lines, valueX, paramY, { baseline:"middle" });
 
-    // Advance cursor by number of wrapped lines × line height
     paramY += Math.max(1, lines.length) * 9.5;
   });
 
   // ── Table of contents ────────────────────────────────────────────────────
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
+    (s) => !(s.skipInCompareMode && compareMode) && !(s.skipWithODFilter && ctx.hasODFilter) && !s.skipWhen?.(ctx)
   );
   const tocY = boxY + boxH + 10;
   if (tocY < PAGE_H - 40) {
@@ -564,7 +547,7 @@ export async function generatePdfReport(ctx) {
   const cursor = new Cursor(doc);
 
   const visibleSections = EXPORT_SECTIONS.filter(
-    (s) => !(s.skipInCompareMode && ctx.compareMode) && !(s.skipWithODFilter && ctx.hasODFilter)
+    (s) => !(s.skipInCompareMode && ctx.compareMode) && !(s.skipWithODFilter && ctx.hasODFilter) && !s.skipWhen?.(ctx)
   );
 
   visibleSections.forEach((section, index) => {
