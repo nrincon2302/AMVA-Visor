@@ -182,6 +182,9 @@ const BarChartCard = ({
           <Tooltip
             cursor={{ fill: "rgba(148,163,184,0.15)" }}
             contentStyle={{ borderRadius: 8, border: "none" }}
+            // Preservar el orden en que vienen las series del backend;
+            // sin esto Recharts las ordena por valor descendente.
+            itemSorter={() => 0}
             formatter={(value, name) => {
               if (isCompareMode && series?.length) {
                 return [formatValue(value), name];
