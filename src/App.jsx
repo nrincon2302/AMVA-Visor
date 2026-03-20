@@ -7,8 +7,6 @@ import logoAmva from "./assets/logo-area.png";
 
 const App = () => (
   <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-    <Header />
-
     {/* ── Párrafo introductorio ── */}
     <div style={{ width: "100%", background: "#ffffff", borderBottom: "1px solid #e5e7eb" }}>
       <div
@@ -69,7 +67,6 @@ const App = () => (
     </div>
 
     <DashboardSection />
-    <Footer />
   </div>
 );
 
